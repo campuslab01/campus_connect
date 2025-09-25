@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import LandingPage from './pages/LandingPage';
 import DiscoverPage from './pages/DiscoverPage';
@@ -13,7 +13,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { useLenis } from './hooks/useLenis';
 
-function App() {
+function AppContent() {
   // Initialize isAuthenticated from localStorage, default to false
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('isAuthenticated') === 'true';
@@ -27,47 +27,54 @@ function App() {
   // Initialize Lenis smooth scrolling
   useLenis();
 
+  const navigate = useNavigate();
+
   const handleGetStarted = () => {
-    const basePath = process.env.NODE_ENV === 'production' ? '/onboarding' : '';
-    window.location.href = `${basePath}/auth`;
+    navigate('auth');
   };
 
   return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {isAuthenticated ? (
+        <>
+          <Navigation />
+          <main className="pb-20">
+            <Routes>
+              <Route path="/" element={<Navigate to="/discover" />} />
+              <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/confessions" element={<ConfessionPage />} />
+              <Route path="/likes" element={<LikesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Routes>
+          </main>
+        </>
+      ) : (
+        <Routes>
+          <Route path="/" element={<LandingPage onGetStarted={handleGetStarted} />} />
+          <Route
+            path="/auth"
+            element={<AuthPage onAuth={() => setIsAuthenticated(true)} />}
+          />
+          <Route path="/discover" element={<Navigate to="/auth" />} />
+          <Route path="/chat" element={<Navigate to="/auth" />} />
+          <Route path="/search" element={<Navigate to="/auth" />} />
+          <Route path="/confessions" element={<Navigate to="/auth" />} />
+          <Route path="/likes" element={<Navigate to="/auth" />} />
+          <Route path="/profile" element={<Navigate to="/auth" />} />
+        </Routes>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  return (
     <AuthProvider>
       <ChatProvider>
-        <Router basename={process.env.NODE_ENV === 'production' ? '/onboarding' : '/'}>
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-            {isAuthenticated ? (
-              <>
-                <Navigation />
-                <main className="pb-20">
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/discover" />} />
-                    <Route path="/discover" element={<DiscoverPage />} />
-                    <Route path="/chat" element={<ChatPage />} />
-                    <Route path="/search" element={<SearchPage />} />
-                    <Route path="/confessions" element={<ConfessionPage />} />
-                    <Route path="/likes" element={<LikesPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                  </Routes>
-                </main>
-              </>
-            ) : (
-              <Routes>
-                <Route path="/" element={<LandingPage onGetStarted={handleGetStarted} />} />
-                <Route
-                  path="/auth"
-                  element={<AuthPage onAuth={() => setIsAuthenticated(true)} />}
-                />
-                <Route path="/discover" element={<Navigate to="/auth" />} />
-                <Route path="/chat" element={<Navigate to="/auth" />} />
-                <Route path="/search" element={<Navigate to="/auth" />} />
-                <Route path="/confessions" element={<Navigate to="/auth" />} />
-                <Route path="/likes" element={<Navigate to="/auth" />} />
-                <Route path="/profile" element={<Navigate to="/auth" />} />
-              </Routes>
-            )}
-          </div>
+        <Router basename={import.meta.env.PROD ? '/campus_connect' : '/'}>
+          <AppContent />
         </Router>
       </ChatProvider>
     </AuthProvider>
