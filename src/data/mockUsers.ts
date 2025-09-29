@@ -1,8 +1,8 @@
-export interface User {
+interface User {
   id: number;
   name: string;
   age: number;
-  gender: 'male' | 'female';
+  gender: string;
   college: string;
   department: string;
   year: string;
@@ -11,8 +11,10 @@ export interface User {
   interests: string[];
   photos: string[];
   verified: boolean;
-  distance: string;
+  lookingFor: ('Long term' | 'Short term' | 'Friendship')[];
 }
+
+
 
 export const mockUsers: User[] = [
   {
@@ -22,17 +24,17 @@ export const mockUsers: User[] = [
     gender: 'female',
     college: 'Stanford University',
     department: 'Computer Science',
-    year: 'Sophomore',
+    year: '3rd',
     bio: 'Love coding, hiking, and good coffee. Always up for exploring new places around campus!',
     relationshipStatus: 'Single',
     interests: ['Programming', 'Hiking', 'Coffee', 'Travel', 'Photography'],
     photos: [
-      'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1559486/pexels-photo-1559486.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=400'
+      '/images/catgirluser1.jpg',
+      '/images/catgirluser1S.jpg',
+      '/images/catgirluser1.jpg'
     ],
     verified: true,
-    distance: '2 miles'
+    lookingFor: ['Long term', 'Friendship']
   },
   {
     id: 2,
@@ -46,12 +48,13 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Rock Climbing', 'Sustainability', 'Music', 'Cooking', 'Travel'],
     photos: [
-      'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400'
+      '/images/Boyuser1.jpg',
+      '/images/Boyuser1S.jpg',
+      '/images/Boyuser1M.jpg'
+      
     ],
     verified: true,
-    distance: '5 miles'
+    lookingFor: ['Short term', 'Friendship']
   },
   {
     id: 3,
@@ -65,12 +68,12 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Art', 'Entrepreneurship', 'Food', 'Yoga', 'Fashion'],
     photos: [
-      'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1858175/pexels-photo-1858175.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1845457/pexels-photo-1845457.jpeg?auto=compress&cs=tinysrgb&w=400'
+      '/images/girluser2A.jpg',
+      '/images/girluser2S.jpg',
+      '/images/girluser2M.jpg'
     ],
     verified: false,
-    distance: '3 miles'
+    lookingFor: ['Long term', 'Friendship']
   },
   {
     id: 4,
@@ -84,12 +87,12 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Film', 'Photography', 'Coffee', 'Books', 'Travel'],
     photos: [
-      'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1080213/pexels-photo-1080213.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400'
+      '/images/boyuser2A.jpg',
+      '/images/boyuser2S.jpg',
+      '/images/boyuser2M.jpg'
     ],
     verified: true,
-    distance: '7 miles'
+    lookingFor: ['Long term']
   },
   {
     id: 5,
@@ -103,11 +106,11 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Dancing', 'Medicine', 'Reading', 'Volunteering', 'Fitness'],
     photos: [
-      'https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1081685/pexels-photo-1081685.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=400'
+      '/images/girluser4A.jpg',
+      '/images/girluser4S.jpg',
+      '/images/girluser4M.jpg'
     ],
     verified: false,
-    distance: '1 mile'
+    lookingFor: ['Long term', 'Friendship']
   }
 ];

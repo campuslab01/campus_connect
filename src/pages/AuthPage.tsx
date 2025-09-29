@@ -7,11 +7,9 @@ import { useNavigate } from "react-router-dom";
 import bgImage from "/images/loginscreen.jpeg";
 import { TypeAnimation } from "react-type-animation";
 
-
-
 interface AuthPageProps {
   onAuth: () => void;
-} 
+}
 
 const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -62,35 +60,34 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   };
 
   const [termsHtml, setTermsHtml] = useState<string | null>(null);
-const [termsLoading, setTermsLoading] = useState(false);
-const [termsError, setTermsError] = useState<string | null>(null);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
 
-useEffect(() => {
-  if (!showTerms) return; // only load when modal opens
-  setTermsLoading(true);
-  setTermsError(null);
+  useEffect(() => {
+    if (!showTerms) return; // only load when modal opens
+    setTermsLoading(true);
+    setTermsError(null);
 
-  const termsPath = `${import.meta.env.BASE_URL}terms.html`;
+    const termsPath = `${import.meta.env.BASE_URL}terms.html`;
 
-  console.log("📄 Fetching Terms & Conditions from:", termsPath); // 👈 debug log
+    console.log("📄 Fetching Terms & Conditions from:", termsPath);
 
-
-  fetch(termsPath) // works in dev and on subpath deployments
-  
-    .then((res) => {
-      if (!res.ok) throw new Error("Failed to load terms");
-      return res.text();
-    })
-    .then((rawHtml) => {
-      const clean = DOMPurify.sanitize(rawHtml);
-      setTermsHtml(clean);
-    })
-    .catch((err) => {
-      console.error(err);
-      setTermsError("Could not load terms. Please try again.");
-    })
-    .finally(() => setTermsLoading(false));
-}, [showTerms]);
+    fetch(termsPath) // works in dev and on subpath deployments
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load terms");
+        return res.text();
+      })
+      .then((rawHtml) => {
+        console.log("Raw terms HTML:", rawHtml.slice(0, 200));
+        const clean = DOMPurify.sanitize(rawHtml);
+        setTermsHtml(clean);
+      })
+      .catch((err) => {
+        console.error(err);
+        setTermsError("Could not load terms. Please try again.");
+      })
+      .finally(() => setTermsLoading(false));
+  }, [showTerms]);
 
   return (
     <div
@@ -151,46 +148,62 @@ useEffect(() => {
             className="text-center mb-6"
           >
             {/* Profile Section */}
-<div className="relative w-24 h-24 mx-auto mb-4">
-  {profileImage ? (
-    <motion.img
-      src={profileImage}
-      alt="Profile Preview"
-      className="w-full h-full rounded-full object-cover border-2 border-purple-400 shadow-lg"
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      transition={{ type: "spring", stiffness: 120 }}
-    />
-  ) : (
-    <motion.div
-      className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg flex items-center justify-center w-full h-full"
-      animate={{ scale: [1, 1.1, 1] }}
-      transition={{ repeat: Infinity, duration: 2 }}
-    >
-      <Heart className="h-12 w-12 text-white animate-pulse" />
-    </motion.div>
-  )}
+            <div className="relative w-24 h-24 mx-auto mb-2">
+              {profileImage ? (
+                <motion.img
+                  src={profileImage}
+                  alt="Profile Preview"
+                  className="w-full h-full rounded-full object-cover border-2 border-purple-400 shadow-lg"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 120 }}
+                />
+              ) : (
+                <motion.div
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-lg flex items-center justify-center w-full h-full"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  <Heart className="h-12 w-12 text-white animate-pulse" />
+                </motion.div>
+              )}
 
-  {!isLogin && (
-    <motion.label
-      className="absolute -bottom-2 -right-2 bg-purple-500 p-3 rounded-full cursor-pointer shadow-lg hover:bg-purple-600 transition transform hover:scale-110"
-      whileHover={{ scale: 1.2, rotate: 10 }}
-      whileTap={{ scale: 0.95 }}
-      title="Add Profile Picture"
-    >
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleProfileUpload}
-      />
-      <User className="h-5 w-5 text-white" />
-{/* Optional: small pulsing ring around the icon */}
-<span className="absolute -inset-[1px] rounded-full border-2 border-white/50 animate-ping"></span>
-    </motion.label>
-  )}
-</div>
+              {!isLogin && (
+                <motion.label
+                  className="absolute -bottom-2 -right-2 bg-purple-500 p-3 rounded-full cursor-pointer shadow-lg hover:bg-purple-600 transition transform hover:scale-110"
+                  whileHover={{ scale: 1.2, rotate: 10 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Add Profile Picture"
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleProfileUpload}
+                  />
 
+                  <User className="h-5 w-5 text-white" />
+
+                  {/* Optional: small pulsing ring */}
+                  <span className="absolute -inset-[1px] rounded-full border-2 border-white/50 animate-ping"></span>
+                </motion.label>
+              )}
+            </div>
+
+            {/* Add Profile text (only on Signup) */}
+            {!isLogin && (
+              <div className="relative w-full flex justify-center mt-2">
+                <p
+                  className="text-white/70 text-[0.7rem] font-bold select-none tracking-wider"
+                  style={{
+                    fontFamily: "'Cursive', sans-serif", // pick any arched/curved font
+                    textShadow: "0 0 6px rgba(255,255,255,0.5)",
+                  }}
+                >
+                  Add Profile
+                </p>
+              </div>
+            )}
 
             <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-md">
               {isLogin ? (
@@ -220,7 +233,12 @@ useEffect(() => {
               )}
             </h2>
 
-            <p className="text-gray-200 text-sm"> {isLogin ? "Sign in to continue your journey" : "Create your account to get started"} </p>
+            <p className="text-gray-200 text-sm">
+              {" "}
+              {isLogin
+                ? "Sign in to continue your journey"
+                : "Create your account to get started"}{" "}
+            </p>
           </motion.div>
 
           {/* Form */}
@@ -248,67 +266,78 @@ useEffect(() => {
                     />
                   </div>
 
+                  {/* College Dropdown */}
                   <div className="relative">
                     <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 h-5 w-5" />
-                    <input
-                      type="text"
+                    <select
                       name="college"
-                      placeholder="College/University"
                       value={formData.college}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-300"
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white
+               placeholder-gray-300 focus:ring-2 focus:ring-purple-400 focus:border-transparent
+               appearance-none"
                       required
-                    />
+                    >
+                      <option value="" disabled className="text-gray-400">
+                        Select College
+                      </option>
+                      <option value="Your College Name">
+                        Medicaps University
+                      </option>
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-  <select
-    name="department"
-    value={formData.department}
-    onChange={handleInputChange}
-    className="px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      className="px-4 py-3 bg-black/10 border border-white/30 rounded-xl text-white
                placeholder-gray-300 focus:ring-2 focus:ring-purple-400 focus:border-transparent
-               appearance-none" // remove default arrow styling for consistency
-    required
-  >
-    <option value="" disabled className="text-gray-400">
-      Department
-    </option>
-    <option value="Computer Science" className="text-white bg-white/10">
-      Computer Science
-    </option>
-    <option value="Engineering" className="text-white bg-white/10">
-      Engineering
-    </option>
-    <option value="Business" className="text-white bg-white/10">
-      Business
-    </option>
-    <option value="Arts" className="text-white bg-white/10">
-      Arts
-    </option>
-    <option value="Medicine" className="text-white bg-white/10">
-      Medicine
-    </option>
-    <option value="Law" className="text-white bg-white/10">
-      Law
-    </option>
-  </select>
+               appearance-none"
+                      required
+                    >
+                      <option value="" disabled className="text-gray-400">
+                        Department
+                      </option>
+                      <option value="B.Com">B.Com</option>
+                      <option value="BCA">BCA</option>
+                      <option value="BBA">BBA</option>
+                      <option value="MBA">MBA</option>
+                      <option value="LLB">LLB</option>
+                      <option value="LLM">LLM</option>
+                      <option value="B.Tech CSE">B.Tech CSE</option>
+                      <option value="B.Tech IT">B.Tech IT</option>
+                      <option value="B.Tech ME">B.Tech ME</option>
+                      <option value="B.Tech CE">B.Tech CE</option>
+                      <option value="B.Tech EE">B.Tech EE</option>
+                      <option value="B.Tech ECE">B.Tech ECE</option>
+                      <option value="B.Sc Physics">B.Sc Physics</option>
+                      <option value="B.Sc Chemistry">B.Sc Chemistry</option>
+                      <option value="B.Sc Maths">B.Sc Maths</option>
+                      <option value="B.Sc Biotech">B.Sc Biotech</option>
+                      <option value="B.Sc Forensic">B.Sc Forensic</option>
+                      <option value="B.Pharm">B.Pharm</option>
+                      <option value="M.Pharm">M.Pharm</option>
+                      <option value="B.Sc Agri">B.Sc Agri</option>
+                      <option value="BA Eng/Hindi">BA Eng/Hindi</option>
+                      <option value="BA Social Sci">BA Social Sci</option>
+                      <option value="Other">Other</option>
+                    </select>
 
-  <input
-    type="number"
-    name="age"
-    placeholder="Age"
-    value={formData.age}
-    onChange={handleInputChange}
-    className="px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white 
+                    <input
+                      type="number"
+                      name="age"
+                      placeholder="Age"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      className="px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white 
                placeholder-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-    min="18"
-    max="30"
-    required
-  />
-</div>
-
-
+                      min="18"
+                      max="30"
+                      required
+                    />
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -322,7 +351,7 @@ useEffect(() => {
                 placeholder="College Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-black placeholder-gray-300"
+                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-300"
                 required
               />
             </motion.div>
@@ -342,58 +371,60 @@ useEffect(() => {
             </motion.div>
 
             {/* Terms checkbox (only Signup) */}
-{!isLogin && (
-  <div className="flex items-center space-x-3 text-white text-sm mt-2">
-  <label className="flex items-center cursor-pointer select-none">
-    <div
-      className={`w-5 h-5 flex items-center justify-center rounded-lg border-2 
-                  ${termsAccepted ? 'bg-gradient-to-tr from-purple-500 to-blue-500 border-transparent' 
-                                  : 'border-white/40 bg-white/10'} 
+            {!isLogin && (
+              <div className="flex items-center space-x-3 text-white text-sm mt-2">
+                {/* Checkbox only controls acceptance */}
+                <div
+                  className={`w-5 h-5 flex items-center justify-center rounded-lg border-2 cursor-pointer
+                  ${
+                    termsAccepted
+                      ? "bg-gradient-to-tr from-purple-500 to-blue-500 border-transparent"
+                      : "border-white/40 bg-white/10"
+                  } 
                   transition-all duration-300`}
-      onClick={() => setTermsAccepted(!termsAccepted)}
-    >
-      {termsAccepted && (
-        <svg
-          className="w-3 h-3 text-white"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          viewBox="0 0 24 24"
-        >
-          <path d="M5 13l4 4L19 7" />
-        </svg>
-      )}
-    </div>
-    <span className="ml-2 text-white text-sm">
-      I accept the{" "}
-      <button
-        type="button"
-        onClick={() => setShowTerms(true)}
-        className="text-blue-400 underline font-semibold hover:text-purple-400 transition-colors duration-300"
-      >
-        Terms & Conditions
-      </button>
-    </span>
-  </label>
-</div>
+                  onClick={() => setTermsAccepted(!termsAccepted)}
+                >
+                  {termsAccepted && (
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
 
-)}
-
+                {/* Text + modal trigger */}
+                <span className="ml-2 text-white text-sm">
+                  I accept the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowTerms(true)}
+                    className="text-blue-400 underline font-semibold hover:text-purple-400 transition-colors duration-300"
+                  >
+                    Terms & Conditions
+                  </button>
+                </span>
+              </div>
+            )}
 
             {/* Forgot password (only Login) */}
-{isLogin && (
-  <div className="text-right mt-2">
-    <button
-      type="button"
-      onClick={() => setShowForgot(true)}
-      className="inline-flex items-center gap-2 text-blue-400 hover:text-purple-400 transition-colors duration-300 text-sm font-medium"
-    >
-      <Lock className="h-4 w-4" /> {/* Key icon alternative: you can use Key instead of Lock */}
-      Forgot Password?
-    </button>
-  </div>
-)}
-
+            {isLogin && (
+              <div className="text-right mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="inline-flex items-center gap-2 text-blue-400 hover:text-purple-400 transition-colors duration-300 text-sm font-medium"
+                >
+                  <Lock className="h-4 w-4" />{" "}
+                  {/* Key icon alternative: you can use Key instead of Lock */}
+                  Forgot Password?
+                </button>
+              </div>
+            )}
 
             {/* Submit */}
             <div className="flex justify-center">
@@ -412,111 +443,105 @@ useEffect(() => {
 
       {/* Terms Modal */}
       <AnimatePresence>
-  {showTerms && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        className="relative bg-white/10 backdrop-blur-lg border border-white/20 
+        {showTerms && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative bg-white/10 backdrop-blur-lg border border-white/20 
                    rounded-2xl p-6 max-w-lg w-full sm:max-w-md md:max-w-lg shadow-2xl text-gray-200"
-      >
-        <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
-          Terms & Conditions
-        </h3>
-        <div
-          className="max-h-[60vh] overflow-y-auto pr-2 text-sm text-gray-300 space-y-3
+            >
+              <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
+                Terms & Conditions
+              </h3>
+              <div
+                className="max-h-[60vh] overflow-y-auto pr-2 text-sm text-gray-300 space-y-3
                      scrollbar-thin scrollbar-thumb-purple-500/60 scrollbar-track-white/10 rounded-lg"
-        >
-          {termsLoading && <p>Loading terms...</p>}
-          {termsError && <p className="text-red-400">{termsError}</p>}
-          {termsHtml && (
-            <div
-              dangerouslySetInnerHTML={{ __html: termsHtml }}
-              className="prose prose-invert max-w-none"
-            />
-          )}
-        </div>
+              >
+                {termsLoading && <p>Loading terms...</p>}
+                {termsError && <p className="text-red-400">{termsError}</p>}
+                {termsHtml && (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: termsHtml }}
+                    className="prose prose-invert max-w-none"
+                  />
+                )}
+              </div>
 
-        <div className="mt-6 text-right">
-          <button
-            onClick={() => setShowTerms(false)}
-            className="px-5 py-2 bg-gradient-to-r from-purple-500 to-blue-500 
+              <div className="mt-6 text-right">
+                <button
+                  onClick={() => setShowTerms(false)}
+                  className="px-5 py-2 bg-gradient-to-r from-purple-500 to-blue-500 
                        text-white rounded-lg shadow-md hover:shadow-lg 
                        transition-all duration-300"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgot && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
           >
-            Close
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
-
-
-{/* Forgot Password Modal */}
-<AnimatePresence>
-  {showForgot && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        className="relative bg-white/10 backdrop-blur-lg border border-white/20 
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative bg-white/10 backdrop-blur-lg border border-white/20 
                    rounded-2xl p-6 max-w-md w-full sm:max-w-sm md:max-w-md shadow-2xl text-gray-200"
-      >
-        <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
-          Reset Password
-        </h3>
-        <input
-          type="email"
-          placeholder="Enter your email"
-          className="w-full mb-6 px-4 py-3 bg-white/10 border border-white/30 
+            >
+              <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
+                Reset Password
+              </h3>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="w-full mb-6 px-4 py-3 bg-white/10 border border-white/30 
                      rounded-xl text-white placeholder-gray-400 focus:ring-2 
                      focus:ring-purple-400 focus:border-transparent"
-        />
+              />
 
-        <div className="flex justify-center gap-4">
-          {/* Send Reset Link Button */}
-          <button
-            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 
+              <div className="flex justify-center gap-4">
+                {/* Send Reset Link Button */}
+                <button
+                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 
                        text-white rounded-xl shadow-md hover:shadow-lg 
                        transition-all duration-300 font-semibold"
-          >
-            Send Reset Link
-          </button>
+                >
+                  Send Reset Link
+                </button>
 
-          {/* Cancel Button with Glass Style */}
-          <button
-            onClick={() => setShowForgot(false)}
-            className="px-6 py-2 bg-white/20 backdrop-blur-md border border-white/30 
+                {/* Cancel Button with Glass Style */}
+                <button
+                  onClick={() => setShowForgot(false)}
+                  className="px-6 py-2 bg-white/20 backdrop-blur-md border border-white/30 
                        text-white rounded-xl hover:bg-white/30 hover:scale-105 
                        transition-all duration-300 font-semibold shadow-lg"
-          >
-            Cancel
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
-
-
-
-
-
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

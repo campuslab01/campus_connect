@@ -5,6 +5,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ command, mode }) => ({
   plugins: [react()],
   base: mode === 'production' 
-    ? '/campus_connect'   // GitHub Pages repo name (no trailing slash)
+    ? '/campus_connect/'   // GitHub Pages repo name (no trailing slash)
     : '/',
 }));

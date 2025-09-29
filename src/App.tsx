@@ -38,15 +38,15 @@ function AppContent() {
       {isAuthenticated ? (
         <>
           <Navigation />
-          <main className="pb-20">
+          <main >
             <Routes>
-              <Route path="/" element={<Navigate to="/discover" />} />
-              <Route path="/discover" element={<DiscoverPage />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/confessions" element={<ConfessionPage />} />
-              <Route path="/likes" element={<LikesPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/" element={<Navigate to="discover" />} />
+              <Route path="discover" element={<DiscoverPage />} />
+              <Route path="chat" element={<ChatPage />} />
+              <Route path="search" element={<SearchPage />} />
+              <Route path="confessions" element={<ConfessionPage />} />
+              <Route path="likes" element={<LikesPage />} />
+              <Route path="profile" element={<ProfilePage />} />
             </Routes>
           </main>
         </>
@@ -54,15 +54,15 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<LandingPage onGetStarted={handleGetStarted} />} />
           <Route
-            path="/auth"
+            path="auth"
             element={<AuthPage onAuth={() => setIsAuthenticated(true)} />}
           />
-          <Route path="/discover" element={<Navigate to="/auth" />} />
-          <Route path="/chat" element={<Navigate to="/auth" />} />
-          <Route path="/search" element={<Navigate to="/auth" />} />
-          <Route path="/confessions" element={<Navigate to="/auth" />} />
-          <Route path="/likes" element={<Navigate to="/auth" />} />
-          <Route path="/profile" element={<Navigate to="/auth" />} />
+          <Route path="discover" element={<Navigate to="auth" />} />
+          <Route path="chat" element={<Navigate to="auth" />} />
+          <Route path="search" element={<Navigate to="auth" />} />
+          <Route path="confessions" element={<Navigate to="auth" />} />
+          <Route path="likes" element={<Navigate to="auth" />} />
+          <Route path="profile" element={<Navigate to="auth" />} />
         </Routes>
       )}
     </div>
@@ -73,7 +73,7 @@ function App() {
   return (
     <AuthProvider>
       <ChatProvider>
-        <Router basename={import.meta.env.PROD ? '/campus_connect' : '/'}>
+        <Router basename={import.meta.env.PROD ? '/campus_connect/' : '/'}>
           <AppContent />
         </Router>
       </ChatProvider>
