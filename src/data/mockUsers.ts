@@ -14,8 +14,7 @@ interface User {
   lookingFor: ('Long term' | 'Short term' | 'Friendship')[];
 }
 
-
-
+const withBase = (p: string) => `${import.meta.env.BASE_URL}${p.replace(/^\//, '')}`;
 export const mockUsers: User[] = [
   {
     id: 1,
@@ -29,9 +28,9 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Programming', 'Hiking', 'Coffee', 'Travel', 'Photography'],
     photos: [
-      '/images/catgirluser1.jpg',
-      '/images/catgirluser1S.jpg',
-      '/images/catgirluser1.jpg'
+      withBase('images/catgirluser1.jpg'),
+      withBase('images/catgirluser1S.jpg'),
+      withBase('images/catgirluser1.jpg')
     ],
     verified: true,
     lookingFor: ['Long term', 'Friendship']
@@ -48,10 +47,9 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Rock Climbing', 'Sustainability', 'Music', 'Cooking', 'Travel'],
     photos: [
-      '/images/Boyuser1.jpg',
-      '/images/Boyuser1S.jpg',
-      '/images/Boyuser1M.jpg'
-      
+      withBase('images/Boyuser1.jpg'),
+      withBase('images/Boyuser1S.jpg'),
+      withBase('images/Boyuser1M.jpg')
     ],
     verified: true,
     lookingFor: ['Short term', 'Friendship']
@@ -68,9 +66,9 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Art', 'Entrepreneurship', 'Food', 'Yoga', 'Fashion'],
     photos: [
-      '/images/girluser2A.jpg',
-      '/images/girluser2S.jpg',
-      '/images/girluser2M.jpg'
+      withBase('images/girluser2A.jpg'),
+      withBase('images/girluser2S.jpg'),
+      withBase('images/girluser2M.jpg')
     ],
     verified: false,
     lookingFor: ['Long term', 'Friendship']
@@ -87,9 +85,9 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Film', 'Photography', 'Coffee', 'Books', 'Travel'],
     photos: [
-      '/images/boyuser2A.jpg',
-      '/images/boyuser2S.jpg',
-      '/images/boyuser2M.jpg'
+      withBase('images/boyuser2A.jpg'),
+      withBase('images/boyuser2S.jpg'),
+      withBase('images/boyuser2M.jpg')
     ],
     verified: true,
     lookingFor: ['Long term']
@@ -106,9 +104,9 @@ export const mockUsers: User[] = [
     relationshipStatus: 'Single',
     interests: ['Dancing', 'Medicine', 'Reading', 'Volunteering', 'Fitness'],
     photos: [
-      '/images/girluser4A.jpg',
-      '/images/girluser4S.jpg',
-      '/images/girluser4M.jpg'
+      withBase('images/girluser4A.jpg'),
+      withBase('images/girluser4S.jpg'),
+      withBase('images/girluser4M.jpg')
     ],
     verified: false,
     lookingFor: ['Long term', 'Friendship']
