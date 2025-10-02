@@ -1,21 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Filter, MapPin, GraduationCap, Heart, X, Sparkles } from 'lucide-react';
+import { Search, Filter, MapPin, GraduationCap, Heart, X, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { mockUsers } from '../data/mockUsers';
+import { User, mockUsers } from '../data/mockUsers';
 import bgImage from "/images/login.jpeg";
+
+
 
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     gender: 'all',
     department: 'all',
-    minAge: 18,
-    maxAge: 30,
+    lookingFor: 'all',
     interests: [] as string[]
   });
   const [showFilters, setShowFilters] = useState(false);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0); 
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut: press / to focus search
@@ -44,11 +47,10 @@ const SearchPage: React.FC = () => {
 
       const matchesGender = filters.gender === 'all' || user.gender === filters.gender;
       const matchesDepartment = filters.department === 'all' || user.department === filters.department;
-      const matchesAge = user.age >= filters.minAge && user.age <= filters.maxAge;
       const matchesInterests = filters.interests.length === 0 ||
         filters.interests.some(interest => user.interests.includes(interest));
-
-      return matchesSearch && matchesGender && matchesDepartment && matchesAge && matchesInterests;
+        const matchesLookingFor = filters.lookingFor === 'all' || user.lookingFor.includes(filters.lookingFor as any);
+      return matchesSearch && matchesGender && matchesDepartment && matchesInterests && matchesLookingFor;
     });
   }, [debouncedQuery, filters]);
 
@@ -62,7 +64,7 @@ const SearchPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ gender: 'all', department: 'all', minAge: 18, maxAge: 30, interests: [] });
+    setFilters({ gender: 'all', department: 'all', lookingFor:'all', interests: [] });
   };
 
   const toggleLike = (id: string) => {
@@ -145,25 +147,20 @@ const SearchPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-white/70 mb-2">Age Range</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={filters.minAge}
-                      onChange={(e) => setFilters(prev => ({ ...prev, minAge: parseInt(e.target.value || '18', 10) }))}
-                      className="w-1/2 px-3 py-2 rounded-xl bg-white/10 text-white border border-white/10 focus:outline-none"
-                      min={18}
-                      max={30}
-                    />
-                    <input
-                      type="number"
-                      value={filters.maxAge}
-                      onChange={(e) => setFilters(prev => ({ ...prev, maxAge: parseInt(e.target.value || '30', 10) }))}
-                      className="w-1/2 px-3 py-2 rounded-xl bg-white/10 text-white border border-white/10 focus:outline-none"
-                      min={18}
-                      max={30}
-                    />
-                  </div>
+                  <div>
+  <label className="block text-xs text-white/70 mb-2">Looking For</label>
+  <select
+    value={filters.lookingFor}
+    onChange={(e) => setFilters(prev => ({ ...prev, lookingFor: e.target.value }))}
+    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/10 focus:outline-none"
+  >
+    <option value="all">All</option>
+    <option value="Long term">Long term</option>
+    <option value="Short term">Short term</option>
+    <option value="Friendship">Friendship</option>
+  </select>
+</div>
+
                 </div>
               </div>
               <div className="mt-3">
@@ -206,6 +203,7 @@ const SearchPage: React.FC = () => {
           {filteredUsers.map((user) => (
             <motion.div
               key={user.id ?? user.name}
+              onClick={() => { setSelectedUser(user); setCurrentPhotoIndex(0); }}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
@@ -249,9 +247,132 @@ const SearchPage: React.FC = () => {
             <h3 className="text-base font-medium mb-1">No results found</h3>
             <p className="text-sm">Try adjusting your search or filters</p>
           </div>
+          
         )}
+       
+       {/* Profile Model */}
+       <AnimatePresence>
+  {selectedUser && (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="relative w-full max-w-md bg-gradient-to-br from-white/10 to-white/5 rounded-3xl overflow-hidden border border-white/20 shadow-neon p-4"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+      >
+        {/* Close button */}
+        <button
+          className="absolute top-3 right-3 text-white/90 hover:text-white z-50"
+          onClick={() => setSelectedUser(null)}
+        >
+          <X size={24} />
+        </button>
+
+        {/* Photo Section with swipe */}
+        <motion.div
+          className="relative h-80 cursor-grab rounded-2xl overflow-hidden"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(event, info) => {
+            if (info.offset.x < -50 && currentPhotoIndex < selectedUser.photos.length - 1) {
+              setCurrentPhotoIndex(currentPhotoIndex + 1);
+            } else if (info.offset.x > 50 && currentPhotoIndex > 0) {
+              setCurrentPhotoIndex(currentPhotoIndex - 1);
+            }
+          }}
+        >
+          <img
+            src={selectedUser.photos[currentPhotoIndex]}
+            alt={selectedUser.name}
+            className="w-full h-full object-cover rounded-2xl"
+          />
+
+          {/* Navigation dots */}
+          <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
+            {selectedUser.photos.map((_, idx) => (
+              <div
+                key={idx}
+                className={`h-2 w-6 rounded-full pointer-events-auto cursor-pointer transition-colors duration-300 ${
+                  idx === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
+                }`}
+                onClick={() => setCurrentPhotoIndex(idx)}
+              />
+            ))}
+          </div>
+
+          {/* Prev / Next buttons - highlighted */}
+          {currentPhotoIndex > 0 && (
+            <button
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/30 hover:bg-white/60 rounded-full p-3 shadow-lg text-black"
+              onClick={() => setCurrentPhotoIndex((prev) => prev - 1)}
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
+          {currentPhotoIndex < selectedUser.photos.length - 1 && (
+            <button
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/30 hover:bg-white/60 rounded-full p-3 shadow-lg text-black"
+              onClick={() => setCurrentPhotoIndex((prev) => prev + 1)}
+            >
+              <ChevronRight size={24} />
+            </button>
+          )}
+        </motion.div>
+
+        {/* Info Section - upgraded styling */}
+        <div className="p-4 mt-4 bg-gradient-to-t from-black/60 to-transparent backdrop-blur-sm rounded-b-2xl relative z-10">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-2xl font-bold text-white">{selectedUser.name}, {selectedUser.age}</h3>
+            {selectedUser.verified && (
+              <span className="bg-neon-cyan text-black px-2 py-1 text-xs rounded-full">Verified</span>
+            )}
+          </div>
+
+          <div className="space-y-2 text-white/90 text-sm">
+            <div className="flex items-center gap-2">
+              <GraduationCap size={16} className="text-cyan-300" />
+              <span>{selectedUser.department} • {selectedUser.year}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin size={16} className="text-rose-300" />
+              <span>{selectedUser.college}</span>
+            </div>
+            <div className="mt-2"><strong>Bio:</strong> {selectedUser.bio}</div>
+            <div><strong>Looking For:</strong> {selectedUser.lookingFor.join(', ')}</div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {selectedUser.interests.map((interest, idx) => (
+                <span key={idx} className="bg-neon-blue/30 text-blue-200 text-xs px-2 py-1 rounded-full">
+                  {interest}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Like Button */}
+          <div className="absolute top-4 right-4">
+            <button
+              onClick={() => toggleLike(String(selectedUser.id ?? selectedUser.name))}
+              className={`${liked[String(selectedUser.id ?? selectedUser.name)] ? 'text-rose-400' : 'text-white/70 hover:text-white'} transition-colors`}
+            >
+              <Heart size={22} fill={liked[String(selectedUser.id ?? selectedUser.name)] ? '#fb7185' : 'none'} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
       </div>
       </div>
+
+      
   );
 };
 
