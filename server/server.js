@@ -72,12 +72,31 @@ app.use(speedLimiter);
 app.use(generalLimiter);
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://campuslab01.github.io', // ✅ GitHub Pages root domain
+  'https://campuslab01.github.io/campus_connect', // ✅ Specific project path
+  process.env.CLIENT_URL // optional dynamic environment variable
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.warn(`❌ CORS blocked request from origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

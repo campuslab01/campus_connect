@@ -89,6 +89,34 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
   try {
+
+    // const { email, password } = req.body;
+
+    // 🧪 TEMPORARY DEV TEST USER (Remove before production)
+    if (email === "dev@campus.com" && password === "campusconnect") {
+      const devUser = {
+        _id: "dev001",
+        name: "Developer",
+        email: "dev@campus.com",
+        gender: "male",
+        college: "Campus College",
+        department: "Computer Science",
+        year: "4",
+      };
+
+      const token = generateToken(devUser._id);
+      return res.status(200).json({
+        status: "success",
+        message: "Dev login successful",
+        data: {
+          user: devUser,
+          token,
+        },
+      });
+    }
+
+
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -118,6 +146,8 @@ const login = async (req, res, next) => {
         message: 'Account is deactivated'
       });
     }
+
+
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
