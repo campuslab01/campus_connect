@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import DOMPurify from "dompurify";
 import { useEffect } from "react";
-import { Heart, Mail, Lock, User, GraduationCap } from "lucide-react";
+import { Heart, Mail, Lock, User, GraduationCap, AlertCircle, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import bgImage from "/images/loginscreen.jpeg";
 import { TypeAnimation } from "react-type-animation";
+import { useAuth } from "../contexts/AuthContext";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -20,23 +21,62 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     college: "",
     department: "",
     age: "",
+    gender: "",
+    bio: "",
+    interests: [] as string[],
+    lookingFor: [] as string[],
+    relationshipStatus: "Single"
   });
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
+  const { login, register, isLoading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLogin && !termsAccepted) {
-      alert("Please accept the Terms & Conditions to continue.");
-      return;
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (!isLogin && !termsAccepted) {
+        setError("Please accept the Terms & Conditions to continue.");
+        return;
+      }
+
+      if (isLogin) {
+        await login(formData.email, formData.password);
+      } else {
+        // Prepare registration data
+        const registrationData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          age: parseInt(formData.age),
+          gender: formData.gender,
+          college: formData.college,
+          department: formData.department,
+          bio: formData.bio,
+          interests: formData.interests,
+          lookingFor: formData.lookingFor,
+          relationshipStatus: formData.relationshipStatus
+        };
+        
+        await register(registrationData);
+      }
+
+      onAuth();
+      navigate("discover");
+    } catch (error: any) {
+      setError(error.message || 'An error occurred');
+    } finally {
+      setIsSubmitting(false);
     }
-    onAuth();
-    navigate("discover");
   };
 
   const handleProfileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +136,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur[1.3px]"></div>
+
+      {/* Back to Landing Button */}
+      <motion.button
+        onClick={() => navigate('/landing')}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="absolute top-4 left-4 z-20 bg-white/20 backdrop-blur-sm border border-white/30 
+                   rounded-full p-3 text-white hover:bg-white/30 transition-all duration-300
+                   hover:scale-110 shadow-lg"
+        title="Back to Landing Page"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </motion.button>
 
       {/* Auth Card */}
       <motion.div
@@ -289,10 +343,43 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      className="px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white
+               placeholder-gray-300 focus:ring-2 focus:ring-purple-400 focus:border-transparent
+               appearance-none"
+                      required
+                    >
+                      <option value="" disabled className="text-gray-400">
+                        Gender
+                      </option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+
+                    <input
+                      type="number"
+                      name="age"
+                      placeholder="Age"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      className="px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white 
+               placeholder-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      min="18"
+                      max="30"
+                      required
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 h-5 w-5" />
+                    <select
                       name="department"
                       value={formData.department}
                       onChange={handleInputChange}
-                      className="px-4 py-3 bg-black/10 border border-white/30 rounded-xl text-white
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white
                placeholder-gray-300 focus:ring-2 focus:ring-purple-400 focus:border-transparent
                appearance-none"
                       required
@@ -324,19 +411,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                       <option value="BA Social Sci">BA Social Sci</option>
                       <option value="Other">Other</option>
                     </select>
-
-                    <input
-                      type="number"
-                      name="age"
-                      placeholder="Age"
-                      value={formData.age}
-                      onChange={handleInputChange}
-                      className="px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white 
-               placeholder-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      min="18"
-                      max="30"
-                      required
-                    />
                   </div>
                 </motion.div>
               )}
@@ -426,15 +500,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
               </div>
             )}
 
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4"
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </motion.div>
+            )}
+
             {/* Submit */}
             <div className="flex justify-center">
               <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: isSubmitting ? 1 : 1.08 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.95 }}
                 type="submit"
-                className="m-4 px-12 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg shadow-md"
+                disabled={isSubmitting || isLoading}
+                className="m-4 px-12 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLogin ? "Sign In" : "Create Account"}
+                {isSubmitting || isLoading ? "Please wait..." : (isLogin ? "Sign In" : "Create Account")}
               </motion.button>
             </div>
           </form>

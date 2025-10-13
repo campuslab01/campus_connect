@@ -1,3 +1,4 @@
+// Navigation.tsx
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -69,7 +70,7 @@ const Navigation: React.FC = () => {
 >
                       <div 
                         className={isActive 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 p-[1px] rounded-lg' 
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 p-[1px] rounded-lg' 
                           : ''
                         }
                       >
@@ -79,7 +80,7 @@ const Navigation: React.FC = () => {
                           className={`${
                             isActive 
                               ? 'text-white' 
-                              : 'text-gray-300 group-hover:text-blue-400'
+                              : 'text-white'
                           }`}
                         />
                       </div>
@@ -104,7 +105,7 @@ const Navigation: React.FC = () => {
                     <motion.span
                       className={`mt-0.5 text-[11px] md:text-xs font-medium ${
                         isActive
-                          ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600'
+                          ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500'
                           : 'text-gray-300 group-hover:text-blue-400'
                       }`}
                       initial={false}

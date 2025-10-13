@@ -1,3 +1,26 @@
+export interface Comment {
+  id: string;
+  author: string;
+  authorAvatar?: string;
+  text: string;
+  time: string;
+  likes: number;
+  isLiked: boolean;
+  isAnonymous: boolean;
+  replies: Reply[];
+}
+
+export interface Reply {
+  id: string;
+  author: string;
+  authorAvatar?: string;
+  text: string;
+  time: string;
+  likes: number;
+  isLiked: boolean;
+  isAnonymous: boolean;
+}
+
 export interface Confession {
   id: number;
   author?: string;
@@ -10,11 +33,7 @@ export interface Confession {
   isAnonymous: boolean;
   college: string;
   tags?: string[];
-  recentComments?: {
-    author: string;
-    text: string;
-    time: string;
-  }[];
+  commentsList: Comment[];
 }
 
 export const mockConfessions: Confession[] = [
@@ -27,9 +46,38 @@ export const mockConfessions: Confession[] = [
     isAnonymous: true,
     college: 'Stanford University',
     tags: ['crush', 'chemistry', 'nervous'],
-    recentComments: [
-      { author: 'Sarah M.', text: 'You should totally talk to them! Maybe ask about the lab assignment?', time: '1h ago' },
-      { author: 'Anonymous', text: 'Vanilla scent is the best! Go for it 💪', time: '45m ago' }
+    commentsList: [
+      {
+        id: 'c1',
+        author: 'Sarah M.',
+        authorAvatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=400',
+        text: 'You should totally talk to them! Maybe ask about the lab assignment?',
+        time: '1h ago',
+        likes: 3,
+        isLiked: false,
+        isAnonymous: false,
+        replies: [
+          {
+            id: 'r1',
+            author: 'Anonymous',
+            text: 'I tried that but I just froze up 😅',
+            time: '45m ago',
+            likes: 1,
+            isLiked: false,
+            isAnonymous: true
+          }
+        ]
+      },
+      {
+        id: 'c2',
+        author: 'Anonymous',
+        text: 'Vanilla scent is the best! Go for it 💪',
+        time: '45m ago',
+        likes: 5,
+        isLiked: true,
+        isAnonymous: true,
+        replies: []
+      }
     ]
   },
   {
@@ -42,7 +90,30 @@ export const mockConfessions: Confession[] = [
     comments: 23,
     isAnonymous: false,
     college: 'UC Berkeley',
-    tags: ['single', 'selfcare', 'growth']
+    tags: ['single', 'selfcare', 'growth'],
+    commentsList: [
+      {
+        id: 'c3',
+        author: 'Anonymous',
+        text: 'YES! This is so important. Being single is not a flaw!',
+        time: '3h ago',
+        likes: 12,
+        isLiked: true,
+        isAnonymous: true,
+        replies: []
+      },
+      {
+        id: 'c4',
+        author: 'Mike_2024',
+        authorAvatar: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400',
+        text: 'Love this energy! Focus on yourself first 💪',
+        time: '2h ago',
+        likes: 8,
+        isLiked: false,
+        isAnonymous: false,
+        replies: []
+      }
+    ]
   },
   {
     id: 3,
@@ -53,9 +124,28 @@ export const mockConfessions: Confession[] = [
     isAnonymous: true,
     college: 'USC',
     tags: ['awkward', 'TA', 'dating'],
-    recentComments: [
-      { author: 'Mike_2024', text: 'Happened to my friend too! They waited until after the semester', time: '3h ago' },
-      { author: 'Anonymous', text: 'Don\'t drop! Just keep it professional for now', time: '2h ago' }
+    commentsList: [
+      {
+        id: 'c5',
+        author: 'Mike_2024',
+        authorAvatar: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400',
+        text: 'Happened to my friend too! They waited until after the semester',
+        time: '3h ago',
+        likes: 7,
+        isLiked: false,
+        isAnonymous: false,
+        replies: []
+      },
+      {
+        id: 'c6',
+        author: 'Anonymous',
+        text: 'Don\'t drop! Just keep it professional for now',
+        time: '2h ago',
+        likes: 4,
+        isLiked: true,
+        isAnonymous: true,
+        replies: []
+      }
     ]
   },
   {
@@ -66,7 +156,19 @@ export const mockConfessions: Confession[] = [
     comments: 31,
     isAnonymous: true,
     college: 'UCLA',
-    tags: ['longdistance', 'relationships', 'college']
+    tags: ['longdistance', 'relationships', 'college'],
+    commentsList: [
+      {
+        id: 'c7',
+        author: 'Anonymous',
+        text: 'I feel this so much! Video calls help but it\'s not the same 😢',
+        time: '6h ago',
+        likes: 9,
+        isLiked: false,
+        isAnonymous: true,
+        replies: []
+      }
+    ]
   },
   {
     id: 5,
@@ -78,7 +180,19 @@ export const mockConfessions: Confession[] = [
     comments: 28,
     isAnonymous: false,
     college: 'Stanford University',
-    tags: ['wholesome', 'finals', 'kindness']
+    tags: ['wholesome', 'finals', 'kindness'],
+    commentsList: [
+      {
+        id: 'c8',
+        author: 'Anonymous',
+        text: 'You\'re welcome! 😊 Keep spreading the positivity!',
+        time: '10h ago',
+        likes: 15,
+        isLiked: true,
+        isAnonymous: true,
+        replies: []
+      }
+    ]
   },
   {
     id: 6,
@@ -89,9 +203,28 @@ export const mockConfessions: Confession[] = [
     isAnonymous: true,
     college: 'UC Berkeley',
     tags: ['ghosting', 'anxiety', 'dating'],
-    recentComments: [
-      { author: 'Emma_22', text: 'Just be honest! Most people understand college stress', time: '12h ago' },
-      { author: 'Anonymous', text: 'Send a cute meme and apologize. Works every time!', time: '8h ago' }
+    commentsList: [
+      {
+        id: 'c9',
+        author: 'Emma_22',
+        authorAvatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=400',
+        text: 'Just be honest! Most people understand college stress',
+        time: '12h ago',
+        likes: 6,
+        isLiked: false,
+        isAnonymous: false,
+        replies: []
+      },
+      {
+        id: 'c10',
+        author: 'Anonymous',
+        text: 'Send a cute meme and apologize. Works every time!',
+        time: '8h ago',
+        likes: 11,
+        isLiked: true,
+        isAnonymous: true,
+        replies: []
+      }
     ]
   }
 ];

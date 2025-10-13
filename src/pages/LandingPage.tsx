@@ -1,307 +1,514 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { Heart, X, MessageCircle, ChevronLeft, ChevronRight, MapPin, GraduationCap } from 'lucide-react';
-import { mockUsers } from '../data/mockUsers';
+import React, { useRef, useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import { Heart, Users, MessageCircle, Shield, ArrowRight } from "lucide-react";
+import { TypeAnimation } from "react-type-animation";
+import { Pagination, Navigation } from "swiper/modules";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
+import landingScreenOne from "/images/landingDate.jpeg";
+import landingScreenTwo from "/images/screenone.jpeg";
+import landingScreenThree from "/images/screentwo.jpeg";
+import landingScreenFour from "/images/screenthree.jpeg";
 
-const DiscoverPage: React.FC = () => {
-  const [currentUserIndex, setCurrentUserIndex] = useState(0);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [swipeCount, setSwipeCount] = useState(0);
-  const [showLimitModal, setShowLimitModal] = useState(false);
-  const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
 
-  const currentUser = mockUsers[currentUserIndex];
+interface LandingPageProps {
+  onGetStarted: () => void;
+}
 
-  const getPhotoInfo = (photoIndex: number) => {
-    switch (photoIndex) {
-      case 0:
-        return {
-          title: 'Basic Info',
-          details: [
-            { label: 'Name', value: currentUser.name },
-            { label: 'Age', value: `${currentUser.age}` },
-            { label: 'College', value: currentUser.college }
-          ]
-        };
-      case 1:
-        return {
-          title: 'Academic Info',
-          details: [
-            { label: 'Bio', value: currentUser.bio },
-            { label: 'Department', value: currentUser.department },
-            { label: 'Year', value: currentUser.year }
-          ]
-        };
-      case 2:
-        return {
-          title: 'Preferences',
-          details: [
-            { label: 'Status', value: currentUser.relationshipStatus },
-            { label: 'Interests', value: currentUser.interests.join(', ') }
-          ]
-        };
-      default:
-        return { title: '', details: [] };
+
+
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+  const swiperRef = useRef<any>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [screen3Triggered, setScreen3Triggered] = useState(false);
+
+  // Debug function to reset app state
+  const resetAppState = () => {
+    localStorage.removeItem('hasLaunchedBefore');
+    localStorage.removeItem('token');
+    localStorage.removeItem('tokenTimestamp');
+    window.location.reload();
+  };
+
+  const goToNextSlide = (slideIndex: number) => {
+    if (swiperRef.current && swiperRef.current.swiper) {
+      swiperRef.current.swiper.slideTo(slideIndex, 1200); // 1200ms smooth transition
+
+   }
+  };
+  
+  
+
+  const featureThree = [
+    {
+      icon: Heart,
+      title: "Matchmaking ",
+      description:
+        "Find new date in your campus facilitates opportunities for students to meet and connect within their campus community through organized events or platforms, promoting meaningful and safe social interactions."
     }
-  };
+  ];
+  
 
-  const nextPhoto = () => setCurrentPhotoIndex((prev) => (prev + 1) % 3);
-  const prevPhoto = () => setCurrentPhotoIndex((prev) => (prev - 1 + 3) % 3);
-
-  const handleAction = (action: 'like' | 'dislike' | 'dm') => {
-    if (swipeCount >= 15 && action !== 'dm') {
-      setShowLimitModal(true);
-      return;
-    }
-
-    setIsAnimating(true);
-    if (action !== 'dm') setSwipeCount((prev) => prev + 1);
-
-    setTimeout(() => {
-      setCurrentUserIndex((prev) => (prev + 1) % mockUsers.length);
-      setCurrentPhotoIndex(0);
-      setIsAnimating(false);
-      setDragDirection(null);
-    }, 300);
-  };
-
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 100;
-    if (info.offset.x > threshold) handleAction('like');
-    else if (info.offset.x < -threshold) handleAction('dislike');
-  };
-
-  const photoInfo = getPhotoInfo(currentPhotoIndex);
-
-  const cardVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 300 : -300,
-      opacity: 0,
-      scale: 0.8,
-      rotate: direction > 0 ? 10 : -10
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      rotate: 0,
-      transition: { type: 'spring', stiffness: 300, damping: 30 }
+  const featuresTwo = [
+    {
+      icon: Users,
+      title: "Anonymous Confessions",
+      description:
+        "Share your deepest thoughts anonymously and discover others with similar experiences. Build connections through vulnerability and authenticity",
     },
-    exit: (direction: number) => ({
-      x: direction < 0 ? 300 : -300,
-      opacity: 0,
-      scale: 0.8,
-      rotate: direction < 0 ? 10 : -10,
-      transition: { duration: 0.3 }
-    })
-  };
+    {
+      icon: Heart,
+      title: "Smart Matchings ",
+      description:
+        "AI-powered matching connects you with compatible students from your college and nearby campuses based on interests, academic goals, and personality",
+  }
+    
+  ];
 
-  return (
-    <div className="max-w-lg mx-auto p-4 pt-6">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentUserIndex}
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
-          variants={cardVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          custom={dragDirection === 'right' ? 1 : dragDirection === 'left' ? -1 : 0}
-          drag="x"
-          dragElastic={0.2}
-          onDragEnd={handleDragEnd}
-          whileDrag={{
-            scale: 1.05,
-            rotate: dragDirection === 'right' ? 5 : dragDirection === 'left' ? -5 : 0
-          }}
-          onDrag={(e, info) => {
-            if (info.offset.x > 50) setDragDirection('right');
-            else if (info.offset.x < -50) setDragDirection('left');
-            else setDragDirection(null);
-          }}
-        >
-          {/* Photo Section */}
-          <div className="relative h-96 sm:h-[500px] md:h-[600px]">
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={currentPhotoIndex}
-                src={currentUser.photos[currentPhotoIndex]}
-                alt={`${currentUser.name} - Photo ${currentPhotoIndex + 1}`}
-                className="w-full h-full object-cover"
-                initial={{ opacity: 0, scale: 1.1 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-              />
-            </AnimatePresence>
+ const features = [
+    {
+      icon: MessageCircle,
+      title: " Find Friend",
+      description:
+"Connect with new friends, like-minded people, and potential co-founders on your campus."    },
+    {
+      icon: Shield,
+      title: "Verified Profiles",
+      description:
+        "Mandatory college email verification and optional photo verification ensure you're connecting with real students, not fake profiles",
+    },
+  ];
 
-            {/* Photo Navigation & Verified */}
-            <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
-              <div className="flex space-x-1">
-                {[0, 1, 2].map((index) => (
-                  <motion.div
-                    key={index}
-                    className={`h-1 w-6 sm:w-12 rounded-full ${index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'}`}
-                    animate={{
-                      backgroundColor: index === currentPhotoIndex ? '#ffffff' : 'rgba(255,255,255,0.5)'
-                    }}
-                    transition={{ duration: 0.3 }}
-                  />
-                ))}
-              </div>
-              {currentUser.verified && (
-                <motion.div
-                  className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-medium"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.5, type: 'spring' }}
-                >
-                  ✓ Verified
-                </motion.div>
-              )}
-            </div>
+ const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.2, delayChildren: 0.3 },
+    },
+ };
 
-            {/* Prev/Next */}
-            <motion.button
-              onClick={prevPhoto}
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full p-2 sm:p-3"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <ChevronLeft size={24} />
-            </motion.button>
-            <motion.button
-              onClick={nextPhoto}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full p-2 sm:p-3"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <ChevronRight size={24} />
-            </motion.button>
-
-            {/* Swipe Count */}
-            <div className="absolute top-4 right-4">
-              <motion.div
-                className="bg-black/50 text-white px-3 py-1 rounded-full text-xs"
-                animate={{ scale: swipeCount >= 15 ? [1, 1.2, 1] : 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                Swipes: {swipeCount}/15
-              </motion.div>
-            </div>
-
-            {/* Drag Indicators */}
-            <AnimatePresence>
-              {dragDirection === 'right' && (
-                <motion.div className="absolute inset-0 bg-green-500/20 flex items-center justify-center"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                >
-                  <motion.div
-                    className="bg-green-500 text-white p-4 rounded-full"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 0.6 }}
-                  >
-                    <Heart size={32} />
-                  </motion.div>
-                </motion.div>
-              )}
-              {dragDirection === 'left' && (
-                <motion.div className="absolute inset-0 bg-red-500/20 flex items-center justify-center"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                >
-                  <motion.div
-                    className="bg-red-500 text-white p-4 rounded-full"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 0.6 }}
-                  >
-                    <X size={32} />
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Info Section */}
-          <motion.div className="p-6" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
-            <div className="mb-4">
-              <motion.h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2" key={photoInfo.title}
-                initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.3 }}>
-                {photoInfo.title}
-              </motion.h3>
-              <div className="space-y-2">
-                {photoInfo.details.map((detail, index) => (
-                  <motion.div key={index} className="flex justify-between text-sm sm:text-base"
-                    initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: index * 0.1 + 0.4 }}>
-                    <span className="text-gray-600 font-medium">{detail.label}:</span>
-                    <span className="text-gray-800">{detail.value}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            {/* Distance & Match */}
-            <motion.div className="flex items-center space-x-4 mb-4 text-sm text-gray-600"
-              initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }}>
-              <div className="flex items-center space-x-1">
-                <MapPin size={14} />
-                <span>{currentUser.distance} away</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <GraduationCap size={14} />
-                <span>Same campus</span>
-              </div>
-            </motion.div>
-
-            {/* Action Buttons */}
-            <motion.div className="flex justify-center space-x-6"
-              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
-              <motion.button onClick={() => handleAction('dislike')}
-                className="bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded-full p-4 transition-all duration-300 transform hover:scale-110">
-                <X size={24} />
-              </motion.button>
-              <motion.button onClick={() => handleAction('dm')}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full p-4 transition-all duration-300 transform hover:scale-110">
-                <MessageCircle size={24} />
-              </motion.button>
-              <motion.button onClick={() => handleAction('like')}
-                className="bg-pink-100 hover:bg-pink-200 text-pink-600 rounded-full p-4 transition-all duration-300 transform hover:scale-110">
-                <Heart size={24} />
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Premium Limit Modal */}
-      <AnimatePresence>
-        {showLimitModal && (
-          <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="bg-white rounded-2xl p-6 max-w-sm w-full"
-              initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-              <motion.h3 className="text-xl font-bold text-gray-800 mb-4"
-                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                Daily Limit Reached
-              </motion.h3>
-              <motion.p className="text-gray-600 mb-6"
-                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                You've reached your daily limit of 15 swipes. Upgrade to Premium for unlimited swipes!
-              </motion.p>
-              <div className="space-y-3">
-                <motion.button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>Upgrade to Premium</motion.button>
-                <motion.button onClick={() => setShowLimitModal(false)}
-                  className="w-full bg-gray-100 text-gray-600 font-medium py-3 rounded-xl"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>Continue Tomorrow</motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  const itemVariants = {
+    hidden: { y: 50, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100, damping: 12 },
+    },
 };
 
-export default DiscoverPage;
+  const floatingVariants = {
+    animate: {
+      y: [-10, 10, -10],
+      transition: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+ },
+  };
+
+  const ScreenWrapper: React.FC<{
+    bg: string;
+    children: React.ReactNode;
+    scrollable?: boolean;
+    index?: number;
+  }> = ({ bg, children, scrollable, index }) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (scrollable && activeIndex === index) {
+        if (index === 2 && !screen3Triggered) {
+          setScreen3Triggered(true);
+        }
+
+        const scrollContainer = scrollRef.current;
+        if (!scrollContainer) return;
+
+        let start: number | null = null;
+        const duration = 5000;
+
+        const animateScroll = (timestamp: number) => {
+          if (start === null) start = timestamp;
+          const progress = (timestamp - start) / duration;
+          scrollContainer.scrollTop =
+            progress *
+            (scrollContainer.scrollHeight - scrollContainer.clientHeight);
+
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          } else {
+            swiperRef.current?.slideNext();
+          }
+        };
+
+        scrollContainer.scrollTop = 0;
+        requestAnimationFrame(animateScroll);
+      } else {
+        if (index === 2) {
+          setScreen3Triggered(false);
+        }
+      }
+    }, [activeIndex, scrollable, index]);
+
+    return (
+      <div className="relative w-full min-h-screen flex flex-col">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${bg})` }}
+        />
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+        <div
+          ref={scrollRef}
+          className={`relative z-10 w-full flex flex-col ${
+            scrollable ? "overflow-y-auto h-screen" : "h-screen"
+          }`}
+        >
+          {children}
+        </div>
+      </div>
+    );
+ };
+
+  return (
+    <motion.div
+      className="min-h-screen overflow-x-hidden"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      {/* Debug Button - Only show in development */}
+      {import.meta.env.DEV && (
+        <button
+          onClick={resetAppState}
+          className="fixed top-4 right-4 z-50 bg-red-500 text-white px-3 py-1 rounded text-xs
+                   hover:bg-red-600 transition-colors"
+          title="Reset App State (Dev Only)"
+        >
+          Reset App
+        </button>
+      )}
+      <Swiper
+        ref={swiperRef}
+        spaceBetween={0}
+        slidesPerView={1}
+        speed={1200}
+        pagination={{ clickable: true }}
+        navigation={{
+          nextEl: ".swiper-button-next",
+          prevEl: ".swiper-button-prev",
+        }}
+        modules={[Pagination, Navigation]}
+        style={{ minHeight: "100vh" }}
+        className="relative group"
+        allowTouchMove={false}
+        onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
+      >
+        {/* Navigation Buttons */}
+        <div className="swiper-button-next absolute right-8 top-1/2 -translate-y-1/2 z-20 opacity-80 hover:opacity-100 transition-opacity duration-300">
+          <div
+            className="p-4 rounded-full flex items-center justify-center 
+               bg-black/40 hover:bg-gradient-to-r hover:from-yellow-400 hover:to-orange-400 
+               hover:shadow-lg hover:scale-110 transition-all duration-300"
+          >
+            <ArrowRight size={15} className="text-white" />
+          </div>
+        </div>
+
+        <div className="swiper-button-prev absolute left-8 top-1/2 -translate-y-1/2 z-20 opacity-80 hover:opacity-100 transition-opacity duration-300">
+          <div
+            className="p-4 rounded-full flex items-center justify-center 
+               bg-black/40 hover:bg-gradient-to-r hover:from-yellow-400 hover:to-orange-400 
+               hover:shadow-lg hover:scale-110 transition-all duration-300 rotate-180"
+          >
+            <ArrowRight size={15} className="text-white" />
+          </div>
+        </div>
+
+        {/* Screen 1: Hero */}
+        <SwiperSlide>
+          <ScreenWrapper bg={landingScreenOne}>
+            <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
+              <motion.div className="text-center" variants={itemVariants}>
+                <motion.div
+                  className="flex justify-center items-center mb-2"
+                  variants={floatingVariants}
+                  animate="animate"
+                >
+                <motion.div
+                    className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full p-4 shadow-xl"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Heart className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+                  </motion.div>
+                </motion.div>
+                <motion.h1
+                  className="text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-2 leading-tight"
+                  variants={itemVariants}
+                >
+                  Campus
+                  <motion.span
+                    className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent"
+               animate={{
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                  }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    {" "}
+                    Connection
+                  </motion.span>
+                </motion.h1>
+
+                {/* Typing animation */}
+                <TypeAnimation
+                  sequence={[
+                    "Make new friends",
+                    1500,
+                    "Explore your campus",
+                    2000,
+                    "Find your date",
+                    2500,
+                    "Find your business partner",
+                    3000,
+                  ]}
+                  wrapper="span"
+                  cursor={true}
+                  repeat={Infinity}
+                  className="block text-center mb-3
+             text-xl sm:text-2xl md:text-2xl lg:text-2sxl
+             font-extrabold tracking-wide
+             text-white"
+                />
+                <motion.p
+                  className="text-center 
+             text-sm sm:text-base md:text-lg lg:text-xl 
+             leading-relaxed sm:leading-loose 
+             text-white/90 font-medium tracking-wide 
+             mb-8 max-w-3xl mx-auto px-4"
+                  variants={itemVariants}
+               >
+                  More than just dating – Find friends, partners, and even your
+                  future co-founder. A space where college connections turn into
+                  lifelong bonds.
+                </motion.p>
+
+                <motion.button
+  onClick={() => goToNextSlide(1)} // Navigate from Screen 1 to Screen 2
+  className="bg-white text-purple-600 font-bold py-3 px-6 sm:py-4 sm:px-8 rounded-full text-base sm:text-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-2 mx-auto"
+>
+  Get Started
+  <motion.div
+    animate={{ x: [0, 5, 0] }}
+    transition={{ duration: 1.5, repeat: Infinity }}
+  >
+    <ArrowRight size={20} />
+  </motion.div>
+</motion.button>
+
+
+              </motion.div>
+           </div>
+          </ScreenWrapper>
+        </SwiperSlide>
+
+        {/* Screen 2: Features Grid */}
+        <SwiperSlide>
+          <ScreenWrapper bg={landingScreenTwo}>
+            <div className="container mx-auto px-4 py-12 min-h-screen flex items-center justify-center">
+              <motion.div
+                className="w-full flex justify-center"
+                variants={containerVariants}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 justify-items-center max-w-4xl mx-auto">
+                  {features.map((feature, index) => (
+                    <motion.div
+                      key={index}
+ className="relative bg-white/20 backdrop-blur-sm border border-white/20 
+             rounded-2xl p-6 text-white shadow-2xl 
+             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"                      variants={itemVariants}
+                    >
+                      {/* Icon */}
+                      <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
+                        <motion.div
+                          animate={{ rotate: [-15, 15, -15] }} // swing like pendulum
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                          style={{ transformOrigin: "bottom center" }} // pivot point
+                        >
+                          <feature.icon className="h-6 w-6 text-white" />
+                        </motion.div>
+                      </div>
+
+                      {/* Title */}
+                      <motion.h3
+                        className="text-xl font-extrabold mb-3 text-center
+             bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400
+             bg-clip-text text-transparent tracking-wide drop-shadow-sm"
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        {feature.title}
+                      </motion.h3>
+
+                      {/* Description */}
+                      <p className="text-white/80 text-sm sm:text-base text-center leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </ScreenWrapper>
+        </SwiperSlide>
+       {/* Screen 3: Features Grid Two */}
+        <SwiperSlide>
+          <ScreenWrapper bg={landingScreenThree}>
+            <div className="container mx-auto px-4 py-12 min-h-screen flex items-center justify-center">
+             <motion.div
+                className="w-full flex justify-center"
+                variants={containerVariants}
+             >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 justify-items-center max-w-4xl mx-auto">
+                  {featuresTwo.map((feature, index) => (
+                    <motion.div
+                      key={index}
+                      className="relative bg-white/20 backdrop-blur-sm border border-white/20 
+             rounded-2xl p-6 text-white shadow-2xl 
+             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"                      variants={itemVariants}
+                    >
+                      {/* Icon */}
+                      <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
+                        <motion.div
+                          animate={{ rotate: [-15, 15, -15] }} // pendulum swing
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                          style={{ transformOrigin: "bottom center" }}
+                        >
+                          <feature.icon className="h-6 w-6 text-white" />
+                        </motion.div>
+                      </div>
+
+                      {/* Title */}
+                      <motion.h3
+                        className="text-xl font-extrabold mb-3 text-center
+                           bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400
+                           bg-clip-text text-transparent tracking-wide drop-shadow-sm"
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        {feature.title}
+                      </motion.h3>
+
+                      {/* Description */}
+                      <p className="text-white/80 text-sm sm:text-base text-center leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </ScreenWrapper>
+        </SwiperSlide>
+
+ {/* Screen 4: Feature Three */}
+<SwiperSlide>
+  <ScreenWrapper bg={landingScreenFour}>
+    <div className="container mx-auto px-4 py-12 min-h-screen flex items-center justify-center">
+      <motion.div className="w-full flex justify-center" variants={containerVariants}>
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 gap-8 justify-items-center max-w-md w-full mx-auto">
+          {featureThree.map((feature, index) => (
+            <motion.div
+              key={index}
+              className="relative bg-white/20 backdrop-blur-sm border border-white/20 
+             rounded-2xl p-6 text-white shadow-2xl 
+             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
+              variants={itemVariants}
+            >
+              {/* Icon - now matches Screen 3 */}
+              <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
+                <motion.div
+                  animate={{ rotate: [-10, 10, -10] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ transformOrigin: "bottom center" }}
+           >
+                  <feature.icon className="h-6 w-6 text-white" />
+               </motion.div>
+              </div>
+           {/* Title */}
+              <motion.h3
+                className="text-xl font-extrabold mb-3 text-center
+                           bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400
+                           bg-clip-text text-transparent tracking-wide drop-shadow-sm"
+                variants={itemVariants}
+                whileHover={{ scale: 1.05 }}
+              >
+                {feature.title}
+                </motion.h3>
+            {/* Description */}
+              <p className="text-white/100 text-sm sm:text-base text-center leading-relaxed">
+                {feature.description}
+              </p>
+          </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  </ScreenWrapper>
+</SwiperSlide>
+
+
+
+        {/* Screen 5: CTA */}
+        <SwiperSlide>
+          <ScreenWrapper bg={landingScreenFour}>
+            <div className="container mx-auto px-4 py-12 min-h-screen flex flex-col items-center justify-center text-center">
+              <motion.h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                Ready to Find Your Connection?
+              </motion.h2>
+              <motion.p
+  className="text-white/80 mb-8 
+             text-sm sm:text-base md:text-lg lg:text-xl 
+             leading-relaxed sm:leading-loose 
+             max-w-2xl mx-auto px-6
+             relative z-30"
+>
+  Turn your college life from boring to exciting – Discover new connections,
+  opportunities, and experiences with Campus Connection.
+</motion.p>
+
+              <motion.button
+  onClick={onGetStarted}
+  className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-bold py-3 px-8 sm:py-4 sm:px-12 rounded-full text-base sm:text-lg shadow-xl"
+  initial={{ scale: 1 }}
+  animate={{
+    scale: [1, 1.05, 1],
+    boxShadow: [
+      "0 0 10px rgba(255, 165, 0, 0.4)",
+      "0 0 20px rgba(255, 165, 0, 0.6)",
+      "0 0 10px rgba(255, 165, 0, 0.4)",
+    ],
+  }}
+  transition={{
+    duration: 1.5,
+    repeat: Infinity,
+    ease: "easeInOut",
+  }}
+>
+  Start Connecting Today
+</motion.button>
+
+            </div>
+          </ScreenWrapper>
+        </SwiperSlide>
+      </Swiper>
+    </motion.div>
+);
+};
+
+export default LandingPage;

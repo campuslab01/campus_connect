@@ -1,10 +1,21 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import api from '../config/axios';
 
 interface User {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   college: string;
+  department?: string;
+  age?: number;
+  bio?: string;
+  interests?: string[];
+  lookingFor?: string[];
+  relationshipStatus?: string;
+  profileImage?: string;
+  isActive: boolean;
+  createdAt: string;
+  lastSeen: string;
 }
 
 interface AuthContextType {
@@ -13,6 +24,7 @@ interface AuthContextType {
   register: (userData: any) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,22 +45,94 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const tokenTimestamp = localStorage.getItem('tokenTimestamp');
+    
+    if (token && tokenTimestamp) {
+      // Check if token is expired (5 hours = 5 * 60 * 60 * 1000 milliseconds)
+      const tokenAge = Date.now() - parseInt(tokenTimestamp);
+      const fiveHours = 5 * 60 * 60 * 1000;
+      
+      if (tokenAge > fiveHours) {
+        // Token expired, clear it
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenTimestamp');
+        setUser(null);
+      } else {
+        // Token is still valid, verify it
+        verifyToken();
+      }
+    }
+  }, []);
+
+  // Set up periodic session timeout checker
+  useEffect(() => {
+    const checkSessionTimeout = () => {
+      const token = localStorage.getItem('token');
+      const tokenTimestamp = localStorage.getItem('tokenTimestamp');
+      
+      if (token && tokenTimestamp) {
+        const tokenAge = Date.now() - parseInt(tokenTimestamp);
+        const fiveHours = 5 * 60 * 60 * 1000;
+        
+        if (tokenAge > fiveHours) {
+          // Session expired, log out user
+          localStorage.removeItem('token');
+          localStorage.removeItem('tokenTimestamp');
+          setUser(null);
+          console.log('Session expired after 5 hours');
+        }
+      }
+    };
+
+    // Check every 5 minutes
+    const interval = setInterval(checkSessionTimeout, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const verifyToken = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await api.get('/auth/me');
+
+      if (response.data.status === 'success') {
+        setUser(response.data.data.user);
+      }
+    } catch (error) {
+      // Token is invalid, remove it
+      localStorage.removeItem('token');
+      setUser(null);
+    }
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockUser: User = {
-        id: 1,
-        name: 'Alex Johnson',
-        email: email,
-        college: 'Stanford University'
-      };
-      
-      setUser(mockUser);
-    } catch (error) {
-      throw new Error('Login failed');
+      const response = await api.post('/auth/login', {
+        email,
+        password
+      });
+
+      if (response.data.status === 'success') {
+        const { user: userData, token } = response.data.data;
+        
+        // Store token and timestamp in localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('tokenTimestamp', Date.now().toString());
+        
+        // Set user in context
+        setUser(userData);
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Login failed';
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -57,26 +141,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockUser: User = {
-        id: 1,
-        name: userData.name,
-        email: userData.email,
-        college: userData.college
-      };
-      
-      setUser(mockUser);
-    } catch (error) {
-      throw new Error('Registration failed');
+      const response = await api.post('/auth/register', userData);
+
+      if (response.data.status === 'success') {
+        const { user: newUser, token } = response.data.data;
+        
+        // Store token and timestamp in localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('tokenTimestamp', Date.now().toString());
+        
+        // Set user in context
+        setUser(newUser);
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Registration failed';
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await api.post('/auth/logout');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local state regardless of API call success
+      localStorage.removeItem('token');
+      localStorage.removeItem('tokenTimestamp');
+      setUser(null);
+    }
   };
 
   const value = {
@@ -84,7 +184,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    isLoading
+    isLoading,
+    isAuthenticated: !!user
   };
 
   return (

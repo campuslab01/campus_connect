@@ -1,0 +1,774 @@
+{
+  "info": {
+    "name": "Campus Connection API",
+    "description": "Complete API collection for Campus Connection - College Dating & Social App",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Password123\",\n  \"age\": 22,\n  \"gender\": \"male\",\n  \"college\": \"Stanford University\",\n  \"department\": \"Computer Science\",\n  \"year\": \"Senior\",\n  \"bio\": \"Love coding and hiking!\",\n  \"interests\": [\"Programming\", \"Hiking\", \"Music\"],\n  \"lookingFor\": [\"Long term\", \"Friendship\"],\n  \"relationshipStatus\": \"Single\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set('authToken', response.data.token);",
+                  "        pm.collectionVariables.set('userId', response.data.user._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Updated bio - Love coding, hiking, and good coffee!\",\n  \"interests\": [\"Programming\", \"Hiking\", \"Coffee\", \"Travel\"],\n  \"showAge\": true,\n  \"showCollege\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123\",\n  \"newPassword\": \"NewPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/search?query=john&gender=male&department=Computer Science&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "john"
+                },
+                {
+                  "key": "gender",
+                  "value": "male"
+                },
+                {
+                  "key": "department",
+                  "value": "Computer Science"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/suggestions?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "suggestions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Like User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "like"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unlike User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "like"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Likes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/likes",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "likes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Block User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/block",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "block"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Report User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"inappropriate\",\n  \"description\": \"User is sending inappropriate messages\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/report",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "report"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Get User Chats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chat?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chat/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "unread-count"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get or Create Chat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{chatId}}/messages?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "{{chatId}}", "messages"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hello! How are you doing today?\",\n  \"type\": \"text\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{chatId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "{{chatId}}", "messages"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Messages as Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{chatId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "{{chatId}}", "read"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Chat",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{chatId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "{{chatId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Confessions",
+      "item": [
+        {
+          "name": "Get Confessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/confessions?page=1&limit=20&category=love",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "category",
+                  "value": "love"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Confessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/confessions/my?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Confession by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/confessions/{{confessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "{{confessionId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Confession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"I have a crush on someone in my CS class but I'm too shy to talk to them. They always sit in the front row and ask really smart questions.\",\n  \"category\": \"love\",\n  \"isAnonymous\": true,\n  \"tags\": [\"crush\", \"shy\", \"study\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/confessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Like Confession",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/confessions/{{confessionId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "{{confessionId}}", "like"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unlike Confession",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/confessions/{{confessionId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "{{confessionId}}", "like"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"You should try to form a study group! That's a great way to get to know someone.\",\n  \"isAnonymous\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/confessions/{{confessionId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "{{confessionId}}", "comments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Report Confession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"inappropriate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/confessions/{{confessionId}}/report",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "{{confessionId}}", "report"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Confession",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/confessions/{{confessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["confessions", "{{confessionId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Upload Profile Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "src": "/path/to/image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/upload/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Multiple Images",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": "/path/to/image1.jpg"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": "/path/to/image2.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/upload/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "images"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Chat Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/chat-image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/upload/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/upload/images/{{imageUrl}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "images", "{{imageUrl}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set Profile Image",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://example.com/image.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/upload/profile-image",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "profile-image"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

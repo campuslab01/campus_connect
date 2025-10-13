@@ -1,143 +1,246 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageCircle, Share, Eye, EyeOff, Send } from 'lucide-react';
-import { mockConfessions } from '../data/mockConfessions';
+import { Heart, Eye, EyeOff, ArrowLeft, MessageCircle, Share2 } from 'lucide-react';
+import { mockConfessions, Comment, Reply } from '../data/mockConfessions';
+import CommentSection from '../components/CommentSection';
+import bgImage from '/images/login.jpeg';
+import { useNavigate } from 'react-router-dom';
 
 const ConfessionPage: React.FC = () => {
   const [showNewConfession, setShowNewConfession] = useState(false);
   const [confessionText, setConfessionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
-  const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
-  const [comment, setComment] = useState('');
   const [likedConfessions, setLikedConfessions] = useState<Set<number>>(new Set());
+  const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
+  const [confessions, setConfessions] = useState(mockConfessions);
+  const navigate = useNavigate();
 
   const handleSubmitConfession = (e: React.FormEvent) => {
     e.preventDefault();
     if (!confessionText.trim()) return;
-    
-    // Here you would submit the confession
+
     console.log('New confession:', { text: confessionText, anonymous: isAnonymous });
-    
+
     setConfessionText('');
     setShowNewConfession(false);
-  };
-
-  const handleComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comment.trim()) return;
-    
-    // Add comment logic here
-    setComment('');
   };
 
   const handleLike = (confessionId: number) => {
     setLikedConfessions(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(confessionId)) {
-        newSet.delete(confessionId);
-      } else {
-        newSet.add(confessionId);
-      }
+      if (newSet.has(confessionId)) newSet.delete(confessionId);
+      else newSet.add(confessionId);
       return newSet;
     });
   };
 
+  const handleAddComment = (confessionId: number, text: string, isAnonymous: boolean) => {
+    const newComment: Comment = {
+      id: `c${Date.now()}`,
+      author: isAnonymous ? 'Anonymous' : 'You',
+      text,
+      time: 'now',
+      likes: 0,
+      isLiked: false,
+      isAnonymous,
+      replies: []
+    };
+
+    setConfessions(prev => prev.map(confession => 
+      confession.id === confessionId 
+        ? { 
+            ...confession, 
+            comments: confession.comments + 1,
+            commentsList: [...confession.commentsList, newComment]
+          }
+        : confession
+    ));
+  };
+
+  const handleAddReply = (confessionId: number, commentId: string, text: string, isAnonymous: boolean) => {
+    const newReply: Reply = {
+      id: `r${Date.now()}`,
+      author: isAnonymous ? 'Anonymous' : 'You',
+      text,
+      time: 'now',
+      likes: 0,
+      isLiked: false,
+      isAnonymous
+    };
+
+    setConfessions(prev => prev.map(confession => 
+      confession.id === confessionId 
+        ? {
+            ...confession,
+            commentsList: confession.commentsList.map(comment =>
+              comment.id === commentId
+                ? { ...comment, replies: [...comment.replies, newReply] }
+                : comment
+            )
+          }
+        : confession
+    ));
+  };
+
+  const handleLikeComment = (confessionId: number, commentId: string) => {
+    setConfessions(prev => prev.map(confession => 
+      confession.id === confessionId 
+        ? {
+            ...confession,
+            commentsList: confession.commentsList.map(comment =>
+              comment.id === commentId
+                ? { 
+                    ...comment, 
+                    isLiked: !comment.isLiked,
+                    likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1
+                  }
+                : comment
+            )
+          }
+        : confession
+    ));
+  };
+
+  const handleLikeReply = (confessionId: number, commentId: string, replyId: string) => {
+    setConfessions(prev => prev.map(confession => 
+      confession.id === confessionId 
+        ? {
+            ...confession,
+            commentsList: confession.commentsList.map(comment =>
+              comment.id === commentId
+                ? {
+                    ...comment,
+                    replies: comment.replies.map(reply =>
+                      reply.id === replyId
+                        ? { 
+                            ...reply, 
+                            isLiked: !reply.isLiked,
+                            likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1
+                          }
+                        : reply
+                    )
+                  }
+                : comment
+            )
+          }
+        : confession
+    ));
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
+    visible: { 
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+      transition: { staggerChildren: 0.08 } 
+    },
   };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
       y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
+      transition: { type: 'spring', stiffness: 200, damping: 25 }
+    },
   };
 
   return (
     <motion.div 
-      className="max-w-lg mx-auto p-4 pt-6"
+      className="min-h-screen bg-cover bg-center relative"
+      style={{ backgroundImage: `url(${bgImage})` }}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <div className="flex justify-between items-center mb-6">
-        <motion.h2 
-          className="text-2xl font-bold text-gray-800"
-          variants={itemVariants}
-        >
-          Confessions
-        </motion.h2>
-        <motion.button
-          onClick={() => setShowNewConfession(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium px-4 py-2 rounded-xl hover:shadow-lg transition-all"
-          variants={itemVariants}
-          whileHover={{ scale: 1.05, y: -2 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          New Confession
-        </motion.button>
-      </div>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1.3px]"></div>
 
-      {/* New Confession Modal */}
-      <AnimatePresence>
-        {showNewConfession && (
-          <motion.div 
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+      <div className="relative z-10 max-w-3xl mx-auto h-screen flex flex-col">
+
+        {/* Confession Header */}
+<motion.div 
+  className="flex justify-between items-center p-4 bg-black/80 backdrop-blur-md sticky top-0 z-20 shadow-md"
+  initial={{ opacity: 0, y: -20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3 }}
+>
+  {/* Left section: optional back button */}
+  <div className="flex items-center gap-3">
+    <motion.h2 className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
+ bg-clip-text text-transparent text-xl font-semibold tracking-wide">
+      Confessions
+    </motion.h2>
+  </div>
+
+  {/* Right section: New Confession + Profile */}
+  <div className="flex items-center gap-3">
+    {/* New Confession button */}
+    <motion.button
+      onClick={() => setShowNewConfession(true)}
+      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium px-4 py-2 rounded-xl shadow-lg hover:shadow-pink-500/40 transition-all"
+      whileHover={{ scale: 1.05, y: -2 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      + Add Confession
+    </motion.button>
+
+    {/* Profile button */}
+    <button
+      onClick={() => navigate('/profile')}
+      className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md"
+    >
+      <img
+        src="/images/login.jpeg" // replace with dynamic avatar if available
+        alt="Profile"
+        className="w-full h-full object-cover"
+      />
+    </button>
+  </div>
+</motion.div>
+
+
+
+        {/* New Confession Modal */}
+        <AnimatePresence>
+          {showNewConfession && (
             <motion.div 
-              className="bg-white rounded-2xl p-6 w-full max-w-md"
-              initial={{ scale: 0.8, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <motion.h3 
-                className="text-xl font-bold text-gray-800 mb-4"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+              <motion.div 
+                className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-6 w-full max-w-md flex flex-col"
+                initial={{ scale: 0.8, y: 50 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.8, y: 50 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               >
-                Share Your Confession
-              </motion.h3>
-            
-              <form onSubmit={handleSubmitConfession}>
-                <motion.textarea
-                  value={confessionText}
-                  onChange={(e) => setConfessionText(e.target.value)}
-                  placeholder="What's on your mind? Share anonymously..."
-                  className="w-full h-32 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                  maxLength={500}
-                  initial={{ opacity: 0, y: 10 }}
+                <motion.h3 
+                  className="text-xl font-bold text-white mb-4"
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                />
-                
-                <motion.div 
-                  className="flex items-center justify-between mt-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
+                  transition={{ delay: 0.2 }}
                 >
-                  <div className="flex items-center space-x-2">
+                  Share Your Confession
+                </motion.h3>
+
+                <form onSubmit={handleSubmitConfession}>
+                  <motion.textarea
+                    value={confessionText}
+                    onChange={(e) => setConfessionText(e.target.value)}
+                    placeholder="What's on your mind? Share anonymously..."
+                    className="w-full h-32 p-3 border border-white/20 rounded-2xl bg-black/20 text-white placeholder-white/50 focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none backdrop-blur-sm"
+                    maxLength={500}
+                  />
+
+                  <motion.div className="flex items-center justify-between mt-4">
                     <motion.button
                       type="button"
                       onClick={() => setIsAnonymous(!isAnonymous)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all ${
-                        isAnonymous ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all ${
+                        isAnonymous 
+                          ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300' 
+                          : 'bg-white/10 text-white'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -147,207 +250,173 @@ const ConfessionPage: React.FC = () => {
                         {isAnonymous ? 'Anonymous' : 'Show Identity'}
                       </span>
                     </motion.button>
+                    
+                    <div className="text-sm text-white/60">
+                      {confessionText.length}/500
+                    </div>
+                  </motion.div>
+
+                  <motion.div className="flex space-x-3 mt-6">
+                    <motion.button
+                      type="button"
+                      onClick={() => setShowNewConfession(false)}
+                      className="flex-1 bg-white/10 text-white font-medium py-3 rounded-2xl hover:bg-white/20 transition-all"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium px-4 py-2 rounded-xl shadow-lg hover:shadow-pink-500/40 transition-all"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Post
+                    </motion.button>
+                  </motion.div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Confessions List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <motion.div className="space-y-4" variants={containerVariants}>
+            {confessions.map((confession, index) => (
+              <motion.div 
+                key={index}
+                className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg flex flex-col space-y-2"
+                variants={itemVariants}
+                whileHover={{ y: -2, scale: 1.01 }}
+                layout
+              >
+                <div className="flex items-start gap-3">
+                  <motion.div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    {confession.isAnonymous 
+                      ? <EyeOff size={16} /> 
+                      : <img src={confession.avatar} alt="User" className="w-full h-full rounded-full object-cover" />}
+                  </motion.div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-medium text-white truncate">
+                        {confession.isAnonymous ? 'Anonymous' : confession.author}
+                      </h4>
+                      <span className="text-xs text-white/60 ml-2">{confession.time}</span>
+                    </div>
+
+                    <p className="text-white/80 leading-relaxed">{confession.text}</p>
+
+                    {confession.tags && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {confession.tags.map((tag, idx) => (
+                          <motion.span
+                            key={idx}
+                            className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-pink-300 text-xs px-2 py-1 rounded-full"
+                            whileHover={{ scale: 1.05 }}
+                          >
+                            #{tag}
+                          </motion.span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Action buttons: Like, Comment, Share */}
+                <div className="flex justify-center h-auto items-center p-2 gap-5 mt-3 shadow-sm backdrop-blur-md border border-white/20 rounded-2xl">
+                  <motion.button
+                    onClick={() => handleLike(confession.id)}
+                    className={`flex items-center justify-center w-10 h-5 rounded-xl backdrop-blur-md border border-white/20 text-white shadow-lg transition-all ${
+                      likedConfessions.has(confession.id) ? 'bg-pink-500/30' : 'bg-white/10'
+                    }`}
+                    whileHover={{ scale: 1.15, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Heart size={14} className={likedConfessions.has(confession.id) ? 'fill-current' : ''} />
+                  </motion.button>
                   
-                  <div className="text-sm text-gray-500">
-                    {confessionText.length}/500
-                  </div>
-                </motion.div>
-                
-                <motion.div 
-                  className="flex space-x-3 mt-6"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
+                  <motion.button
+                    onClick={() => setSelectedConfession(confession.id)}
+                    className="flex items-center justify-center w-10 h-5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
+                    whileHover={{ scale: 1.15, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <MessageCircle size={14} />
+                  </motion.button>
+                  
+                  <motion.button
+                    className="flex items-center justify-center w-10 h-5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
+                    whileHover={{ scale: 1.15, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Share2 size={14} />
+                  </motion.button>
+                </div>
+
+
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        {confessions.length === 0 && (
+          <div className="text-center py-12 text-white/70">
+            <h3 className="text-base font-medium mb-1">No confessions yet</h3>
+            <p className="text-sm">Be the first to share one!</p>
+          </div>
+        )}
+      </div>
+
+      {/* Comment Section Modal */}
+      <AnimatePresence>
+        {selectedConfession && (
+          <motion.div 
+            className="fixed inset-0 bg-black/70 flex items-end z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedConfession(null)}
+          >
+            <motion.div 
+              className="bg-black/40 backdrop-blur-xl border-t border-white/20 rounded-t-3xl w-full max-h-[80vh] flex flex-col"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-white font-semibold">Comments</h3>
+                <button
+                  onClick={() => setSelectedConfession(null)}
+                  className="text-white/60 hover:text-white transition-colors"
                 >
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowNewConfession(false)}
-                    className="flex-1 bg-gray-100 text-gray-600 font-medium py-3 rounded-xl"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    type="submit"
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium py-3 rounded-xl"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Post
-                  </motion.button>
-                </motion.div>
-              </form>
+                  ✕
+                </button>
+              </div>
+
+              {/* Comment Section */}
+              {selectedConfession && (
+                <CommentSection
+                  confessionId={selectedConfession}
+                  comments={confessions.find(c => c.id === selectedConfession)?.commentsList || []}
+                  onAddComment={(text, isAnonymous) => handleAddComment(selectedConfession, text, isAnonymous)}
+                  onAddReply={(commentId, text, isAnonymous) => handleAddReply(selectedConfession, commentId, text, isAnonymous)}
+                  onLikeComment={(commentId) => handleLikeComment(selectedConfession, commentId)}
+                  onLikeReply={(commentId, replyId) => handleLikeReply(selectedConfession, commentId, replyId)}
+                />
+              )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Confessions List */}
-      <motion.div 
-        className="space-y-4"
-        variants={containerVariants}
-      >
-        {mockConfessions.map((confession, index) => (
-          <motion.div 
-            key={index} 
-            className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
-            variants={itemVariants}
-            whileHover={{ y: -2, shadow: "0 10px 25px rgba(0,0,0,0.1)" }}
-            layout={true}
-          >
-            <div className="flex items-start space-x-3 mb-3">
-              <motion.div 
-                className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-              >
-                {confession.isAnonymous ? (
-                  <EyeOff size={16} className="text-white" />
-                ) : (
-                  <img
-                    src={confession.avatar}
-                    alt="User"
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                )}
-              </motion.div>
-              
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-800">
-                    {confession.isAnonymous ? 'Anonymous' : confession.author}
-                  </h4>
-                  <span className="text-sm text-gray-500">{confession.time}</span>
-                </div>
-                
-                <p className="text-gray-700 leading-relaxed">{confession.text}</p>
-                
-                {confession.tags && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {confession.tags.map((tag, idx) => (
-                      <motion.span
-                        key={idx}
-                        className="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full"
-                        whileHover={{ scale: 1.05 }}
-                      >
-                        #{tag}
-                      </motion.span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-              <div className="flex items-center space-x-4">
-                <motion.button 
-                  onClick={() => handleLike(confession.id)}
-                  className={`flex items-center space-x-1 transition-colors ${
-                    likedConfessions.has(confession.id) 
-                      ? 'text-pink-600' 
-                      : 'text-gray-500 hover:text-pink-600'
-                  }`}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <motion.div
-                    animate={likedConfessions.has(confession.id) ? { scale: [1, 1.3, 1] } : {}}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Heart 
-                      size={16} 
-                      className={likedConfessions.has(confession.id) ? 'fill-current' : ''}
-                    />
-                  </motion.div>
-                  <span className="text-sm">{confession.likes}</span>
-                </motion.button>
-                
-                <motion.button
-                  onClick={() => setSelectedConfession(selectedConfession === index ? null : index)}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <MessageCircle size={16} />
-                  <span className="text-sm">{confession.comments}</span>
-                </motion.button>
-                
-                <motion.button 
-                  className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Share size={16} />
-                  <span className="text-sm">Share</span>
-                </motion.button>
-              </div>
-              
-              <div className="text-xs text-gray-500">
-                {confession.college}
-              </div>
-            </div>
-            
-            {/* Comments Section */}
-            {selectedConfession === index && (
-              <motion.div 
-                className="mt-4 pt-3 border-t border-gray-100"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="space-y-3 mb-3">
-                  {confession.recentComments?.map((commentItem, idx) => (
-                    <motion.div 
-                      key={idx} 
-                      className="flex items-start space-x-2"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
-                    >
-                      <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
-                      <div className="flex-1">
-                        <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-sm text-gray-700">{commentItem.text}</p>
-                        </div>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <span className="text-xs text-gray-500 font-medium">
-                            {commentItem.author}
-                          </span>
-                          <span className="text-xs text-gray-400">{commentItem.time}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                
-                <form onSubmit={handleComment} className="flex items-center space-x-2">
-                  <motion.input
-                    type="text"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Write a comment..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  />
-                  <motion.button
-                    type="submit"
-                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg p-2 transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Send size={16} />
-                  </motion.button>
-                </form>
-              </motion.div>
-            )}
-          </motion.div>
-        ))}
-      </motion.div>
     </motion.div>
   );
 };

@@ -15,6 +15,8 @@ export interface Chat {
   compatibilityScore?: number;
 }
 
+
+
 export const mockChats: Chat[] = [
   {
     id: 1,
