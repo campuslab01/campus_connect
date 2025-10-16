@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: import.meta.env.PROD 
-    ? 'https://campus-connection-api.onrender.com' 
+    ? 'https://campus-connect-api-m4fg.onrender.com' 
     : 'http://localhost:5000/api',
   timeout: 10000,
   headers: {
