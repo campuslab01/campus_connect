@@ -22,10 +22,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     department: "",
     age: "",
     gender: "",
-    bio: "",
-    interests: [] as string[],
-    lookingFor: [] as string[],
-    relationshipStatus: "Single"
   });
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -50,7 +46,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
       }
 
       if (isLogin) {
-        await login(formData.email, formData.password);
+        const result = await login(formData.email, formData.password);
+        if (result.success) {
+          onAuth();
+          navigate("/discover");
+        } else {
+          setError(result.message);
+        }
       } else {
         // Prepare registration data
         const registrationData = {
@@ -60,18 +62,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           age: parseInt(formData.age),
           gender: formData.gender,
           college: formData.college,
-          department: formData.department,
-          bio: formData.bio,
-          interests: formData.interests,
-          lookingFor: formData.lookingFor,
-          relationshipStatus: formData.relationshipStatus
+          department: formData.department
+          
         };
         
-        await register(registrationData);
+        const result = await register(registrationData);
+if (result?.success) {   // only proceed if registration succeeded
+  onAuth();
+  navigate("discover");
+} else {
+  setError(result?.message || "Registration failed. Please try again.");
+}
+
       }
 
-      onAuth();
-      navigate("discover");
     } catch (error: any) {
       setError(error.message || 'An error occurred');
     } finally {

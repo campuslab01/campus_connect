@@ -18,10 +18,17 @@ interface User {
   lastSeen: string;
 }
 
+interface AuthResult {
+  success: boolean;
+  message: string;
+  user?: User;
+}
+
+
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (userData: any) => Promise<AuthResult>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -110,59 +117,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/login', {
-        email,
-        password
-      });
-
+      const response = await api.post('/auth/login', { email, password });
+  
       if (response.data.status === 'success') {
         const { user: userData, token } = response.data.data;
-        
-        // Store token and timestamp in localStorage
+  
         localStorage.setItem('token', token);
         localStorage.setItem('tokenTimestamp', Date.now().toString());
-        
-        // Set user in context
+  
         setUser(userData);
+  
+        return { success: true, message: 'Login successful', user: userData };
       } else {
-        throw new Error(response.data.message || 'Login failed');
+        return { success: false, message: response.data.message || 'Login failed' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Login failed';
-      throw new Error(errorMessage);
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
-
-  const register = async (userData: any) => {
+  
+  const register = async (userData: any): Promise<AuthResult> => {
     setIsLoading(true);
     try {
       const response = await api.post('/auth/register', userData);
-
+  
       if (response.data.status === 'success') {
         const { user: newUser, token } = response.data.data;
-        
-        // Store token and timestamp in localStorage
+  
         localStorage.setItem('token', token);
         localStorage.setItem('tokenTimestamp', Date.now().toString());
-        
-        // Set user in context
+  
         setUser(newUser);
+  
+        return { success: true, message: 'Registration successful', user: newUser };
       } else {
-        throw new Error(response.data.message || 'Registration failed');
+        return { success: false, message: response.data.message || 'Registration failed' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Registration failed';
-      throw new Error(errorMessage);
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   const logout = async () => {
     try {
       const token = localStorage.getItem('token');

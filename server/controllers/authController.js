@@ -34,10 +34,7 @@ const register = async (req, res, next) => {
       college,
       department,
       year,
-      bio,
-      interests,
-      lookingFor,
-      relationshipStatus
+      
     } = req.body;
 
     // Check if user already exists
@@ -59,10 +56,6 @@ const register = async (req, res, next) => {
       college,
       department,
       year,
-      bio: bio || '',
-      interests: interests || [],
-      lookingFor: lookingFor || [],
-      relationshipStatus: relationshipStatus || 'Single'
     });
 
     // Generate token
@@ -89,10 +82,17 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ status: 'error', message: 'Request body missing' });
+    }
+    const { email, password } = req.body;
 
-    // const { email, password } = req.body;
 
-    // 🧪 TEMPORARY DEV TEST USER (Remove before production)
+    if (!email || !password) {
+      return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+    }
+
+    // TEMP DEV USER
     if (email === "dev@campus.com" && password === "campusconnect") {
       const devUser = {
         _id: "dev001",
@@ -108,79 +108,35 @@ const login = async (req, res, next) => {
       return res.status(200).json({
         status: "success",
         message: "Dev login successful",
-        data: {
-          user: devUser,
-          token,
-        },
+        data: { user: devUser, token },
       });
     }
 
-
-
-    // Check for validation errors
+    // Validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+      return res.status(400).json({ status: 'error', message: 'Validation failed', errors: errors.array() });
     }
 
-    const { email, password } = req.body;
-
-    // Check if user exists and include password for comparison
     const user = await User.findOne({ email }).select('+password');
-    
     if (!user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid email or password'
-      });
+      return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
     }
 
-    // Check if user is active
-    if (!user.isActive) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Account is deactivated'
-      });
-    }
-
-
-
-    // Check password
     const isPasswordValid = await user.comparePassword(password);
-    
     if (!isPasswordValid) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid email or password'
-      });
+      return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
     }
 
-    // Update last seen
-    user.lastSeen = new Date();
-    await user.save();
-
-    // Generate token
     const token = generateToken(user._id);
-
-    // Remove password from response
     const userResponse = user.getPublicProfile();
 
-    res.status(200).json({
-      status: 'success',
-      message: 'Login successful',
-      data: {
-        user: userResponse,
-        token
-      }
-    });
+    res.status(200).json({ status: 'success', message: 'Login successful', data: { user: userResponse, token } });
   } catch (error) {
     next(error);
   }
 };
+
 
 // @desc    Get current user
 // @route   GET /api/auth/me
