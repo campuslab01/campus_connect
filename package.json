@@ -18,7 +18,7 @@
     "install:all": "npm install && npm run server:install",
     "setup": "node setup.js",
     "seed": "cd server && npm run seed",
-    "start": "serve -s dist -l 3000"
+    "start": "serve -s dist -l $PORT --single"
   },
   "dependencies": {
     "@emoji-mart/react": "^1.1.1",

@@ -7,11 +7,6 @@ import bgImage from "/images/login.jpeg";
 import { Sliders } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-
-
-
-
-
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
