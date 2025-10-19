@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  define: {
+    'process.env.VITE_BASE_PATH': JSON.stringify(mode === 'production' ? '/' : '/campus_connect/'),
+  },
   base: mode === 'production' ? '/' : '/campus_connect/',
   build: {
     chunkSizeWarningLimit: 1600,
