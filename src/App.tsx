@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import SplashScreen from './components/SplashScreen';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -115,9 +115,7 @@ function App() {
   return (
     <AuthProvider>
       <ChatProvider>
-        <Router basename={import.meta.env.PROD ? '/campus_connect/' : '/'}>
-          <AppContent />
-        </Router>
+        <AppContent />
       </ChatProvider>
     </AuthProvider>
   );

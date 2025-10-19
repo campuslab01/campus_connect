@@ -6,7 +6,7 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename={process.env.VITE_BASE_PATH}>
+    <BrowserRouter basename={import.meta.env.PROD ? '/campus_connect/' : '/'}>
       <App />
     </BrowserRouter>
   </StrictMode>
