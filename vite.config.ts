@@ -2,9 +2,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: process.env.NODE_ENV === 'production' ? '/' : '/campus_connect/',
+  base: mode === 'production' ? '/' : '/campus_connect/',
   build: {
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
