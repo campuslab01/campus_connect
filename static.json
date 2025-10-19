@@ -1,5 +1,8 @@
 {
-    "routes": [
+    "rewrites": [
+      { "source": "/campus_connect/(.*)", "destination": "/$1" }
+    ],
+    "routes": [ 
       {
         "src": "/(.*\\.js)",
         "headers": { "Content-Type": "application/javascript" }
