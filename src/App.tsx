@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import SplashScreen from './components/SplashScreen';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -15,6 +15,27 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { useLenis } from './hooks/useLenis';
 
+// Layout for authenticated users
+function AuthenticatedLayout() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <Navigation />
+      <main>
+        <Outlet /> {/* Child routes will render here */}
+      </main>
+    </div>
+  );
+}
+
+// Layout for public pages
+function PublicLayout() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <Outlet /> {/* Child routes will render here */}
+    </div>
+  );
+}
+
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
   const [isFirstLaunch, setIsFirstLaunch] = useState(true);
@@ -28,8 +49,6 @@ function AppContent() {
   // Check if this is the first launch
   useEffect(() => {
     const hasLaunchedBefore = localStorage.getItem('hasLaunchedBefore');
-    console.log('hasLaunchedBefore:', hasLaunchedBefore);
-    console.log('isFirstLaunch:', isFirstLaunch);
     if (hasLaunchedBefore) {
       setIsFirstLaunch(false);
     }
@@ -38,7 +57,6 @@ function AppContent() {
   // Handle splash screen completion
   const handleSplashComplete = () => {
     setShowSplash(false);
-
   };
 
   const handleGetStarted = () => {
@@ -47,67 +65,44 @@ function AppContent() {
     navigate('auth');
   };
 
-  const handleBackToLanding = () => {
-    // Allow users to go back to landing page
-    navigate('/landing');
-  };
-
   // Show splash screen on every app start
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  // After splash, check authentication and first launch status
-  if (isAuthenticated) {
-    // User is logged in, show main app
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <Navigation />
-        <main>
-          <Routes>
-            <Route path="/" element={<Navigate to="discover" />} />
-            <Route path="discover" element={<DiscoverPage />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="search" element={<SearchPage />} />
-            <Route path="confessions" element={<ConfessionPage />} />
-            <Route path="likes" element={<LikesPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-          </Routes>
-        </main>
-      </div>
-    );
-  }
-
-  // Not authenticated - show appropriate page based on first launch
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Routes>
-        {/* Public Routes */}
+    <Routes>
+      {/* Authenticated Routes */}
+      <Route 
+        path="/" 
+        element={isAuthenticated ? <AuthenticatedLayout /> : <Navigate to="/landing" />}
+      >
+        <Route index element={<Navigate to="discover" />} />
+        <Route path="discover" element={<DiscoverPage />} />
+        <Route path="chat" element={<ChatPage />} />
+        <Route path="search" element={<SearchPage />} />
+        <Route path="confessions" element={<ConfessionPage />} />
+        <Route path="likes" element={<LikesPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      {/* Public Routes */}
+      <Route 
+        path="/landing" 
+        element={!isAuthenticated ? <PublicLayout /> : <Navigate to="/discover" />}
+      >
         <Route 
-          path="/" 
+          index 
           element={
-            (() => {
-              console.log('Rendering route /, isFirstLaunch:', isFirstLaunch);
-              // Flow 1: New user (first launch) -> Landing Page
-              // Flow 2: Registered but not logged in -> Auth Page
-              return isFirstLaunch ? (
-                <LandingPage onGetStarted={handleGetStarted} />
-              ) : (
-                <Navigate to="auth" />
-              );
-            })()
-          } 
-        />
-        <Route
-          path="landing"
-          element={<LandingPage onGetStarted={handleGetStarted} />}
-        />
-        <Route
-          path="auth"
-          element={<AuthPage onAuth={() => {}} />}
-        />
-      </Routes>
-    </div>
+            isFirstLaunch ? (
+              <LandingPage onGetStarted={handleGetStarted} />
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          } />
+      </Route>
+      <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" />} />
+    </Routes>
   );
 }
 
