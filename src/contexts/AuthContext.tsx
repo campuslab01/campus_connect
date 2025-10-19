@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import api from '../config/axios';
+import axios from 'axios';
 
 interface User {
   _id: string;
@@ -51,6 +51,11 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+    withCredentials: true,
+  });
 
   // Check for existing token on mount
   useEffect(() => {
