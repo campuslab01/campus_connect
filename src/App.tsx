@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import SplashScreen from './components/SplashScreen';
@@ -15,44 +15,14 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { useLenis } from './hooks/useLenis';
 
-// Layout for authenticated users
-function AuthenticatedLayout() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Navigation />
-      <main>
-        <Outlet /> {/* Child routes will render here */}
-      </main>
-    </div>
-  );
-}
-
-// Layout for public pages
-function PublicLayout() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Outlet /> {/* Child routes will render here */}
-    </div>
-  );
-}
-
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
-  const [isFirstLaunch, setIsFirstLaunch] = useState(true);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Initialize Lenis smooth scrolling
   useLenis();
 
   const navigate = useNavigate();
-
-  // Check if this is the first launch
-  useEffect(() => {
-    const hasLaunchedBefore = localStorage.getItem('hasLaunchedBefore');
-    if (hasLaunchedBefore) {
-      setIsFirstLaunch(false);
-    }
-  }, []);
 
   // Handle splash screen completion
   const handleSplashComplete = () => {
@@ -65,44 +35,41 @@ function AppContent() {
     navigate('auth');
   };
 
-  // Show splash screen on every app start
+  // Show splash screen on every app start, and a loading indicator while auth status is being determined
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  return (
-    <Routes>
-      {/* Authenticated Routes */}
-      <Route 
-        path="/" 
-        element={isAuthenticated ? <AuthenticatedLayout /> : <Navigate to="/landing" />}
-      >
-        <Route index element={<Navigate to="discover" />} />
-        <Route path="discover" element={<DiscoverPage />} />
-        <Route path="chat" element={<ChatPage />} />
-        <Route path="search" element={<SearchPage />} />
-        <Route path="confessions" element={<ConfessionPage />} />
-        <Route path="likes" element={<LikesPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
+  if (isLoading) {
+    // You can replace this with a proper loading spinner component
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
-      {/* Public Routes */}
-      <Route 
-        path="/landing" 
-        element={!isAuthenticated ? <PublicLayout /> : <Navigate to="/discover" />}
-      >
-        <Route 
-          index 
-          element={
-            isFirstLaunch ? (
-              <LandingPage onGetStarted={handleGetStarted} />
-            ) : (
-              <Navigate to="/auth" replace />
-            )
-          } />
-      </Route>
-      <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" />} />
-    </Routes>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {isAuthenticated && <Navigation />}
+      <main>
+        <Routes>
+          {/* Authenticated Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Navigate to="/discover" replace />} />
+            <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/confessions" element={<ConfessionPage />} />
+            <Route path="/likes" element={<LikesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+    
+          {/* Public Routes */}
+          <Route path="/landing" element={!isAuthenticated ? <LandingPage onGetStarted={handleGetStarted} /> : <Navigate to="/discover" replace />} />
+          <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" replace />} />
+    
+          {/* Fallback Route for unauthenticated users */}
+          <Route path="*" element={!isAuthenticated ? <Navigate to="/landing" replace /> : <Navigate to="/discover" replace />} />
+        </Routes>
+      </main>
+    </div>
   );
 }
 
