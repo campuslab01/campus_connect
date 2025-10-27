@@ -4,11 +4,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  define: {
-    'process.env.VITE_BASE_PATH': JSON.stringify(mode === 'production' ? '/' : '/campus_connect/'),
-  },
-  base: mode === 'production' ? '/' : '/campus_connect/',
+  base: mode === 'production' ? '/campus_connect/' : '/',
   build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: mode === 'production' ? false : 'inline',
+    minify: mode === 'production' ? 'terser' : false,
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
