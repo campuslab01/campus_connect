@@ -70,7 +70,7 @@ export default defineConfig(({ command, mode }) => ({
 Create `.env.production` file:
 ```bash
 # Production API URL
-VITE_API_URL=https://your-backend-url.com/api
+VITE_API_URL=https://campus-connect-api-m4fg.onrender.com/api
 VITE_APP_NAME=Campus Connection
 VITE_APP_VERSION=1.0.0
 ```

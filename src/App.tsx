@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
+import { useState, useCallback } from 'react'; // Import useCallback
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'; // Removed Outlet as it's not directly used here
 import Navigation from './components/Navigation';
 import SplashScreen from './components/SplashScreen';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -29,11 +29,11 @@ function AppContent() {
     setShowSplash(false);
   };
 
-  const handleGetStarted = () => {
+  const handleGetStarted = useCallback(() => { // Wrap in useCallback
     // Mark that the app has been launched before when user clicks "Get Started"
     localStorage.setItem('hasLaunchedBefore', 'true');
     navigate('auth');
-  };
+  }, [navigate]); // navigate is a stable function from react-router-dom
 
   // Show splash screen on every app start, and a loading indicator while auth status is being determined
   if (showSplash) {

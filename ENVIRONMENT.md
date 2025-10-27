@@ -135,7 +135,7 @@ This document provides comprehensive documentation for all environment variables
   CLIENT_URL=http://localhost:5173
   
   # Production
-  CLIENT_URL=https://campus-connection.vercel.app
+  CLIENT_URL=https://campus-connect-swart-nine.vercel.app
   ```
 
 ### 7. Rate Limiting Configuration
