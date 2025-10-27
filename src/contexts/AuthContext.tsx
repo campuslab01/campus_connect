@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import api from '../api';
-import axios from 'axios'; // Import axios for type guarding
+import axios from 'axios';
 
 interface User {
   _id: string;
@@ -53,6 +52,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+    withCredentials: true,
+  });
+
   // Check for existing token on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -90,9 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('token');
           localStorage.removeItem('tokenTimestamp');
           setUser(null);
-          // In a production environment, consider using a proper logging service
-          // instead of console.log for session expiration.
-          // console.log('Session expired after 5 hours');
+          console.log('Session expired after 5 hours');
         }
       }
     };
@@ -114,14 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data.data.user);
       }
     } catch (error) {
-      // Token is invalid or API call failed, remove it
-      // In a production environment, consider using a proper logging service
-      // instead of console.error.
-      if (axios.isAxiosError(error)) {
-        console.error('Token verification failed:', error.response?.data?.message || error.message);
-      } else if (error instanceof Error) {
-        console.error('Token verification failed:', error.message);
-      }
+      // Token is invalid, remove it
       localStorage.removeItem('token');
       setUser(null);
     }
@@ -144,13 +139,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         return { success: false, message: response.data.message || 'Login failed' };
       }
-    } catch (error: unknown) { // Use unknown for caught errors
-      let errorMessage = 'Login failed due to an unexpected error.';
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Login failed';
       return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
@@ -174,13 +164,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         return { success: false, message: response.data.message || 'Registration failed' };
       }
-    } catch (error: unknown) { // Use unknown for caught errors
-      let errorMessage = 'Registration failed due to an unexpected error.';
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Registration failed';
       return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
@@ -193,14 +178,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token) {
         await api.post('/auth/logout');
       }
-    } catch (error: unknown) {
-      // In a production environment, consider using a proper logging service
-      // instead of console.error.
-      if (axios.isAxiosError(error)) {
-        console.error('Logout error:', error.response?.data?.message || error.message);
-      } else if (error instanceof Error) {
-        console.error('Logout error:', error.message);
-      }
+    } catch (error) {
+      console.error('Logout error:', error);
     } finally {
       // Clear local state regardless of API call success
       localStorage.removeItem('token');
