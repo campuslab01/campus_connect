@@ -50,23 +50,22 @@ function AppContent() {
       {isAuthenticated && <Navigation />}
       <main>
         <Routes>
+          {/* Public Routes */}
+          <Route path="/landing" element={!isAuthenticated ? <LandingPage onGetStarted={handleGetStarted} /> : <Navigate to="/discover" replace />} />
+          <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" replace />} />
+    
           {/* Authenticated Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Navigate to="/discover" replace />} />
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/confessions" element={<ConfessionPage />} />
             <Route path="/likes" element={<LikesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            {/* Redirect root and any other authenticated paths to discover */}
+            <Route path="/" element={<Navigate to="/discover" replace />} />
+            <Route path="*" element={<Navigate to="/discover" replace />} />
           </Route>
-    
-          {/* Public Routes */}
-          <Route path="/landing" element={!isAuthenticated ? <LandingPage onGetStarted={handleGetStarted} /> : <Navigate to="/discover" replace />} />
-          <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" replace />} />
-    
-          {/* Fallback Route for unauthenticated users */}
-          <Route path="*" element={!isAuthenticated ? <Navigate to="/landing" replace /> : <Navigate to="/discover" replace />} />
         </Routes>
       </main>
     </div>
