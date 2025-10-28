@@ -1,0 +1,17 @@
+{
+  "name": "campus-connection-api",
+  "env": "node",
+  "buildCommand": "cd server && npm install",
+  "startCommand": "cd server && npm start",
+  "healthCheckPath": "/api/health",
+  "envVars": [
+    {
+      "key": "NODE_ENV",
+      "value": "production"
+    },
+    {
+      "key": "CLIENT_URL",
+      "value": "https://campus-connect-swart-nine.vercel.app"
+    }
+  ]
+}
