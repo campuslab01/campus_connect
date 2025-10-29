@@ -1,6 +1,6 @@
 // API Connection Test Component
 import React, { useEffect } from 'react';
-import api from './config/axios';
+import api from '../config/axios';
 
 const APITest = () => {
   useEffect(() => {
