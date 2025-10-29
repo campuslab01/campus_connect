@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 // Updated for production deployment
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-api-m4fg.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api',
   timeout: 10000,
   withCredentials: true,
   headers: {
