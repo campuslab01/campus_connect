@@ -9,6 +9,7 @@ console.log('🔍 Axios Configuration Debug:');
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('Final baseURL:', baseURL);
 console.log('Environment:', import.meta.env.MODE);
+console.log('Build timestamp:', new Date().toISOString());
 
 const api = axios.create({
   baseURL: baseURL,
