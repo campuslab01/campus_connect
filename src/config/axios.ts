@@ -2,7 +2,12 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 // Updated for production deployment
-const baseURL = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+let baseURL = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+
+// Ensure baseURL ends with /api
+if (!baseURL.endsWith('/api')) {
+  baseURL = baseURL.endsWith('/') ? baseURL + 'api' : baseURL + '/api';
+}
 
 // Debug logging
 console.log('🔍 Axios Configuration Debug:');
