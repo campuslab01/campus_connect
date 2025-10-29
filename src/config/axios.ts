@@ -28,8 +28,8 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    console.log('🚀 Making API request to:', config.baseURL + config.url);
-    console.log('Full URL:', config.url);
+    console.log('🚀 Making API request to:', (config.baseURL || '') + (config.url || ''));
+    console.log('Full URL:', config.url || '');
     console.log('Method:', config.method?.toUpperCase());
     
     const token = localStorage.getItem('token');
