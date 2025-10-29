@@ -11,7 +11,6 @@ import ConfessionPage from './pages/ConfessionPage';
 import LikesPage from './pages/LikesPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
-import APITest from './components/APITest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { useLenis } from './hooks/useLenis';
@@ -49,7 +48,6 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {isAuthenticated && <Navigation />}
-      <APITest />
       <main>
         <Routes>
           {/* Public Routes */}

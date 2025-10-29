@@ -62,11 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
   });
 
-  // Debug logging for AuthContext
-  console.log('🔍 AuthContext API Configuration:');
-  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
-  console.log('AuthContext baseURL:', api.defaults.baseURL);
-  console.log('🚨 AUTH CACHE BUSTER:', Math.random().toString(36).substring(7));
+  // AuthContext API configuration
 
   // Add request interceptor for JWT token
   api.interceptors.request.use(
@@ -74,7 +70,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('🔑 JWT Token added to request');
       }
       return config;
     },
@@ -94,7 +89,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('tokenTimestamp');
         setUser(null);
-        console.log('🔐 401 Unauthorized - clearing token');
       }
       return Promise.reject(error);
     }
@@ -137,7 +131,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('token');
           localStorage.removeItem('tokenTimestamp');
           setUser(null);
-          console.log('Session expired after 5 hours');
         }
       }
     };
