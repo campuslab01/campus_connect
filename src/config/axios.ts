@@ -15,6 +15,7 @@ console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('Final baseURL:', baseURL);
 console.log('Environment:', import.meta.env.MODE);
 console.log('Build timestamp:', new Date().toISOString());
+console.log('🚨 CACHE BUSTER:', Math.random().toString(36).substring(7));
 
 const api = axios.create({
   baseURL: baseURL,

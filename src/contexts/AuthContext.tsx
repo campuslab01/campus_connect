@@ -62,6 +62,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
   });
 
+  // Debug logging for AuthContext
+  console.log('🔍 AuthContext API Configuration:');
+  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+  console.log('AuthContext baseURL:', api.defaults.baseURL);
+  console.log('🚨 AUTH CACHE BUSTER:', Math.random().toString(36).substring(7));
+
   // Add request interceptor for JWT token
   api.interceptors.request.use(
     (config) => {
