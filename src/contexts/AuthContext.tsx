@@ -52,10 +52,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Use the centralized axios configuration
   const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+    baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api',
     withCredentials: true,
+    timeout: 10000,
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
+
+  // Add request interceptor for JWT token
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 JWT Token added to request');
+      }
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // Add response interceptor for auth errors
+  api.interceptors.response.use(
+    (response) => {
+      return response;
+    },
+    (error) => {
+      if (error.response?.status === 401) {
+        // Token is invalid, clear it and redirect to auth
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenTimestamp');
+        setUser(null);
+        console.log('🔐 401 Unauthorized - clearing token');
+      }
+      return Promise.reject(error);
+    }
+  );
 
   // Check for existing token on mount
   useEffect(() => {
