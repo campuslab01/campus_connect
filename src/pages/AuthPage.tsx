@@ -35,6 +35,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [serverErrors, setServerErrors] = useState<Array<{ msg: string; param?: string }>>([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('rememberMe');
+      return stored ? stored === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
 
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
@@ -58,6 +66,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         const result = await login(formData.email, formData.password);
         console.log('[AUTH PAGE] Login result:', result);
         if (result.success) {
+          try {
+            localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+            if (rememberMe) {
+              localStorage.setItem('rememberedEmail', formData.email);
+              localStorage.setItem('rememberedPassword', formData.password);
+            } else {
+              localStorage.removeItem('rememberedEmail');
+              localStorage.removeItem('rememberedPassword');
+            }
+          } catch {}
           onAuth();
           navigate("/discover");
         } else {
@@ -179,6 +197,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
       })
       .finally(() => setTermsLoading(false));
   }, [showTerms]);
+
+  // Prefill saved credentials on mount (login)
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem('rememberedEmail') || '';
+      const savedPassword = localStorage.getItem('rememberedPassword') || '';
+      if (savedEmail || savedPassword) {
+        setFormData((prev) => ({ ...prev, email: savedEmail, password: savedPassword }));
+      }
+    } catch {}
+  }, []);
 
   return (
     <div
@@ -579,6 +608,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                     Terms & Conditions
                   </button>
                 </span>
+              </div>
+            )}
+
+            {/* Remember me (only Login) */}
+            {isLogin && (
+              <div className="flex items-center justify-between mt-2 text-white text-sm">
+                <label className="inline-flex items-center gap-2 select-none cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="accent-purple-500 cursor-pointer"
+                  />
+                  <span>Remember me</span>
+                </label>
               </div>
             )}
 
