@@ -22,6 +22,7 @@ interface AuthResult {
   success: boolean;
   message: string;
   user?: User;
+  errors?: Array<{ msg: string; param?: string }>; // optional detailed backend errors
 }
 
 
@@ -185,7 +186,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (backend) {
         console.error('[LOGIN] Backend error response:', backend);
       }
-      const errorMessage = error.response?.data?.message || 'Login failed';
+      const firstErrorMsg = backend?.errors?.[0]?.msg;
+      const errorMessage = firstErrorMsg || backend?.message || 'Login failed';
       return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
@@ -219,8 +221,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (backend) {
         console.error('[REGISTER] Backend error response:', backend);
       }
-      const errorMessage = error.response?.data?.message || 'Registration failed';
-      return { success: false, message: errorMessage };
+      const firstErrorMsg = backend?.errors?.[0]?.msg;
+      const errorMessage = firstErrorMsg || backend?.message || 'Registration failed';
+      return { success: false, message: errorMessage, errors: backend?.errors };
     } finally {
       setIsLoading(false);
     }

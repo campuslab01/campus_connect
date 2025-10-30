@@ -33,6 +33,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [serverErrors, setServerErrors] = useState<Array<{ msg: string; param?: string }>>([]);
 
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
@@ -41,6 +42,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     e.preventDefault();
     setError(null);
     setValidationErrors({});
+    setServerErrors([]);
     setIsSubmitting(true);
 
     try {
@@ -59,6 +61,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           navigate("/discover");
         } else {
           setError(result.message);
+          if (result.errors) setServerErrors(result.errors);
         }
       } else {
         // Validate registration form
@@ -115,6 +118,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           navigate("/discover");
         } else {
           setError(result?.message || "Registration failed. Please try again.");
+          if (result.errors) setServerErrors(result.errors);
         }
       }
 
@@ -587,14 +591,39 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             )}
 
             {/* Error Message */}
-            {error && (
+            {(error || Object.keys(validationErrors).length > 0 || serverErrors.length > 0) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4"
+                className="text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4"
               >
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+                {error && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm font-medium">{error}</span>
+                  </div>
+                )}
+                {/* Backend field errors */}
+                {serverErrors.length > 0 && (
+                  <ul className="list-disc ml-6 mt-1 space-y-1 text-sm">
+                    {serverErrors.map((e, idx) => (
+                      <li key={idx}>
+                        {e.param ? <strong className="mr-1">{e.param}:</strong> : null}
+                        {e.msg}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {/* Client-side validation errors */}
+                {Object.keys(validationErrors).length > 0 && (
+                  <ul className="list-disc ml-6 mt-1 space-y-1 text-sm">
+                    {Object.entries(validationErrors).map(([field, msg]) => (
+                      <li key={field}>
+                        <strong className="mr-1">{field}:</strong>{msg}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </motion.div>
             )}
 
