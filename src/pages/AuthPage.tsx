@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import DOMPurify from "dompurify";
 import { useEffect } from "react";
-import { Heart, Mail, Lock, User, GraduationCap, AlertCircle, ArrowLeft } from "lucide-react";
+import { Heart, Mail, Lock, User, GraduationCap, AlertCircle, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import bgImage from "/images/loginscreen.jpeg";
@@ -34,6 +34,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [serverErrors, setServerErrors] = useState<Array<{ msg: string; param?: string }>>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
@@ -390,9 +391,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                       <option value="" disabled className="text-gray-400">
                         Select College
                       </option>
-                      <option value="Your College Name">
-                        Medicaps University
-                      </option>
+                      <option value="Medicaps University">Medicaps University</option>
                     </select>
                   </div>
 
@@ -519,7 +518,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             <motion.div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 h-5 w-5" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Password"
                 value={formData.password}
@@ -529,6 +528,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                 }`}
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white transition"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
               {validationErrors.password && (
                 <p className="text-red-400 text-xs mt-1">{validationErrors.password}</p>
               )}
