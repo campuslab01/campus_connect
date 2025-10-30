@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api',
     withCredentials: true,
-    timeout: 10000,
+    timeout: 30000,
     headers: {
       'Content-Type': 'application/json',
     },
@@ -161,46 +161,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true);
     try {
+      console.log('[LOGIN] Sending payload:', { email, password });
+      console.log('[LOGIN] Endpoint: /auth/login');
       const response = await api.post('/auth/login', { email, password });
-  
+      console.log('[LOGIN] Response:', response.data);
+
       if (response.data.status === 'success') {
         const { user: userData, token } = response.data.data;
-  
+
         localStorage.setItem('token', token);
         localStorage.setItem('tokenTimestamp', Date.now().toString());
-  
+
         setUser(userData);
-  
+
         return { success: true, message: 'Login successful', user: userData };
       } else {
+        console.warn('[LOGIN] Backend returned error:', response.data);
         return { success: false, message: response.data.message || 'Login failed' };
       }
     } catch (error: any) {
+      const backend = error?.response?.data;
+      console.error('[LOGIN] Error:', error);
+      if (backend) {
+        console.error('[LOGIN] Backend error response:', backend);
+      }
       const errorMessage = error.response?.data?.message || 'Login failed';
       return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const register = async (userData: any): Promise<AuthResult> => {
     setIsLoading(true);
     try {
+      console.log('[REGISTER] Sending payload:', userData);
+      console.log('[REGISTER] Endpoint: /auth/register');
       const response = await api.post('/auth/register', userData);
-  
+      console.log('[REGISTER] Response:', response.data);
+
       if (response.data.status === 'success') {
         const { user: newUser, token } = response.data.data;
-  
+
         localStorage.setItem('token', token);
         localStorage.setItem('tokenTimestamp', Date.now().toString());
-  
+
         setUser(newUser);
-  
+
         return { success: true, message: 'Registration successful', user: newUser };
       } else {
+        console.warn('[REGISTER] Backend returned error:', response.data);
         return { success: false, message: response.data.message || 'Registration failed' };
       }
     } catch (error: any) {
+      const backend = error?.response?.data;
+      console.error('[REGISTER] Error:', error);
+      if (backend) {
+        console.error('[REGISTER] Backend error response:', backend);
+      }
       const errorMessage = error.response?.data?.message || 'Registration failed';
       return { success: false, message: errorMessage };
     } finally {

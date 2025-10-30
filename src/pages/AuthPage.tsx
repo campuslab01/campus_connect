@@ -23,6 +23,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     department: "",
     age: "",
     gender: "",
+    year: ""
   });
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -50,8 +51,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           setValidationErrors(loginValidation.errors);
           return;
         }
-
+        console.log('[AUTH PAGE] Submitting login:', { email: formData.email, password: formData.password });
         const result = await login(formData.email, formData.password);
+        console.log('[AUTH PAGE] Login result:', result);
         if (result.success) {
           onAuth();
           navigate("/discover");
@@ -64,15 +66,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           setError("Please accept the Terms & Conditions to continue.");
           return;
         }
-
         const registrationData: UserFormData = {
           name: formData.name,
           email: formData.email,
           password: formData.password,
           age: formData.age,
-          gender: formData.gender,
+          gender: (formData.gender || '').toLowerCase(),
           college: formData.college,
           department: formData.department,
+          year: formData.year,
           profileImage: profileImage || '',
           photos: profileImage ? [profileImage] : []
         };
@@ -82,19 +84,32 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           setValidationErrors(registrationValidation.errors);
           return;
         }
-
+        // Log payload to be sent
+        console.log('[AUTH PAGE] Submitting registration:', {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          age: parseInt(formData.age),
+          gender: (formData.gender || '').toLowerCase(),
+          college: formData.college,
+          department: formData.department,
+          year: formData.year,
+          profileImage: profileImage || '',
+          photos: profileImage ? [profileImage] : []
+        });
         const result = await register({
           name: formData.name,
           email: formData.email,
           password: formData.password,
           age: parseInt(formData.age),
-          gender: formData.gender,
+          gender: (formData.gender || '').toLowerCase(),
           college: formData.college,
           department: formData.department,
+          year: formData.year,
           profileImage: profileImage || '',
           photos: profileImage ? [profileImage] : []
         });
-
+        console.log('[AUTH PAGE] Registration result:', result);
         if (result?.success) {
           onAuth();
           navigate("/discover");
@@ -446,6 +461,31 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                       <option value="BA Eng/Hindi">BA Eng/Hindi</option>
                       <option value="BA Social Sci">BA Social Sci</option>
                       <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="relative">
+                    <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 h-5 w-5" />
+                    <select
+                      name="year"
+                      value={formData.year}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white
+               placeholder-gray-300 focus:ring-2 focus:ring-purple-400 focus:border-transparent
+               appearance-none"
+                      required
+                    >
+                      <option value="" disabled className="text-gray-400">
+                        Academic Year
+                      </option>
+                      <option value="Freshman">Freshman</option>
+                      <option value="Sophomore">Sophomore</option>
+                      <option value="Junior">Junior</option>
+                      <option value="Senior">Senior</option>
+                      <option value="Graduate">Graduate</option>
+                      <option value="1st">1st</option>
+                      <option value="2nd">2nd</option>
+                      <option value="3rd">3rd</option>
+                      <option value="4th">4th</option>
                     </select>
                   </div>
                 </motion.div>
