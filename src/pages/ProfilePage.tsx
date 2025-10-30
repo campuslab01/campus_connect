@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera,
   Edit2,
-  Settings,
   Shield,
   Star,
   LogOut,
@@ -22,20 +21,28 @@ const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState<string | null>(null);
   const { user, logout } = useAuth();
-  const [profile, setProfile] = useState({
-    name: 'Alex Johnson',
-    age: 21,
-    college: 'Stanford University',
-    department: 'Computer Science',
-    year: 'Junior',
-    bio: 'Love coding, hiking, and good coffee. Looking for someone to explore the Bay Area with!',
+  type Profile = {
+    name: string;
+    age: number;
+    college: string;
+    department: string;
+    year: string;
+    bio: string;
+    relationshipStatus: string;
+    interests: string[];
+    photos: string[];
+  };
+
+  const [profile, setProfile] = useState<Profile>({
+    name: '',
+    age: 18,
+    college: '',
+    department: '',
+    year: 'Freshman',
+    bio: '',
     relationshipStatus: 'Single',
-    interests: ['Programming', 'Hiking', 'Coffee', 'Travel', 'Photography'],
-    photos: [
-      'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400',
-      'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400'
-    ]
+    interests: [],
+    photos: []
   });
 
   // Initialize from authenticated user without changing existing fields
@@ -65,11 +72,15 @@ const ProfilePage: React.FC = () => {
 
   const [isUploading, setIsUploading] = useState(false);
   const fileInputId = 'add-photo-input';
+  const replaceInputId = (idx: number) => `replace-photo-input-${idx}`;
 
   const handleAddPhotos = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const remaining = Math.max(0, 3 - (profile.photos?.length || 0));
+    const selected = Array.from(files).slice(0, remaining);
+    if (selected.length === 0) return;
     const form = new FormData();
-    Array.from(files).forEach((f) => form.append('images', f));
+    selected.forEach((f) => form.append('images', f));
     setIsUploading(true);
     try {
       const res = await api.post('/upload/images', form, {
@@ -87,6 +98,29 @@ const ProfilePage: React.FC = () => {
     } finally {
       setIsUploading(false);
       const inp = document.getElementById(fileInputId) as HTMLInputElement | null;
+      if (inp) inp.value = '';
+    }
+  };
+
+  const handleReplacePhoto = async (index: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const form = new FormData();
+    form.append('image', file);
+    setIsUploading(true);
+    try {
+      const res = await api.put(`/upload/images/${index}`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const updated = res.data?.data?.user;
+      if (updated) {
+        setProfile((prev) => ({ ...prev, photos: updated.photos || prev.photos }));
+      }
+    } catch (e) {
+      console.error('Photo replace failed', e);
+    } finally {
+      setIsUploading(false);
+      const inp = document.getElementById(replaceInputId(index)) as HTMLInputElement | null;
       if (inp) inp.value = '';
     }
   };
@@ -211,10 +245,10 @@ const ProfilePage: React.FC = () => {
                     {isUploading && <span className="text-xs text-white/70">Uploading...</span>}
                     <motion.button
                       onClick={() => document.getElementById(fileInputId)?.click()}
-                      className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white font-medium px-4 py-1 rounded-full shadow-md hover:opacity-95"
-                      disabled={isUploading}
+                      className={`bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white font-medium px-4 py-1 rounded-full shadow-md ${isUploading || (profile.photos?.length||0) >= 3 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'}`}
+                      disabled={isUploading || (profile.photos?.length||0) >= 3}
                     >
-                      Add Photo
+                      {(profile.photos?.length||0) >= 3 ? 'Max 3 photos' : 'Add Photo'}
                     </motion.button>
                     <input
                       id={fileInputId}
@@ -228,19 +262,35 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  {profile.photos.map((photo, index) => (
-                    <motion.div key={index} className="relative group overflow-hidden rounded-lg">
-                      <img src={photo} alt={`Profile ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
-                      <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                        <Camera className="h-5 w-5 text-white" />
+                  {[0,1,2].map((index) => {
+                    const photo = profile.photos[index];
+                    return (
+                      <motion.div key={index} className="relative group overflow-hidden rounded-lg">
+                        {photo ? (
+                          <>
+                            <img src={photo} alt={`Profile ${index + 1}`} className="w-full h-24 object-cover rounded-lg cursor-pointer" onClick={() => document.getElementById(replaceInputId(index))?.click()} />
+                            <input id={replaceInputId(index)} type="file" accept="image/*" className="hidden" onChange={(e) => handleReplacePhoto(index, e.target.files)} />
+                            <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                              <Camera className="h-5 w-5 text-white" />
+                            </motion.div>
+                            {index === 0 && (
+                              <motion.div className="absolute top-1 right-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs px-2 py-0.5 rounded-full shadow-md">
+                                Main
+                              </motion.div>
+                            )}
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById(fileInputId)?.click()}
+                            className="w-full h-24 flex items-center justify-center rounded-lg border border-dashed border-white/20 text-white/70 hover:text-white hover:border-white/40 bg-white/5"
+                          >
+                            + Add
+                          </button>
+                        )}
                       </motion.div>
-                      {index === 0 && (
-                        <motion.div className="absolute top-1 right-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs px-2 py-0.5 rounded-full shadow-md">
-                          Main
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
               </motion.div>
 
