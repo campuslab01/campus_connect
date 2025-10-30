@@ -1,0 +1,26 @@
+# Exclude backend servers and their artifacts
+campus_connect_server/
+server/
+
+# Logs and runtime uploads
+**/logs/**
+**/uploads/**
+**/*.log
+
+# Tests and local tooling artifacts
+**/__tests__/**
+**/tests/**
+**/*.test.*
+
+# Local caches and node modules (Vercel installs fresh)
+**/.cache/**
+**/node_modules/**
+
+# Misc repo files not needed for deploys
+Campus_Connection_API.postman_collection.json
+render.json
+serve.json
+*.md
+
+# Build output not required to upload (Vercel builds from source)
+dist/
