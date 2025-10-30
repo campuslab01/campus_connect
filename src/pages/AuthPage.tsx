@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import bgImage from "/images/loginscreen.jpeg";
 import { TypeAnimation } from "react-type-animation";
 import { useAuth } from "../contexts/AuthContext";
+import { validateRegistrationForm, validateLoginForm, UserFormData } from "../utils/validation";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -30,6 +31,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [showForgot, setShowForgot] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
@@ -37,15 +39,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setValidationErrors({});
     setIsSubmitting(true);
 
     try {
-      if (!isLogin && !termsAccepted) {
-        setError("Please accept the Terms & Conditions to continue.");
-        return;
-      }
-
       if (isLogin) {
+        // Validate login form
+        const loginValidation = validateLoginForm(formData.email, formData.password);
+        if (!loginValidation.isValid) {
+          setValidationErrors(loginValidation.errors);
+          return;
+        }
+
         const result = await login(formData.email, formData.password);
         if (result.success) {
           onAuth();
@@ -54,26 +59,48 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           setError(result.message);
         }
       } else {
-        // Prepare registration data
-        const registrationData = {
+        // Validate registration form
+        if (!termsAccepted) {
+          setError("Please accept the Terms & Conditions to continue.");
+          return;
+        }
+
+        const registrationData: UserFormData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          age: formData.age,
+          gender: formData.gender,
+          college: formData.college,
+          department: formData.department,
+          profileImage: profileImage || '',
+          photos: profileImage ? [profileImage] : []
+        };
+
+        const registrationValidation = validateRegistrationForm(registrationData);
+        if (!registrationValidation.isValid) {
+          setValidationErrors(registrationValidation.errors);
+          return;
+        }
+
+        const result = await register({
           name: formData.name,
           email: formData.email,
           password: formData.password,
           age: parseInt(formData.age),
           gender: formData.gender,
           college: formData.college,
-          department: formData.department
-          
-        };
-        
-        const result = await register(registrationData);
-if (result?.success) {   // only proceed if registration succeeded
-  onAuth();
-  navigate("discover");
-} else {
-  setError(result?.message || "Registration failed. Please try again.");
-}
+          department: formData.department,
+          profileImage: profileImage || '',
+          photos: profileImage ? [profileImage] : []
+        });
 
+        if (result?.success) {
+          onAuth();
+          navigate("/discover");
+        } else {
+          setError(result?.message || "Registration failed. Please try again.");
+        }
       }
 
     } catch (error: any) {
@@ -319,9 +346,14 @@ if (result?.success) {   // only proceed if registration succeeded
                       placeholder="Full Name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-300"
+                      className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-gray-300 ${
+                        validationErrors.name ? 'border-red-400' : 'border-white/30'
+                      }`}
                       required
                     />
+                    {validationErrors.name && (
+                      <p className="text-red-400 text-xs mt-1">{validationErrors.name}</p>
+                    )}
                   </div>
 
                   {/* College Dropdown */}
@@ -429,9 +461,14 @@ if (result?.success) {   // only proceed if registration succeeded
                 placeholder="College Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-300"
+                className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-gray-300 ${
+                  validationErrors.email ? 'border-red-400' : 'border-white/30'
+                }`}
                 required
               />
+              {validationErrors.email && (
+                <p className="text-red-400 text-xs mt-1">{validationErrors.email}</p>
+              )}
             </motion.div>
 
             {/* Password */}
@@ -443,9 +480,14 @@ if (result?.success) {   // only proceed if registration succeeded
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-300"
+                className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-gray-300 ${
+                  validationErrors.password ? 'border-red-400' : 'border-white/30'
+                }`}
                 required
               />
+              {validationErrors.password && (
+                <p className="text-red-400 text-xs mt-1">{validationErrors.password}</p>
+              )}
             </motion.div>
 
             {/* Terms checkbox (only Signup) */}
