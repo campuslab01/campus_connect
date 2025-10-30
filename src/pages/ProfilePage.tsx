@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import bgImage from "/images/login.jpeg";
 import { useAuth } from '../contexts/AuthContext';
+import api from '../config/axios';
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
@@ -58,10 +59,37 @@ const ProfilePage: React.FC = () => {
 
   const [settings, setSettings] = useState({
     notifications: true,
-    showDistance: true,
     invisibleMode: false,
     autoMatch: false
   });
+
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputId = 'add-photo-input';
+
+  const handleAddPhotos = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const form = new FormData();
+    Array.from(files).forEach((f) => form.append('images', f));
+    setIsUploading(true);
+    try {
+      const res = await api.post('/upload/images', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const updated = res.data?.data?.user;
+      if (updated) {
+        setProfile((prev) => ({
+          ...prev,
+          photos: Array.isArray(updated.photos) && updated.photos.length > 0 ? updated.photos : prev.photos,
+        }));
+      }
+    } catch (e) {
+      console.error('Photo upload failed', e);
+    } finally {
+      setIsUploading(false);
+      const inp = document.getElementById(fileInputId) as HTMLInputElement | null;
+      if (inp) inp.value = '';
+    }
+  };
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -173,12 +201,30 @@ const ProfilePage: React.FC = () => {
               transition={{ duration: 0.35 }}
             >
               {/* Photos */}
-              <motion.div className="bg-white/8 border border-white/10 backdrop-blur-xl rounded-2xl p-4 shadow-lg" variants={itemVariants}>
+              <motion.div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-2xl rounded-2xl p-4 shadow-xl" variants={itemVariants}>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-white">Photos</h3>
-                  <motion.button className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white font-medium px-4 py-1 rounded-full shadow-md hover:opacity-95">
-                    Add Photo
-                  </motion.button>
+                  <h3 className="font-semibold text-white flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-pink-400 animate-pulse"></span>
+                    Photos
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    {isUploading && <span className="text-xs text-white/70">Uploading...</span>}
+                    <motion.button
+                      onClick={() => document.getElementById(fileInputId)?.click()}
+                      className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white font-medium px-4 py-1 rounded-full shadow-md hover:opacity-95"
+                      disabled={isUploading}
+                    >
+                      Add Photo
+                    </motion.button>
+                    <input
+                      id={fileInputId}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleAddPhotos(e.target.files)}
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -199,9 +245,12 @@ const ProfilePage: React.FC = () => {
               </motion.div>
 
               {/* Profile Info */}
-              <motion.div className="bg-white/8 border border-white/10 backdrop-blur-xl rounded-2xl p-4 shadow-lg" variants={itemVariants}>
+              <motion.div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-2xl rounded-2xl p-5 shadow-xl" variants={itemVariants}>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-white">Profile Information</h3>
+                  <h3 className="font-semibold text-white flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-purple-400"></span>
+                    Profile Information
+                  </h3>
                   <motion.button
                     onClick={() => (isEditing ? handleSaveProfile() : setIsEditing(true))}
                     className="flex items-center space-x-1 bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white text-sm font-medium px-4 py-1 rounded-full shadow-md hover:opacity-95"
@@ -211,28 +260,17 @@ const ProfilePage: React.FC = () => {
                   </motion.button>
                 </div>
 
-                <motion.div className="space-y-4" variants={containerVariants}>
+                <motion.div className="space-y-5" variants={containerVariants}>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Name" value={profile.name} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, name: v })} />
-                    <Field
-                      label="Age"
-                      type="number"
-                      value={String(profile.age)}
-                      editable={isEditing}
-                      onChange={(v: string) => setProfile({ ...profile, age: Number(v) })}
-                    />
+                    <Field label="Age" type="number" value={String(profile.age)} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, age: Number(v) })} />
                   </div>
 
                   <Field label="College" value={profile.college} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, college: v })} />
 
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Department" value={profile.department} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, department: v })} />
-                    <SelectField
-                      label="Year"
-                      value={profile.year}
-                      editable={isEditing}
-                      onChange={(v: string) => setProfile({ ...profile, year: v })}
-                    />
+                    <SelectField label="Year" value={profile.year} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, year: v })} />
                   </div>
 
                   <Field label="Bio" type="textarea" value={profile.bio} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, bio: v })} />
@@ -241,17 +279,14 @@ const ProfilePage: React.FC = () => {
                     <label className="block text-sm font-medium text-white/80 mb-2">Interests</label>
                     <div className="flex flex-wrap gap-2">
                       {profile.interests.map((interest, i) => (
-                        <motion.span
-                          key={i}
-                          className="bg-gradient-to-r from-pink-500/30 to-purple-500/30 text-white text-sm px-3 py-1 rounded-full shadow-inner backdrop-blur-md"
-                        >
+                        <motion.span key={i} className="bg-white/10 border border-white/10 text-white text-sm px-3 py-1 rounded-full shadow-inner">
                           {interest}
                         </motion.span>
                       ))}
                       {isEditing && (
                         <motion.button
                           onClick={() => setProfile(prev => ({ ...prev, interests: [...prev.interests, 'New'] }))}
-                          className="bg-white/10 text-white text-sm px-3 py-1 rounded-full border border-dashed border-white/10"
+                          className="bg-white/10 text-white text-sm px-3 py-1 rounded-full border border-dashed border-white/20"
                           whileHover={{ scale: 1.03 }}
                         >
                           + Add
@@ -302,12 +337,7 @@ const ProfilePage: React.FC = () => {
                     onToggle={() => setSettings(prev => ({ ...prev, notifications: !prev.notifications }))}
                   />
 
-                  <ToggleRow
-                    title="Show Distance"
-                    subtitle="Display your distance to other users"
-                    checked={settings.showDistance}
-                    onToggle={() => setSettings(prev => ({ ...prev, showDistance: !prev.showDistance }))}
-                  />
+                  
 
                   <ToggleRow
                     title="Invisible Mode"
