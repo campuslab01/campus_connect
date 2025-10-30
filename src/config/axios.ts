@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 // Prefer local API in development for faster iteration
 let baseURL = import.meta.env.VITE_API_URL
-  || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://campus-connect-server-yqbh.onrender.com/api');
+  || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://campus-connect-api-m4fg.onrender.com/api');
 
 // Ensure baseURL ends with /api
 if (!baseURL.endsWith('/api')) {
