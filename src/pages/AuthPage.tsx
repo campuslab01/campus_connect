@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import DOMPurify from "dompurify";
 import { useEffect } from "react";
-import { Heart, Mail, Lock, User, GraduationCap, AlertCircle, ArrowLeft, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Heart, Mail, Lock, User, GraduationCap, AlertCircle, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import bgImage from "/images/loginscreen.jpeg";
@@ -45,10 +45,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   });
 
   const navigate = useNavigate();
-  const { login, register, requestLoading } = useAuth();
-
-  // Simple popup alert state
-  const [popup, setPopup] = useState<null | { type: 'success' | 'error'; message: string }>(null);
+  const { login, register, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +60,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         const loginValidation = validateLoginForm(formData.email, formData.password);
         if (!loginValidation.isValid) {
           setValidationErrors(loginValidation.errors);
+          setIsSubmitting(false);
           return;
         }
         console.log('[AUTH PAGE] Submitting login:', { email: formData.email, password: formData.password });
         const result = await login(formData.email, formData.password);
         console.log('[AUTH PAGE] Login result:', result);
         if (result.success) {
-          setPopup({ type: 'success', message: 'Logged in successfully!' });
           try {
             localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
             if (rememberMe) {
@@ -81,16 +78,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             }
           } catch {}
           onAuth();
+          try { window.alert('Login successful!'); } catch {}
           navigate("/discover");
         } else {
           setError(result.message);
-          setPopup({ type: 'error', message: result.message || 'Login failed' });
+          try { window.alert(result.message || 'Login failed'); } catch {}
           if (result.errors) setServerErrors(result.errors);
+          setIsSubmitting(false);
         }
       } else {
         // Validate registration form
         if (!termsAccepted) {
           setError("Please accept the Terms & Conditions to continue.");
+          setIsSubmitting(false);
           return;
         }
         const registrationData: UserFormData = {
@@ -109,6 +109,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         const registrationValidation = validateRegistrationForm(registrationData);
         if (!registrationValidation.isValid) {
           setValidationErrors(registrationValidation.errors);
+          setIsSubmitting(false);
           return;
         }
         // Log payload to be sent
@@ -138,21 +139,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         });
         console.log('[AUTH PAGE] Registration result:', result);
         if (result?.success) {
-          setPopup({ type: 'success', message: 'Registration successful!' });
           onAuth();
+          try { window.alert('Registration successful!'); } catch {}
           navigate("/discover");
         } else {
           setError(result?.message || "Registration failed. Please try again.");
-          setPopup({ type: 'error', message: result?.message || 'Registration failed' });
+          try { window.alert(result?.message || 'Registration failed'); } catch {}
           if (result.errors) setServerErrors(result.errors);
+          setIsSubmitting(false);
         }
       }
 
     } catch (error: any) {
-      const msg = error.message || 'An error occurred';
-      setError(msg);
-      setPopup({ type: 'error', message: msg });
-    } finally {
+      setError(error.message || 'An error occurred');
+      try { window.alert(error.message || 'Something went wrong'); } catch {}
       setIsSubmitting(false);
     }
   };
@@ -693,19 +693,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                 whileHover={{ scale: isSubmitting ? 1 : 1.08 }}
                 whileTap={{ scale: isSubmitting ? 1 : 0.95 }}
                 type="submit"
-                disabled={isSubmitting || requestLoading}
-                className="relative m-4 px-12 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
+                disabled={isSubmitting || isLoading}
+                className="relative m-4 px-12 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px] flex items-center justify-center"
               >
-                <span className={`${isSubmitting || requestLoading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
-                  {isLogin ? "Sign In" : "Create Account"}
-                </span>
-                {(isSubmitting || requestLoading) && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                    </svg>
-                  </span>
+                {(isSubmitting || isLoading) ? (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                ) : (
+                  (isLogin ? "Sign In" : "Create Account")
                 )}
               </motion.button>
             </div>
@@ -811,25 +808,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                 </button>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {/* Popup Alert */}
-      <AnimatePresence>
-        {popup && (
-          <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 40, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl shadow-xl border backdrop-blur-md ${popup.type === 'success' ? 'bg-green-500/20 border-green-400/40 text-green-200' : 'bg-red-500/20 border-red-400/40 text-red-200'}`}
-            role="alert"
-          >
-            <div className="flex items-center gap-2">
-              {popup.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-              <span className="text-sm font-medium">{popup.message}</span>
-              <button onClick={() => setPopup(null)} className="ml-3 text-white/70 hover:text-white text-xs">Close</button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

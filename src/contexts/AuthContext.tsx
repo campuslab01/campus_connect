@@ -31,8 +31,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (userData: any) => Promise<AuthResult>;
   logout: () => void;
-  isLoadingInitial: boolean; // only during initial auth bootstrap
-  requestLoading: boolean; // ongoing auth requests like login/register
+  isLoading: boolean;
   isAuthenticated: boolean;
 }
 
@@ -52,8 +51,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-  const [requestLoading, setRequestLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Use the centralized axios configuration
   const api = axios.create({
@@ -114,10 +112,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
       } else {
         // Token is still valid, verify it
-        verifyToken().finally(() => setIsLoadingInitial(false));
+        verifyToken();
       }
-    } else {
-      setIsLoadingInitial(false);
     }
   }, []);
 
@@ -164,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = async (email: string, password: string): Promise<AuthResult> => {
-    setRequestLoading(true);
+    setIsLoading(true);
     try {
       console.log('[LOGIN] Sending payload:', { email, password });
       console.log('[LOGIN] Endpoint: /auth/login');
@@ -216,12 +212,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const errorMessage = firstErrorMsg || backend?.message || 'Login failed';
       return { success: false, message: errorMessage };
     } finally {
-      setRequestLoading(false);
+      setIsLoading(false);
     }
   };
 
   const register = async (userData: any): Promise<AuthResult> => {
-    setRequestLoading(true);
+    setIsLoading(true);
     try {
       console.log('[REGISTER] Sending payload:', userData);
       console.log('[REGISTER] Endpoint: /auth/register');
@@ -251,7 +247,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const errorMessage = firstErrorMsg || backend?.message || 'Registration failed';
       return { success: false, message: errorMessage, errors: backend?.errors };
     } finally {
-      setRequestLoading(false);
+      setIsLoading(false);
     }
   };
   
@@ -276,8 +272,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    isLoadingInitial,
-    requestLoading,
+    isLoading,
     isAuthenticated: !!user
   };
 

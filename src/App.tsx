@@ -17,7 +17,7 @@ import { useLenis } from './hooks/useLenis';
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
-  const { isAuthenticated, isLoadingInitial } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Initialize Lenis smooth scrolling
   useLenis();
@@ -40,7 +40,7 @@ function AppContent() {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  if (isLoadingInitial) {
+  if (isLoading) {
     // You can replace this with a proper loading spinner component
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
