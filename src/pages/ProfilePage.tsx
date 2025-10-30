@@ -1,5 +1,5 @@
 // ProfilePage.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera,
@@ -14,11 +14,13 @@ import {
   Trash2
 } from 'lucide-react';
 import bgImage from "/images/login.jpeg";
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState<string | null>(null);
+  const { user, logout } = useAuth();
   const [profile, setProfile] = useState({
     name: 'Alex Johnson',
     age: 21,
@@ -34,6 +36,25 @@ const ProfilePage: React.FC = () => {
       'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400'
     ]
   });
+
+  // Initialize from authenticated user without changing existing fields
+  useEffect(() => {
+    if (!user) return;
+    setProfile(prev => ({
+      ...prev,
+      name: user.name || prev.name,
+      age: (user as any).age ?? prev.age,
+      college: (user as any).college || prev.college,
+      department: (user as any).department || prev.department,
+      year: (user as any).year || prev.year,
+      bio: (user as any).bio ?? prev.bio,
+      relationshipStatus: (user as any).relationshipStatus || prev.relationshipStatus,
+      interests: Array.isArray((user as any).interests) && (user as any).interests.length > 0 ? (user as any).interests : prev.interests,
+      photos: Array.isArray((user as any).photos) && (user as any).photos.length > 0
+        ? (user as any).photos
+        : ((user as any).profileImage ? [(user as any).profileImage] : prev.photos)
+    }));
+  }, [user]);
 
   const [settings, setSettings] = useState({
     notifications: true,
@@ -526,7 +547,7 @@ const ProfilePage: React.FC = () => {
                           Cancel
                         </motion.button>
                         <motion.button
-                          onClick={() => { setShowModal(null); console.log('Logged out'); }}
+                          onClick={() => { setShowModal(null); logout(); }}
                           className="flex-1 bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white font-medium py-3 rounded-xl"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
