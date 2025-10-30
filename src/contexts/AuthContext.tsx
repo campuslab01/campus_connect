@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api',
     withCredentials: true,
-    timeout: 30000,
+    timeout: 60000,
     headers: {
       'Content-Type': 'application/json',
     },
@@ -164,7 +164,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('[LOGIN] Sending payload:', { email, password });
       console.log('[LOGIN] Endpoint: /auth/login');
-      const response = await api.post('/auth/login', { email, password });
+      // Warm up backend (Render free instances may cold start)
+      try {
+        await api.get('/health', { timeout: 10000 });
+      } catch (_) {
+        // ignore health check failure; proceed to attempt login
+      }
+
+      let response;
+      try {
+        response = await api.post('/auth/login', { email, password });
+      } catch (err: any) {
+        if (err?.code === 'ECONNABORTED') {
+          // Retry once after timeout
+          try {
+            await api.get('/health', { timeout: 10000 }).catch(() => {});
+            response = await api.post('/auth/login', { email, password });
+          } catch (e) {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
       console.log('[LOGIN] Response:', response.data);
 
       if (response.data.status === 'success') {
