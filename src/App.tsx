@@ -14,10 +14,12 @@ import AuthPage from './pages/AuthPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { useLenis } from './hooks/useLenis';
+import { ToastProvider } from './contexts/ToastContext';
+import Toaster from './components/Toaster';
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isBootstrapping } = useAuth();
 
   // Initialize Lenis smooth scrolling
   useLenis();
@@ -40,9 +42,13 @@ function AppContent() {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  if (isLoading) {
-    // You can replace this with a proper loading spinner component
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (isBootstrapping) {
+    // Minimal on-brand loader background
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="h-8 w-8 rounded-full border-4 border-purple-400 border-t-transparent animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -68,6 +74,7 @@ function AppContent() {
           </Route>
         </Routes>
       </main>
+      <Toaster />
     </div>
   );
 }
@@ -76,7 +83,9 @@ function App() {
   return (
     <AuthProvider>
       <ChatProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </ChatProvider>
     </AuthProvider>
   );

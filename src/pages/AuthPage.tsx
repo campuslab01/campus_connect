@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import bgImage from "/images/loginscreen.jpeg";
 import { TypeAnimation } from "react-type-animation";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { validateRegistrationForm, validateLoginForm, UserFormData } from "../utils/validation";
 
 interface AuthPageProps {
@@ -46,6 +47,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
 
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,11 +80,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             }
           } catch {}
           onAuth();
-          try { window.alert('Login successful!'); } catch {}
+          showToast({ type: 'success', title: 'Welcome back', message: 'Login successful!' });
           navigate("/discover");
         } else {
           setError(result.message);
-          try { window.alert(result.message || 'Login failed'); } catch {}
+          showToast({ type: 'error', title: 'Login failed', message: result.message || 'Please try again.' });
           if (result.errors) setServerErrors(result.errors);
           setIsSubmitting(false);
         }
@@ -140,11 +142,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         console.log('[AUTH PAGE] Registration result:', result);
         if (result?.success) {
           onAuth();
-          try { window.alert('Registration successful!'); } catch {}
+          showToast({ type: 'success', title: 'Welcome!', message: 'Registration successful' });
           navigate("/discover");
         } else {
           setError(result?.message || "Registration failed. Please try again.");
-          try { window.alert(result?.message || 'Registration failed'); } catch {}
+          showToast({ type: 'error', title: 'Registration failed', message: result?.message || 'Please try again.' });
           if (result.errors) setServerErrors(result.errors);
           setIsSubmitting(false);
         }
@@ -152,7 +154,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
 
     } catch (error: any) {
       setError(error.message || 'An error occurred');
-      try { window.alert(error.message || 'Something went wrong'); } catch {}
+      showToast({ type: 'error', title: 'Error', message: error.message || 'Something went wrong' });
       setIsSubmitting(false);
     }
   };

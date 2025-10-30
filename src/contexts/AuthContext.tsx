@@ -32,6 +32,7 @@ interface AuthContextType {
   register: (userData: any) => Promise<AuthResult>;
   logout: () => void;
   isLoading: boolean;
+  isBootstrapping: boolean;
   isAuthenticated: boolean;
 }
 
@@ -52,6 +53,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   // Use the centralized axios configuration
   const api = axios.create({
@@ -110,10 +112,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('tokenTimestamp');
         setUser(null);
+        setIsBootstrapping(false);
       } else {
         // Token is still valid, verify it
-        verifyToken();
+        verifyToken().finally(() => setIsBootstrapping(false));
       }
+    } else {
+      setIsBootstrapping(false);
     }
   }, []);
 
@@ -273,6 +278,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     isLoading,
+    isBootstrapping,
     isAuthenticated: !!user
   };
 
