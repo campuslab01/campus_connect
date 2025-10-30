@@ -45,7 +45,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   });
 
   const navigate = useNavigate();
-  const { login, register, isLoading } = useAuth();
+  const { login, register, requestLoading } = useAuth();
 
   // Simple popup alert state
   const [popup, setPopup] = useState<null | { type: 'success' | 'error'; message: string }>(null);
@@ -693,13 +693,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                 whileHover={{ scale: isSubmitting ? 1 : 1.08 }}
                 whileTap={{ scale: isSubmitting ? 1 : 0.95 }}
                 type="submit"
-                disabled={isSubmitting || isLoading}
+                disabled={isSubmitting || requestLoading}
                 className="relative m-4 px-12 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
               >
-                <span className={`${isSubmitting || isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
+                <span className={`${isSubmitting || requestLoading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
                   {isLogin ? "Sign In" : "Create Account"}
                 </span>
-                {(isSubmitting || isLoading) && (
+                {(isSubmitting || requestLoading) && (
                   <span className="absolute inset-0 flex items-center justify-center">
                     <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
