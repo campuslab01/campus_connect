@@ -224,17 +224,22 @@ const DiscoverPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <AnimatePresence
-            initial={false}
-            onExitComplete={() => {
-              if (users.length > 0) {
-                setCurrentUserIndex((prev) => (prev + 1) % users.length);
-              }
-              setExitDirection(0);
-              setCurrentPhotoIndex(0);
-              setIsSwiping(false);
-            }}
+          <InfiniteScroll 
+            fetchNext={fetchNextPage} 
+            hasMore={hasNextPage || false} 
+            isLoading={isFetchingNextPage}
           >
+            <AnimatePresence
+              initial={false}
+              onExitComplete={() => {
+                if (users.length > 0) {
+                  setCurrentUserIndex((prev) => (prev + 1) % users.length);
+                }
+                setExitDirection(0);
+                setCurrentPhotoIndex(0);
+                setIsSwiping(false);
+              }}
+            >
             {!isSwiping && currentUser && (
             <motion.div
               key={currentUser.id}
@@ -588,7 +593,6 @@ const DiscoverPage: React.FC = () => {
     </div>
   </motion.div>
 )}
-
             </AnimatePresence>
           </InfiniteScroll>
         )}
