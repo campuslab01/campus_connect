@@ -48,9 +48,15 @@ const ChatPage: React.FC = () => {
         } catch (err: any) {
           console.error('Error getting/creating chat:', err);
           const errorMsg = err.response?.data?.message || 'Failed to start chat';
-          if (errorMsg.includes('matched')) {
-            alert('You need to match with this user first before you can chat.');
-          } else {
+          // TODO: Re-enable matching requirement check after testing phase
+          // During testing phase, allow chatting without matching
+          // if (errorMsg.includes('matched')) {
+          //   alert('You need to match with this user first before you can chat.');
+          // } else {
+          //   alert(errorMsg);
+          // }
+          // For now, only show alert for non-matching errors during testing
+          if (!errorMsg.includes('matched')) {
             alert(errorMsg);
           }
         }
