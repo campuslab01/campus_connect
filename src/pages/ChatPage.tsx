@@ -53,6 +53,10 @@ const ChatPage: React.FC = () => {
       const findOrCreateChat = async () => {
         try {
           console.log('Creating/finding chat for userId:', initialUserId);
+          const token = localStorage.getItem('token');
+          console.log('Token exists:', !!token);
+          console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
+          
           // Use GET endpoint to get or create chat
           const response = await api.get(`/chat/${initialUserId}`);
           console.log('Chat response:', response.data);
@@ -98,17 +102,29 @@ const ChatPage: React.FC = () => {
           }
         } catch (err: any) {
           console.error('Error getting/creating chat:', err);
-          const errorMsg = err.response?.data?.message || 'Failed to start chat';
-          // TODO: Re-enable matching requirement check after testing phase
-          // During testing phase, allow chatting without matching
-          // if (errorMsg.includes('matched')) {
-          //   alert('You need to match with this user first before you can chat.');
-          // } else {
-          //   alert(errorMsg);
-          // }
-          // For now, only show alert for non-matching errors during testing
-          if (!errorMsg.includes('matched')) {
-            alert(errorMsg);
+          console.error('Error response:', err.response?.data);
+          console.error('Error status:', err.response?.status);
+          const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to start chat';
+          console.error('Error message:', errorMsg);
+          
+          // Handle 403 errors - might be authentication or permission issue
+          if (err.response?.status === 403) {
+            console.error('403 Forbidden - checking authentication');
+            const token = localStorage.getItem('token');
+            console.log('Token exists:', !!token);
+            alert(`Access denied (403). Please check if you're properly authenticated. Error: ${errorMsg}`);
+          } else {
+            // TODO: Re-enable matching requirement check after testing phase
+            // During testing phase, allow chatting without matching
+            // if (errorMsg.includes('matched')) {
+            //   alert('You need to match with this user first before you can chat.');
+            // } else {
+            //   alert(errorMsg);
+            // }
+            // For now, only show alert for non-matching errors during testing
+            if (!errorMsg.includes('matched')) {
+              alert(errorMsg);
+            }
           }
         }
       };
