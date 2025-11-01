@@ -32,24 +32,29 @@ const ChatPage: React.FC = () => {
   
   // When navigating from DM, find or create chat
   useEffect(() => {
-    if (initialUserId && !selectedChat) {
+    if (initialUserId && !selectedChat && user) {
       const findOrCreateChat = async () => {
         try {
+          console.log('Creating/finding chat for userId:', initialUserId);
           // Use GET endpoint to get or create chat
           const response = await api.get(`/chat/${initialUserId}`);
+          console.log('Chat response:', response.data);
           if (response.data.status === 'success') {
             const chat = response.data.data.chat;
             const chatId = chat._id || chat.id;
+            console.log('Chat created/found with ID:', chatId);
             
             // Store chat info for immediate use
             const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
             const participants = chat.participants || [];
+            console.log('Participants:', participants);
             const otherParticipant = participants.find((p: any) => {
               const pIdStr = (p._id || p.id)?.toString();
               return pIdStr !== userIdStr;
             });
+            console.log('Other participant:', otherParticipant);
             
-            setDirectChatInfo({
+            const chatInfo = {
               id: chatId,
               name: otherParticipant?.name || 'Unknown',
               avatar: otherParticipant?.profileImage || '/images/login.jpeg',
@@ -60,9 +65,13 @@ const ChatPage: React.FC = () => {
               isDMRequest: false,
               compatibilityScore: chat.compatibilityScore,
               chatId: chatId
-            });
+            };
             
-            // Set selected chat directly using chat._id
+            console.log('Setting directChatInfo:', chatInfo);
+            setDirectChatInfo(chatInfo);
+            
+            // Set selected chat directly using chat._id - this should trigger message box to show
+            console.log('Setting selectedChat to:', chatId);
             setSelectedChat(chatId);
             
             // Refresh chats list in background to ensure it's available
@@ -89,7 +98,7 @@ const ChatPage: React.FC = () => {
       findOrCreateChat();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialUserId]);
+  }, [initialUserId, user]);
 
 const [showEmojiPicker, setShowEmojiPicker] = useState(false); // Emoji picker toggle
 
@@ -289,16 +298,23 @@ const filteredChats = transformedChats.filter(
 
 
   if (selectedChat !== null) {
+    console.log('selectedChat is not null:', selectedChat);
+    console.log('directChatInfo:', directChatInfo);
+    console.log('transformedChats length:', transformedChats.length);
+    
     // Find chat by chatId (which is the actual MongoDB _id)
     let chat = transformedChats.find((c: any) => c.chatId?.toString() === selectedChat.toString());
+    console.log('Chat found in transformedChats:', chat);
     
     // If not found, check if we have direct chat info (from DM navigation)
     if (!chat && directChatInfo && directChatInfo.chatId?.toString() === selectedChat.toString()) {
+      console.log('Using directChatInfo');
       chat = directChatInfo;
     }
     
     // If still not found, it might be in the raw chats list
     if (!chat && chats.length > 0) {
+      console.log('Checking raw chats list');
       const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat.toString());
       if (rawChat) {
         const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
@@ -321,8 +337,19 @@ const filteredChats = transformedChats.filter(
       }
     }
     
-    if (!chat) return null;
-
+    // If still not found but we have initialUserId, create a minimal chat object
+    if (!chat && initialUserId && directChatInfo) {
+      console.log('Using directChatInfo as fallback');
+      chat = directChatInfo;
+    }
+    
+    if (!chat) {
+      console.log('No chat found, returning null');
+      return null;
+    }
+    
+    console.log('Rendering message box with chat:', chat);
+// message box UI
     return (
       <motion.div
         className="min-h-screen bg-cover bg-center relative flex flex-col"
