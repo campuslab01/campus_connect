@@ -715,52 +715,48 @@ const DiscoverPage: React.FC = () => {
     </div>
                   </div>
                 </div>
-                         {/* Relationship & Interests */}
-<div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4">
-  <h3 className="text-white font-semibold mb-3 flex items-center">
-    <Heart size={16} className="mr-2 text-pink-400" />
-    Preferences
-  </h3>
-  <div className="space-y-2">
-                  <div className="flex justify-between mt-[1.2rem]">
-  <span className="text-white/80 font-medium drop-shadow-sm">Looking For:</span>
-  <span className="text-white drop-shadow-sm">{Array.isArray(modalUser.lookingFor) ? modalUser.lookingFor.join(', ') : modalUser.lookingFor || 'N/A'}</span>
-</div>
-<div className="flex justify-between mt-[1.2rem]">
-  <span className="text-white/80 font-medium drop-shadow-sm">RelationShip Status:</span>
-  <span className="text-white drop-shadow-sm">{modalUser.relationshipStatus || 'Single'}</span>
-</div>
-</div>
-</div>
-  </div>
-   {/* Interests */}
-   <div>
-    <span className="text-white/80 text-sm font-medium block mb-2">Interests:</span>
-    <div className="flex flex-wrap gap-2">
-      {(modalUser.interests && modalUser.interests.length > 0) ? modalUser.interests.map((interest: string, index: number) => (
-        <span
-          key={index}
-          className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white text-xs px-3 py-1 rounded-full border border-white/20 shadow-sm hover:scale-105 transition-transform duration-200"
-        >
-          {interest}
-        </span>
-      )) : (
-        <span className="text-white/60 text-sm">No interests listed</span>
-      )}
-    </div>
-  </div>
+                {/* Relationship & Preferences */}
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4">
+                  <h3 className="text-white font-semibold mb-3 flex items-center">
+                    <Heart size={16} className="mr-2 text-pink-400" />
+                    Preferences
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between mt-[1.2rem]">
+                      <span className="text-white/80 font-medium drop-shadow-sm">Looking For:</span>
+                      <span className="text-white drop-shadow-sm">{Array.isArray(modalUser.lookingFor) ? modalUser.lookingFor.join(', ') : modalUser.lookingFor || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between mt-[1.2rem]">
+                      <span className="text-white/80 font-medium drop-shadow-sm">Relationship Status:</span>
+                      <span className="text-white drop-shadow-sm">{modalUser.relationshipStatus || 'Single'}</span>
+                    </div>
+                  </div>
+                </div>
 
+                {/* Interests */}
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4">
+                  <span className="text-white/80 text-sm font-medium block mb-2">Interests:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(modalUser.interests && modalUser.interests.length > 0) ? modalUser.interests.map((interest: string, index: number) => (
+                      <span
+                        key={index}
+                        className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white text-xs px-3 py-1 rounded-full border border-white/20 shadow-sm hover:scale-105 transition-transform duration-200"
+                      >
+                        {interest}
+                      </span>
+                    )) : (
+                      <span className="text-white/60 text-sm">No interests listed</span>
+                    )}
+                  </div>
+                </div>
 
-                
-              </motion.div>
-
-              {/* Action Buttons */}
-              <motion.div 
-                className="flex space-x-3 mt-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
+                {/* Action Buttons */}
+                <motion.div 
+                  className="flex space-x-3 mt-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
                 <motion.button
                   onClick={() => {
                     if (modalUser?.id || modalUser?._id) {
@@ -788,8 +784,8 @@ const DiscoverPage: React.FC = () => {
                   <MessageCircle size={16} className="inline mr-2" />
                   Message
                 </motion.button>
+                </motion.div>
               </motion.div>
-
 
               {/* Close Button */}
               <motion.button
@@ -800,6 +796,8 @@ const DiscoverPage: React.FC = () => {
               >
                 <X size={24} />
               </motion.button>
+                </>
+              ) : null}
             </motion.div>
           </motion.div>
         )}
