@@ -25,9 +25,13 @@ const SearchPage: React.FC = () => {
 
   const [showFilters, setShowFilters] = useState(false);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | number | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch full profile when modal is opened
+  const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
+  const modalUser = profileData?.user || null;
     // 🔠 Typewriter placeholder animation with blinking cursor
     const placeholders = [
       "Find by name...",
