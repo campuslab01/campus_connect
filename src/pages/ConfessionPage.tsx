@@ -66,26 +66,48 @@ const ConfessionPage: React.FC = () => {
     isAnonymous: confession.isAnonymous !== false,
     college: confession.author?.college || confession.college || '',
     tags: confession.tags || [],
-    commentsList: confession.comments?.map((comment: any): Comment => ({
-      id: comment._id || comment.id,
-      author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
-      authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
-      text: comment.content || comment.text,
-      time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
-      likes: comment.likes?.length || 0,
-      isLiked: false, // TODO: Check if current user liked
-      isAnonymous: comment.isAnonymous !== false,
-      replies: comment.replies?.map((reply: any): Reply => ({
-        id: reply._id || reply.id,
-        author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
-        authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
-        text: reply.content || reply.text,
-        time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
-        likes: reply.likes?.length || 0,
-        isLiked: false,
-        isAnonymous: reply.isAnonymous !== false
-      })) || []
-    })) || []
+    commentsList: confession.comments?.map((comment: any, commentIndex: number): Comment => {
+      const userId = (user as any)?._id || (user as any)?.id;
+      const userIdStr = userId?.toString();
+      
+      // Check if user liked this comment - likes array contains user IDs
+      const commentIsLiked = Array.isArray(comment.likes) && comment.likes.some((likeId: any) => {
+        const likeIdStr = (likeId._id || likeId)?.toString();
+        return likeIdStr === userIdStr;
+      });
+      
+      return {
+        id: comment._id || comment.id,
+        author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
+        authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
+        text: comment.content || comment.text,
+        time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
+        likes: Array.isArray(comment.likes) ? comment.likes.length : 0,
+        isLiked: commentIsLiked,
+        isAnonymous: comment.isAnonymous !== false,
+        commentIndex, // Store MongoDB array index for API calls
+        replies: comment.replies?.map((reply: any, replyIndex: number): Reply => {
+          // Check if user liked this reply
+          const replyIsLiked = Array.isArray(reply.likes) && reply.likes.some((likeId: any) => {
+            const likeIdStr = (likeId._id || likeId)?.toString();
+            return likeIdStr === userIdStr;
+          });
+          
+          return {
+            id: reply._id || reply.id,
+            author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
+            authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
+            text: reply.content || reply.text,
+            time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
+            likes: Array.isArray(reply.likes) ? reply.likes.length : 0,
+            isLiked: replyIsLiked,
+            isAnonymous: reply.isAnonymous !== false,
+            commentIndex, // Store for API calls
+            replyIndex // Store MongoDB array index for API calls
+          };
+        }) || []
+      };
+    }) || []
   }));
 
   const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load confessions') : null;
@@ -176,27 +198,85 @@ const ConfessionPage: React.FC = () => {
     }
   };
 
-  const handleAddReply = async (_confessionId: number, _commentId: string, _text: string, _isAnonymous: boolean) => {
+  const handleAddReply = async (confessionId: number, commentId: string, text: string, isAnonymous: boolean) => {
     try {
-      // TODO: Implement reply API endpoint if available
-      // For now, just invalidate queries to refetch updated confession with new reply
-      queryClient.invalidateQueries({ queryKey: ['confessions'] });
+      // Find the comment index from the confessions data
+      const confession = confessions.find((c: any) => c.id === confessionId);
+      if (!confession) {
+        alert('Confession not found');
+        return;
+      }
+
+      const comment = confession.commentsList?.find((c: any) => c.id === commentId);
+      if (!comment || comment.commentIndex === undefined) {
+        alert('Comment not found');
+        return;
+      }
+
+      const response = await api.post(`/confessions/${confessionId}/comments/${comment.commentIndex}/replies`, {
+        content: text.trim(),
+        isAnonymous: Boolean(isAnonymous)
+      });
+
+      if (response.data.status === 'success') {
+        // Invalidate queries to refetch updated confession with new reply
+        queryClient.invalidateQueries({ queryKey: ['confessions'] });
+      }
     } catch (err: any) {
       console.error('Error adding reply:', err);
       alert(err.response?.data?.message || 'Failed to add reply');
     }
   };
 
-  const handleLikeComment = (_confessionId: number, _commentId: string) => {
-    // TODO: Implement like comment API call
-    // For now, just invalidate queries to refetch
-    queryClient.invalidateQueries({ queryKey: ['confessions'] });
+  const handleLikeComment = async (confessionId: number, commentId: string) => {
+    try {
+      // Find the comment index from the confessions data
+      const confession = confessions.find((c: any) => c.id === confessionId);
+      if (!confession) {
+        return;
+      }
+
+      const comment = confession.commentsList?.find((c: any) => c.id === commentId);
+      if (!comment || comment.commentIndex === undefined) {
+        return;
+      }
+
+      await api.post(`/confessions/${confessionId}/comments/${comment.commentIndex}/like`);
+      
+      // Invalidate queries to refetch updated confession
+      queryClient.invalidateQueries({ queryKey: ['confessions'] });
+    } catch (err: any) {
+      console.error('Error liking comment:', err);
+      alert(err.response?.data?.message || 'Failed to like comment');
+    }
   };
 
-  const handleLikeReply = (_confessionId: number, _commentId: string, _replyId: string) => {
-    // TODO: Implement like reply API call
-    // For now, just invalidate queries to refetch
-    queryClient.invalidateQueries({ queryKey: ['confessions'] });
+  const handleLikeReply = async (confessionId: number, commentId: string, replyId: string) => {
+    try {
+      // Find the comment and reply indices from the confessions data
+      const confession = confessions.find((c: any) => c.id === confessionId);
+      if (!confession) {
+        return;
+      }
+
+      const comment = confession.commentsList?.find((c: any) => c.id === commentId);
+      if (!comment || comment.commentIndex === undefined) {
+        return;
+      }
+
+      const reply = comment.replies?.find((r: any) => r.id === replyId);
+      if (!reply || reply.replyIndex === undefined) {
+        return;
+      }
+
+      await api.post(`/confessions/${confessionId}/comments/${comment.commentIndex}/replies/${reply.replyIndex}/like`);
+      
+      // Invalidate queries to refetch updated confession
+      queryClient.invalidateQueries({ queryKey: ['confessions'] });
+    } catch (err: any) {
+      console.error('Error liking reply:', err);
+      alert(err.response?.data?.message || 'Failed to like reply');
+    }
   };
 
   const containerVariants = {

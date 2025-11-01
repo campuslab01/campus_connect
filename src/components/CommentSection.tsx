@@ -13,6 +13,7 @@ interface Comment {
   isLiked: boolean;
   isAnonymous: boolean;
   replies: Reply[];
+  commentIndex?: number; // For API calls
 }
 
 interface Reply {
@@ -24,6 +25,8 @@ interface Reply {
   likes: number;
   isLiked: boolean;
   isAnonymous: boolean;
+  commentIndex?: number; // For API calls
+  replyIndex?: number; // For API calls
 }
 
 interface CommentSectionProps {
