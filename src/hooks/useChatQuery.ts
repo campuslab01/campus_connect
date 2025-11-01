@@ -81,13 +81,16 @@ export const useSendMessage = () => {
     onMutate: async ({ chatId, content }) => {
       // Optimistic update
       const messageId = `temp-${Date.now()}`;
+      const now = new Date().toISOString();
       const optimisticMessage = {
         id: messageId,
         chatId,
         content,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        timestamp: now,
         isOwn: true,
-        sender: { id: 'current-user', name: 'You' }
+        sender: { id: 'current-user', name: 'You', _id: 'current-user' },
+        _id: messageId
       };
 
       // Cancel outgoing queries
@@ -96,15 +99,22 @@ export const useSendMessage = () => {
       // Snapshot previous value
       const previousMessages = queryClient.getQueryData(['chatMessages', chatId, 'infinite']);
 
-      // Optimistically update
+      // Optimistically update - add to the end of the first page (most recent messages)
       queryClient.setQueryData(['chatMessages', chatId, 'infinite'], (old: any) => {
-        if (!old) return old;
+        if (!old || !old.pages || old.pages.length === 0) {
+          return {
+            pages: [{ messages: [optimisticMessage] }],
+            pageParams: [1]
+          };
+        }
+        
+        // Add optimistic message to the end of the first page (newest messages)
         return {
           ...old,
           pages: [
             {
               ...old.pages[0],
-              messages: [optimisticMessage, ...old.pages[0].messages]
+              messages: [...(old.pages[0].messages || []), optimisticMessage]
             },
             ...old.pages.slice(1)
           ]

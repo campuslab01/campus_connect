@@ -8,9 +8,9 @@ import {
   MoreVertical,
   Sparkles,
   Smile,
-  Paperclip,
   Search,
   Star,
+  Trash2,
 } from "lucide-react";
 // Mock data removed - data will be fetched from MongoDB
 import bgImage from "/images/login.jpeg";
@@ -145,6 +145,7 @@ const handleEmojiSelect = (emoji: any) => {
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<"primary" | "requests">("primary");
+  const [showDeleteMenu, setShowDeleteMenu] = useState(false);
   const socket = useSocket();
   
   // Fetch chats using React Query
@@ -182,13 +183,19 @@ const handleEmojiSelect = (emoji: any) => {
   // Flatten paginated messages
   const allMessages = messagesData?.pages.flatMap((page: any) => page?.messages || []) || [];
   
-  // Transform messages to match UI
-  const transformedMessages = allMessages.map((msg: any) => ({
-    text: msg.content || msg.text,
-    time: msg.createdAt ? formatTime(msg.createdAt) : 'Just now',
-    isOwn: (msg.sender?._id || msg.sender?.id?.toString()) === ((user as any)?.id?.toString() || (user as any)?._id?.toString()),
-    id: msg._id || msg.id
-  }));
+  // Transform messages to match UI and sort by timestamp
+  const transformedMessages = allMessages
+    .map((msg: any) => ({
+      text: msg.content || msg.text,
+      time: msg.timestamp ? formatTime(msg.timestamp) : (msg.createdAt ? formatTime(msg.createdAt) : 'Just now'),
+      timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
+      isOwn: (msg.sender?._id || msg.sender?.id?.toString()) === ((user as any)?.id?.toString() || (user as any)?._id?.toString()),
+      id: msg._id || msg.id || `temp-${Date.now()}`
+    }))
+    .sort((a: any, b: any) => {
+      // Sort by timestamp - newest first (then reverse for display)
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
 
   // Send message mutation with optimistic updates
   const sendMessageMutation = useSendMessage();
@@ -278,14 +285,12 @@ const handleEmojiSelect = (emoji: any) => {
     const chat = transformedChats.find((c: any) => c.id === selectedChat);
     if (!chat || !chat.chatId) return;
 
-    // Send via Socket.io immediately (optimistic) and API (for persistence)
-    if (socket.isConnected) {
-      socket.sendMessage(String(chat.chatId), message.trim());
-    }
+    const messageContent = message.trim();
+    setMessage(""); // Clear input immediately for better UX
 
-    // Use mutation for API call (includes optimistic update)
+    // Use mutation for API call (includes optimistic update and socket send)
     sendMessageMutation.mutate(
-      { chatId: chat.chatId, content: message.trim() },
+      { chatId: chat.chatId, content: messageContent },
       {
         onSuccess: () => {
           // Trigger quiz after 5 user messages
@@ -293,14 +298,39 @@ const handleEmojiSelect = (emoji: any) => {
             setShowQuiz(true);
             setQuizTimeLeft(300);
           }
-          setMessage("");
         },
         onError: (err: any) => {
           console.error('Error sending message:', err);
+          setMessage(messageContent); // Restore message on error
           alert(err.response?.data?.message || 'Failed to send message');
         }
       }
     );
+  };
+
+  const handleDeleteChat = async () => {
+    if (!selectedChat || !window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+      return;
+    }
+
+    const chat = transformedChats.find((c: any) => c.id === selectedChat);
+    if (!chat || !chat.chatId) return;
+
+    try {
+      await api.delete(`/chat/${chat.chatId}`);
+      
+      // Invalidate queries to refresh chat list
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      
+      // Clear selected chat and navigate back
+      setSelectedChat(null);
+      setShowDeleteMenu(false);
+      
+      alert('Chat deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting chat:', err);
+      alert(err.response?.data?.message || 'Failed to delete chat');
+    }
   };
 
  // Filter chats based on search query
@@ -421,11 +451,34 @@ const filteredChats = transformedChats.filter(
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                
-                <motion.button className="text-white/70 hover:text-pink-300 transition-colors p-2 rounded-xl hover:bg-white/5" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <div className="flex items-center gap-2 relative">
+                <motion.button 
+                  className="text-white/70 hover:text-pink-300 transition-colors p-2 rounded-xl hover:bg-white/5" 
+                  whileHover={{ scale: 1.1 }} 
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowDeleteMenu(!showDeleteMenu)}
+                >
                   <MoreVertical size={20} />
                 </motion.button>
+                
+                {showDeleteMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute right-0 top-full mt-2 bg-black/90 backdrop-blur-md border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
+                  >
+                    <motion.button
+                      onClick={handleDeleteChat}
+                      className="flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-red-500/20 w-full text-left transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Trash2 size={18} />
+                      <span>Delete Chat</span>
+                    </motion.button>
+                  </motion.div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -442,8 +495,16 @@ const filteredChats = transformedChats.filter(
               </button>
             )}
             <AnimatePresence>
-              {transformedMessages.map((msg, index) => (
-                <motion.div key={index} className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`} initial={{ opacity: 0, y: 20, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: index * 0.05, type: "spring", stiffness: 500, damping: 30 }}>
+              {transformedMessages.map((msg) => (
+                <motion.div 
+                  key={msg.id || `msg-${msg.timestamp}`} 
+                  className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`} 
+                  initial={{ opacity: 0, y: 20, scale: 0.8 }} 
+                  animate={{ opacity: 1, y: 0, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  layout
+                >
                   <motion.div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border ${msg.isOwn ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white border-pink-400/30 shadow-lg shadow-pink-500/20" : "bg-white/10 text-white border-white/10"}`} whileHover={{ scale: 1.02 }}>
                     <p className="text-sm">{msg.text}</p>
                     <p className={`text-xs mt-1 ${msg.isOwn ? "text-pink-100" : "text-white/50"}`}>{msg.time}</p>
@@ -476,18 +537,14 @@ const filteredChats = transformedChats.filter(
             onSubmit={(e) => handleSendMessage(e)}
             className="flex-shrink-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-20"
           >
-            <div className="flex items-center gap-2">
-              <motion.button type="button" className=" text-white transition-colors p-2 rounded-xl hover:bg-white/5" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Paperclip size={20} />
-              </motion.button>
-
+            <div className="flex items-center gap-2 w-full">
               <motion.input
-  type="text"
-  value={message}
-  onChange={(e) => setMessage(e.target.value)}
-  placeholder="Type your message..."
-  className="flex-1 px-4 py-2 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-pink-400/60 backdrop-blur-sm"
-/>
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 px-4 py-2 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-pink-400/60 backdrop-blur-sm"
+              />
 
 
              {/* Emoji Button */}
