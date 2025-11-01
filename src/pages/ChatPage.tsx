@@ -29,6 +29,23 @@ const ChatPage: React.FC = () => {
   const initialUserId = state?.userId ?? null;
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [directChatInfo, setDirectChatInfo] = useState<any>(null); // Store chat info when created from DM
+  const { user } = useAuth();
+  
+  // Helper function to format time (must be defined before use)
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return date.toLocaleDateString();
+  };
   
   // When navigating from DM, find or create chat
   useEffect(() => {
@@ -111,7 +128,6 @@ const handleEmojiSelect = (emoji: any) => {
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<"primary" | "requests">("primary");
-  const { user } = useAuth();
   const socket = useSocket();
   
   // Fetch chats using React Query
@@ -185,21 +201,6 @@ const handleEmojiSelect = (emoji: any) => {
     };
   }, [socket, selectedChatData?.chatId]);
 
-  // Helper function to format time
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    return date.toLocaleDateString();
-  };
   const isQuizComplete = () => {
     return quizQuestions.every(q => {
       if (q.type === "select") return !!quizAnswers[q.id];
