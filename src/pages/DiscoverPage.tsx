@@ -273,7 +273,7 @@ const DiscoverPage: React.FC = () => {
             >
               {/* Like Overlay (Green Flame + Animated Heart) */}
               <motion.div
-                className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                className="absolute inset-0 z-[999] flex items-center justify-center pointer-events-none"
                 style={{ opacity: likeOpacity, pointerEvents: "none" }}
               >
                 {/* Animated green flame layers */}
@@ -308,6 +308,7 @@ const DiscoverPage: React.FC = () => {
 
                 {/* Heart icon with scaling and rotation */}
                 <motion.div
+                  className="relative z-[1000]"
                   animate={{ scale: [1, 1.3, 1.1, 1], rotate: [0, 15, -10, 0] }}
                   transition={{
                     duration: 0.8,
@@ -318,7 +319,7 @@ const DiscoverPage: React.FC = () => {
                 >
                   <Heart
                     size={100}
-                    className="text-green-400 z-10"
+                    className="text-green-400"
                     fill="currentColor"
                   />
                 </motion.div>
@@ -326,7 +327,7 @@ const DiscoverPage: React.FC = () => {
 
               {/* Dislike Overlay (Red Flame + Animated X) */}
               <motion.div
-                className="absolute inset-0 flex z-20 items-center justify-center pointer-events-none"
+                className="absolute inset-0 flex z-[999] items-center justify-center pointer-events-none"
                 style={{ opacity: nopeOpacity }}
               >
                 {/* Animated red flame layers */}
@@ -361,6 +362,7 @@ const DiscoverPage: React.FC = () => {
 
                 {/* X icon with scaling and rotation */}
                 <motion.div
+                  className="relative z-[1000]"
                   animate={{ scale: [1, 1.3, 1.1, 1], rotate: [0, -15, 10, 0] }}
                   transition={{
                     duration: 0.8,
@@ -369,7 +371,7 @@ const DiscoverPage: React.FC = () => {
                     ease: "easeInOut",
                   }}
                 >
-                  <X size={100} className="text-red-400 z-10" />
+                  <X size={100} className="text-red-400" />
                 </motion.div>
               </motion.div>
 
