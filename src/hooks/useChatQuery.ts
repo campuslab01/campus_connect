@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
+import { useSocket } from '../contexts/SocketContext';
 
 // Chat queries
 export const useChats = (page = 1, limit = 20) => {
@@ -11,7 +12,7 @@ export const useChats = (page = 1, limit = 20) => {
       });
       return response.data.data;
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -44,7 +45,7 @@ export const useChatMessages = (chatId: string | number | null, page = 1, limit 
       return response.data.data;
     },
     enabled: !!chatId,
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -70,6 +71,7 @@ export const useInfiniteMessages = (chatId: string | number | null) => {
 
 export const useSendMessage = () => {
   const queryClient = useQueryClient();
+  const socket = useSocket();
 
   return useMutation({
     mutationFn: async ({ chatId, content }: { chatId: string | number; content: string }) => {
@@ -109,20 +111,24 @@ export const useSendMessage = () => {
         };
       });
 
-      // Send via Socket.io immediately
-      if (socket.isConnected) {
-        socket.sendMessage(String(chatId), content, messageId);
+      // Send via Socket.io immediately if connected
+      if (socket.isConnected && socket.sendMessage) {
+        try {
+          socket.sendMessage(String(chatId), content, messageId);
+        } catch (error) {
+          console.error('Error sending message via socket:', error);
+        }
       }
 
       return { previousMessages, optimisticMessage };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, variables, context) => {
       // Rollback on error
       if (context?.previousMessages) {
         queryClient.setQueryData(['chatMessages', variables.chatId, 'infinite'], context.previousMessages);
       }
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: (_data, variables) => {
       // Replace optimistic message with real one
       queryClient.invalidateQueries({ queryKey: ['chatMessages', variables.chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
