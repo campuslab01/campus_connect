@@ -21,6 +21,23 @@ const ConfessionPage: React.FC = () => {
   const socket = useSocket();
   const queryClient = useQueryClient();
 
+  // Helper function to format time - MUST be defined before it's used
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+  };
+
   // Fetch confessions with infinite scroll using React Query
   const { 
     data, 
@@ -88,23 +105,6 @@ const ConfessionPage: React.FC = () => {
       // Cleanup handled by SocketContext
     };
   }, [socket]);
-
-  // Helper function to format time
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    if (days < 7) return `${days} days ago`;
-    return date.toLocaleDateString();
-  };
 
   const handleSubmitConfession = async (e: React.FormEvent) => {
     e.preventDefault();
