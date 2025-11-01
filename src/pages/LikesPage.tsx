@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, Star, Crown } from 'lucide-react';
 // Mock data removed - data will be fetched from MongoDB
 import bgImage from '/images/login.jpeg';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUserLikes } from '../hooks/useUsersQuery';
 import { useSocket } from '../contexts/SocketContext';
 
@@ -11,6 +12,7 @@ const LikesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'likes' | 'matches'>('likes');
   const [showPremium, setShowPremium] = useState(false);
   const socket = useSocket();
+  const queryClient = useQueryClient();
   
   // Fetch likes and matches using React Query
   const { data: likesData, isLoading: loading, error: queryError } = useUserLikes();
@@ -47,20 +49,12 @@ const LikesPage: React.FC = () => {
 
     const handleNewLike = (data: any) => {
       // Invalidate React Query cache to refetch
-      const { queryClient } = require('@tanstack/react-query');
-      const client = queryClient;
-      if (client) {
-        client.invalidateQueries({ queryKey: ['userLikes'] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['userLikes'] });
     };
 
     const handleNewMatch = (data: any) => {
       // Invalidate React Query cache to refetch
-      const { queryClient } = require('@tanstack/react-query');
-      const client = queryClient;
-      if (client) {
-        client.invalidateQueries({ queryKey: ['userLikes'] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['userLikes'] });
     };
 
     socket.onLikeNew(handleNewLike);

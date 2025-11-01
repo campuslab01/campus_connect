@@ -16,6 +16,7 @@ import {
 import bgImage from "/images/login.jpeg";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useChats, useInfiniteMessages, useSendMessage } from '../hooks/useChatQuery';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +31,7 @@ const ChatPage: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [directChatInfo, setDirectChatInfo] = useState<any>(null); // Store chat info when created from DM
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   // Helper function to format time (must be defined before use)
   const formatTime = (dateString: string) => {
@@ -96,9 +98,8 @@ const ChatPage: React.FC = () => {
             setSelectedChat(chatId);
             
             // Refresh chats list in background to ensure it's available
-            const { queryClient } = require('@tanstack/react-query');
-            await queryClient.invalidateQueries({ queryKey: ['chats'] });
-            await queryClient.refetchQueries({ queryKey: ['chats'] });
+            queryClient.invalidateQueries({ queryKey: ['chats'] });
+            queryClient.refetchQueries({ queryKey: ['chats'] });
           }
         } catch (err: any) {
           console.error('Error getting/creating chat:', err);
@@ -199,11 +200,7 @@ const handleEmojiSelect = (emoji: any) => {
     const handleNewMessage = (_data: any) => {
       // Invalidate React Query cache to refetch messages
       // React Query will handle the update automatically
-      const { queryClient } = require('@tanstack/react-query');
-      const client = queryClient;
-      if (client) {
-        client.invalidateQueries({ queryKey: ['chatMessages', selectedChatData.chatId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', selectedChatData.chatId] });
     };
 
     socket.onMessage(handleNewMessage);

@@ -155,10 +155,17 @@ const ProfilePage: React.FC = () => {
       
       if (response.data.status === 'success') {
         setIsEditing(false);
-        // Update auth context with new user data
-        const { useAuth } = require('../contexts/AuthContext');
+        // Update local profile state with new data
+        if (response.data.data?.user) {
+          setProfile(prev => ({
+            ...prev,
+            ...response.data.data.user
+          }));
+        }
         // Profile updated successfully
         alert('Profile updated successfully!');
+        // Optionally reload page to get fresh user data
+        window.location.reload();
       }
     } catch (err: any) {
       console.error('Error updating profile:', err);

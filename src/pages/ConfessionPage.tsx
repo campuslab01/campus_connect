@@ -5,6 +5,7 @@ import { Comment, Reply } from '../data/mockConfessions'; // Types kept for API 
 import CommentSection from '../components/CommentSection';
 import bgImage from '/images/login.jpeg';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useConfessions, useCreateConfession } from '../hooks/useConfessionsQuery';
 import { useSocket } from '../contexts/SocketContext';
 import { InfiniteScroll } from '../components/InfiniteScroll';
@@ -17,6 +18,7 @@ const ConfessionPage: React.FC = () => {
   const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
   const navigate = useNavigate();
   const socket = useSocket();
+  const queryClient = useQueryClient();
 
   // Fetch confessions with infinite scroll using React Query
   const { 
@@ -76,11 +78,7 @@ const ConfessionPage: React.FC = () => {
 
     const handleNewConfession = (data: any) => {
       // Invalidate React Query cache to refetch
-      const { queryClient } = require('@tanstack/react-query');
-      const client = queryClient;
-      if (client) {
-        client.invalidateQueries({ queryKey: ['confessions'] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['confessions'] });
     };
 
     socket.onConfessionNew(handleNewConfession);
