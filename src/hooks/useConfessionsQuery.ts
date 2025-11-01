@@ -31,14 +31,14 @@ export const useCreateConfession = () => {
     onMutate: async (variables) => {
       // Optimistic update
       const optimisticConfession = {
+        _id: `temp-${Date.now()}`,
         id: `temp-${Date.now()}`,
         content: variables.content,
         isAnonymous: variables.isAnonymous,
-        author: variables.isAnonymous ? undefined : 'You',
+        author: variables.isAnonymous ? undefined : { name: 'You' },
         createdAt: new Date().toISOString(),
-        likes: 0,
-        comments: 0,
-        commentsList: [],
+        likes: [],
+        comments: [], // Ensure this is an array, not a number
         tags: []
       };
 

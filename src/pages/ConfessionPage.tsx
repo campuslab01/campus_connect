@@ -57,60 +57,65 @@ const ConfessionPage: React.FC = () => {
   const confessionsData = data?.pages.flatMap(page => page.confessions) || [];
   
   // Transform API response to match Confession structure
-  const confessions = confessionsData.map((confession: any) => ({
-    id: confession._id || confession.id,
-    author: confession.isAnonymous ? undefined : confession.author?.name,
-    avatar: confession.isAnonymous ? undefined : confession.author?.profileImage,
-    text: confession.content || confession.text,
-    time: confession.createdAt ? formatTime(confession.createdAt) : 'Just now',
-    likes: confession.likes?.length || 0,
-    comments: confession.comments?.length || 0,
-    isAnonymous: confession.isAnonymous !== false,
-    college: confession.author?.college || confession.college || '',
-    tags: confession.tags || [],
-    commentsList: confession.comments?.map((comment: any, commentIndex: number) => {
-      const userId = (user as any)?._id || (user as any)?.id;
-      const userIdStr = userId?.toString();
-      
-      // Check if user liked this comment - likes array contains user IDs
-      const commentIsLiked = Array.isArray(comment.likes) && comment.likes.some((likeId: any) => {
-        const likeIdStr = (likeId._id || likeId)?.toString();
-        return likeIdStr === userIdStr;
-      });
-      
-      return {
-        id: comment._id || comment.id,
-        author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
-        authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
-        text: comment.content || comment.text,
-        time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
-        likes: Array.isArray(comment.likes) ? comment.likes.length : 0,
-        isLiked: commentIsLiked,
-        isAnonymous: comment.isAnonymous !== false,
-        commentIndex, // Store MongoDB array index for API calls
-        replies: comment.replies?.map((reply: any, replyIndex: number) => {
-          // Check if user liked this reply
-          const replyIsLiked = Array.isArray(reply.likes) && reply.likes.some((likeId: any) => {
-            const likeIdStr = (likeId._id || likeId)?.toString();
-            return likeIdStr === userIdStr;
-          });
-          
-          return {
-            id: reply._id || reply.id,
-            author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
-            authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
-            text: reply.content || reply.text,
-            time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
-            likes: Array.isArray(reply.likes) ? reply.likes.length : 0,
-            isLiked: replyIsLiked,
-            isAnonymous: reply.isAnonymous !== false,
-            commentIndex, // Store for API calls
-            replyIndex // Store MongoDB array index for API calls
-          } as Reply;
-        }) || []
-      } as Comment;
-    }) || []
-  }));
+  const confessions = confessionsData.map((confession: any) => {
+    // Ensure comments is always an array
+    const commentsArray = Array.isArray(confession.comments) ? confession.comments : [];
+    
+    return {
+      id: confession._id || confession.id,
+      author: confession.isAnonymous ? undefined : confession.author?.name,
+      avatar: confession.isAnonymous ? undefined : confession.author?.profileImage,
+      text: confession.content || confession.text,
+      time: confession.createdAt ? formatTime(confession.createdAt) : 'Just now',
+      likes: Array.isArray(confession.likes) ? confession.likes.length : (typeof confession.likes === 'number' ? confession.likes : 0),
+      comments: commentsArray.length,
+      isAnonymous: confession.isAnonymous !== false,
+      college: confession.author?.college || confession.college || '',
+      tags: Array.isArray(confession.tags) ? confession.tags : [],
+      commentsList: commentsArray.map((comment: any, commentIndex: number) => {
+        const userId = (user as any)?._id || (user as any)?.id;
+        const userIdStr = userId?.toString();
+        
+        // Check if user liked this comment - likes array contains user IDs
+        const commentIsLiked = Array.isArray(comment.likes) && comment.likes.some((likeId: any) => {
+          const likeIdStr = (likeId._id || likeId)?.toString();
+          return likeIdStr === userIdStr;
+        });
+        
+        return {
+          id: comment._id || comment.id,
+          author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
+          authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
+          text: comment.content || comment.text,
+          time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
+          likes: Array.isArray(comment.likes) ? comment.likes.length : 0,
+          isLiked: commentIsLiked,
+          isAnonymous: comment.isAnonymous !== false,
+          commentIndex, // Store MongoDB array index for API calls
+          replies: Array.isArray(comment.replies) ? comment.replies.map((reply: any, replyIndex: number) => {
+            // Check if user liked this reply
+            const replyIsLiked = Array.isArray(reply.likes) && reply.likes.some((likeId: any) => {
+              const likeIdStr = (likeId._id || likeId)?.toString();
+              return likeIdStr === userIdStr;
+            });
+            
+            return {
+              id: reply._id || reply.id,
+              author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
+              authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
+              text: reply.content || reply.text,
+              time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
+              likes: Array.isArray(reply.likes) ? reply.likes.length : 0,
+              isLiked: replyIsLiked,
+              isAnonymous: reply.isAnonymous !== false,
+              commentIndex, // Store for API calls
+              replyIndex // Store MongoDB array index for API calls
+            } as Reply;
+          }) : []
+        } as Comment;
+      })
+    };
+  });
 
   const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load confessions') : null;
 
