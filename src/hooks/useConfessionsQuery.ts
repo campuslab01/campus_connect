@@ -7,7 +7,7 @@ export const useConfessions = () => {
     queryKey: ['confessions'],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await api.get('/confessions', {
-        params: { page: pageParam, limit }
+        params: { page: pageParam, limit: 20 }
       });
       return {
         confessions: response.data.data.confessions || [],

@@ -108,12 +108,28 @@ const ConfessionPage: React.FC = () => {
 
   const handleSubmitConfession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confessionText.trim()) return;
+    const trimmedContent = confessionText.trim();
+    
+    // Validate content length (backend requires 10-1000 characters)
+    if (!trimmedContent) {
+      alert('Please enter a confession');
+      return;
+    }
+    
+    if (trimmedContent.length < 10) {
+      alert('Confession must be at least 10 characters long');
+      return;
+    }
+    
+    if (trimmedContent.length > 1000) {
+      alert('Confession cannot be more than 1000 characters');
+      return;
+    }
 
     createConfessionMutation.mutate(
       {
-        content: confessionText.trim(),
-        isAnonymous: isAnonymous
+        content: trimmedContent,
+        isAnonymous: Boolean(isAnonymous) // Ensure it's a boolean
       },
       {
         onSuccess: () => {
@@ -127,7 +143,8 @@ const ConfessionPage: React.FC = () => {
         },
         onError: (err: any) => {
           console.error('Error creating confession:', err);
-          alert(err.response?.data?.message || 'Failed to post confession');
+          const errorMessage = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to post confession';
+          alert(errorMessage);
         }
       }
     );
