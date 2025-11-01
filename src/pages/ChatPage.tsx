@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { useChats, useInfiniteMessages, useSendMessage } from '../hooks/useChatQuery';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../config/axios';
 
 
 const ChatPage: React.FC = () => {
@@ -56,6 +57,7 @@ const ChatPage: React.FC = () => {
       };
       findOrCreateChat();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserId]);
 
 const [showEmojiPicker, setShowEmojiPicker] = useState(false); // Emoji picker toggle
@@ -182,10 +184,10 @@ const handleEmojiSelect = (emoji: any) => {
   }, [showQuiz]);
 
   useEffect(() => {
-    if (initialChatId) {
+    if (initialUserId) {
       window.history.replaceState({}, document.title);
     }
-  }, [initialChatId]);
+  }, [initialUserId]);
   
 
   // Quiz questions (static)
