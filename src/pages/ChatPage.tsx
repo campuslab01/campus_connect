@@ -76,11 +76,11 @@ const handleEmojiSelect = (emoji: any) => {
   
   // Fetch chats using React Query
   const { data: chatsData, isLoading: loading, error: chatsError } = useChats(1, 50);
-  const chats = chatsData?.chats || (chatsData as any)?.data?.chats || [];
+  const chats = (chatsData as any)?.chats || (chatsData as any)?.data?.chats || [];
   
   // Transform chats to match UI structure
   const transformedChats = chats.map((chat: any) => {
-    const userIdStr = (user?.id || user?._id)?.toString();
+    const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
     const otherParticipant = chat.participants?.find((p: any) => {
       const pIdStr = (p._id || p.id)?.toString();
       return pIdStr !== userIdStr;
@@ -113,7 +113,7 @@ const handleEmojiSelect = (emoji: any) => {
   const transformedMessages = allMessages.map((msg: any) => ({
     text: msg.content || msg.text,
     time: msg.createdAt ? formatTime(msg.createdAt) : 'Just now',
-    isOwn: (msg.sender?._id || msg.sender?.id?.toString()) === (user?.id?.toString() || user?._id?.toString()),
+    isOwn: (msg.sender?._id || msg.sender?.id?.toString()) === ((user as any)?.id?.toString() || (user as any)?._id?.toString()),
     id: msg._id || msg.id
   }));
 
@@ -251,7 +251,7 @@ const handleEmojiSelect = (emoji: any) => {
 
  // Filter chats based on search query
 const filteredChats = transformedChats.filter(
-  (chat) =>
+  (chat: any) =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
 );
@@ -264,7 +264,7 @@ const filteredChats = transformedChats.filter(
     if (!chat && chats.length > 0) {
       const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat.toString());
       if (rawChat) {
-        const userIdStr = (user?.id || user?._id)?.toString();
+        const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
         const otherParticipant = rawChat.participants?.find((p: any) => {
           const pIdStr = (p._id || p.id)?.toString();
           return pIdStr !== userIdStr;
@@ -627,7 +627,7 @@ const filteredChats = transformedChats.filter(
         <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></div>
         Primary
         <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
-          {filteredChats.filter((c) => !c.isDMRequest).length}
+          {filteredChats.filter((c: any) => !c.isDMRequest).length}
         </span>
       </span>
     </motion.button>
@@ -652,9 +652,9 @@ const filteredChats = transformedChats.filter(
       <span className="relative z-10 flex items-center justify-center gap-2">
         <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse"></div>
         Requests
-        {filteredChats.filter((c) => c.isDMRequest).length > 0 && (
+        {filteredChats.filter((c: any) => c.isDMRequest).length > 0 && (
           <span className="text-xs bg-pink-500/30 px-2 py-0.5 rounded-full border border-pink-400/30">
-            {filteredChats.filter((c) => c.isDMRequest).length}
+            {filteredChats.filter((c: any) => c.isDMRequest).length}
           </span>
         )}
       </span>
@@ -697,11 +697,11 @@ const filteredChats = transformedChats.filter(
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {filteredChats.filter((c) => c.isDMRequest).length > 0 ? (
+              {filteredChats.filter((c: any) => c.isDMRequest).length > 0 ? (
                 <div className="space-y-3">
                   {filteredChats
-                    .filter((chat) => chat.isDMRequest)
-                    .map((chat, index) => (
+                    .filter((chat: any) => chat.isDMRequest)
+                    .map((chat: any, index: number) => (
                       <motion.div
                         key={chat.id}
                         className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-pink-400/20 rounded-2xl p-4 backdrop-blur-md"
@@ -783,11 +783,11 @@ const filteredChats = transformedChats.filter(
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.3 }}
             >
-              {filteredChats.filter((c) => !c.isDMRequest).length > 0 ? (
+              {filteredChats.filter((c: any) => !c.isDMRequest).length > 0 ? (
                 <div className="space-y-3 pb-24">
                   {filteredChats
-                    .filter((chat) => !chat.isDMRequest)
-                    .map((chat, index) => (
+                    .filter((chat: any) => !chat.isDMRequest)
+                    .map((chat: any, index: number) => (
                       <motion.div
                         key={chat.id}
                         onClick={() => setSelectedChat(chat.id)}
