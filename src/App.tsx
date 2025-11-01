@@ -17,6 +17,7 @@ import { SocketProvider } from './contexts/SocketContext';
 import { useLenis } from './hooks/useLenis';
 import { ToastProvider } from './contexts/ToastContext';
 import Toaster from './components/Toaster';
+import { useGlobalSocketUpdates } from './hooks/useGlobalSocketUpdates';
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
@@ -24,6 +25,9 @@ function AppContent() {
 
   // Initialize Lenis smooth scrolling
   useLenis();
+  
+  // Setup global socket listeners for real-time updates
+  useGlobalSocketUpdates();
 
   const navigate = useNavigate();
 

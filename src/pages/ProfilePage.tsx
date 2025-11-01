@@ -367,7 +367,7 @@ const ProfilePage: React.FC = () => {
                       <select
                         value={profile.relationshipStatus}
                         onChange={(e) => setProfile({ ...profile, relationshipStatus: e.target.value })}
-                        className="w-full bg-white/10 border border-white/20 text-white rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                        className="w-full bg-white/10 border border-white/12 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-400"
                       >
                         <option value="Single">Single</option>
                         <option value="In a relationship">In a relationship</option>
@@ -375,7 +375,7 @@ const ProfilePage: React.FC = () => {
                         <option value="It's complicated">It's complicated</option>
                       </select>
                     ) : (
-                      <div className="text-white">{profile.relationshipStatus}</div>
+                      <div className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white/90">{profile.relationshipStatus || 'Not specified'}</div>
                     )}
                   </motion.div>
 
@@ -404,7 +404,7 @@ const ProfilePage: React.FC = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-white">{profile.lookingFor?.join(', ') || 'Not specified'}</div>
+                      <div className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white/90">{profile.lookingFor?.join(', ') || 'Not specified'}</div>
                     )}
                   </motion.div>
 
@@ -430,14 +430,17 @@ const ProfilePage: React.FC = () => {
                       {isEditing && (
                         <motion.input
                           type="text"
-                          placeholder="Add interest"
+                          placeholder="Type and press Enter"
                           onKeyPress={(e: any) => {
                             if (e.key === 'Enter' && e.target.value.trim()) {
-                              setProfile(prev => ({ ...prev, interests: [...prev.interests, e.target.value.trim()] }));
+                              const newInterest = e.target.value.trim();
+                              if (!profile.interests.includes(newInterest)) {
+                                setProfile(prev => ({ ...prev, interests: [...prev.interests, newInterest] }));
+                              }
                               e.target.value = '';
                             }
                           }}
-                          className="bg-white/10 border border-dashed border-white/20 text-white text-sm px-3 py-1 rounded-full placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 w-32"
+                          className="bg-white/10 border border-dashed border-white/20 text-white text-sm px-3 py-1 rounded-full placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 min-w-[150px]"
                         />
                       )}
                     </div>
@@ -749,6 +752,7 @@ const ProfilePage: React.FC = () => {
 /* ---------- Reusable small components ---------- */
 
 const Field = ({ label, type = 'text', value, editable, onChange }: any) => {
+  const commonStyles = "w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white";
   return (
     <motion.div>
       <label className="block text-sm font-medium text-white/80 mb-1">{label}</label>
@@ -757,7 +761,7 @@ const Field = ({ label, type = 'text', value, editable, onChange }: any) => {
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            className={`${commonStyles} placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-400`}
             rows={4}
           />
         ) : (
@@ -765,17 +769,18 @@ const Field = ({ label, type = 'text', value, editable, onChange }: any) => {
             type={type}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            className={`${commonStyles} placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-400`}
           />
         )
       ) : (
-        <p className="text-white/90">{value}</p>
+        <div className={`${commonStyles} text-white/90`}>{value || 'Not specified'}</div>
       )}
     </motion.div>
   );
 };
 
 const SelectField = ({ label, value, editable, onChange }: any) => {
+  const commonStyles = "w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white";
   return (
     <motion.div>
       <label className="block text-sm font-medium text-white/80 mb-1">{label}</label>
@@ -783,7 +788,7 @@ const SelectField = ({ label, value, editable, onChange }: any) => {
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-pink-400"
+          className={`${commonStyles} focus:outline-none focus:ring-2 focus:ring-pink-400`}
         >
           <option>Freshman</option>
           <option>Sophomore</option>
@@ -792,7 +797,7 @@ const SelectField = ({ label, value, editable, onChange }: any) => {
           <option>Graduate</option>
         </select>
       ) : (
-        <p className="text-white/90">{value}</p>
+        <div className={`${commonStyles} text-white/90`}>{value || 'Not specified'}</div>
       )}
     </motion.div>
   );
