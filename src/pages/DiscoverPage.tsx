@@ -23,6 +23,7 @@ import bgImage from "/images/login.jpeg";
 import { useNavigate } from "react-router-dom";
 import { useUserSuggestions } from '../hooks/useUsersQuery';
 import { InfiniteScroll } from '../components/InfiniteScroll';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 
 
@@ -36,13 +37,21 @@ const DiscoverPage: React.FC = () => {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
   const [showNextCard, setShowNextCard] = useState(false);
-  // Removed unused variables: selectedUser, modalPhotoIndex
   const navigate = useNavigate();
-  // 
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | number | null>(null);
+
+  // Fetch full profile when modal is opened
+  const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
+  const modalUser = profileData?.user || null;
 
   const openChat = (userId: number) => {
     navigate("/chat", { state: { userId } });
+  };
+  
+  const openProfileModal = (userId: string | number) => {
+    setSelectedUserId(userId);
+    setShowProfileModal(true);
   };
 
 
@@ -383,8 +392,7 @@ const DiscoverPage: React.FC = () => {
                     alt={currentUser.name}
                     className="w-full h-full object-cover cursor-pointer"
                     onClick={() => {
-                      console.log("Opening profile modal for:", currentUser.name);
-                      setShowProfileModal(true);
+                      openProfileModal(currentUser.id);
                     }}
                   />
                 )}
@@ -609,7 +617,10 @@ const DiscoverPage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowProfileModal(false)}
+            onClick={() => {
+              setShowProfileModal(false);
+              setSelectedUserId(null);
+            }}
           >
             <motion.div 
   className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-3xl p-6 w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-y-auto overflow-x-hidden relative"
@@ -619,6 +630,13 @@ const DiscoverPage: React.FC = () => {
   transition={{ type: "spring", stiffness: 300, damping: 30 }}
   onClick={(e) => e.stopPropagation()}
 >
+              {profileLoading ? (
+                <div className="text-center py-12 text-white/70">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+                  <p className="text-sm">Loading profile...</p>
+                </div>
+              ) : modalUser ? (
+                <>
               {/* Profile Header */}
               <div className="text-center mb-6">
                 <motion.div
@@ -627,14 +645,18 @@ const DiscoverPage: React.FC = () => {
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring" }}
                 >
-                  {currentUser.photos && currentUser.photos[currentPhotoIndex] && (
+                  {(modalUser.photos && modalUser.photos[0]) || modalUser.profileImage ? (
                     <img
-                      src={currentUser.photos[currentPhotoIndex]}
-                      alt={currentUser.name}
+                      src={modalUser.photos?.[0] || modalUser.profileImage}
+                      alt={modalUser.name}
                       className="w-full h-full rounded-full object-cover border-2 border-pink-400 shadow-lg"
                     />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
+                      {modalUser.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
                   )}
-                  {currentUser.verified && (
+                  {modalUser.verified && (
                     <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-1 rounded-full">
                       <Star size={12} />
                     </div>
@@ -646,7 +668,7 @@ const DiscoverPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  {currentUser.name}, {currentUser.age}
+                  {modalUser.name}, {modalUser.age}
                 </motion.h2>
                 <motion.p 
                   className="text-white/80 text-sm drop-shadow-sm"
@@ -654,7 +676,7 @@ const DiscoverPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  {currentUser.college} • {currentUser.department}
+                  {modalUser.college} • {modalUser.department}
                 </motion.p>
               </div>
 
@@ -672,7 +694,7 @@ const DiscoverPage: React.FC = () => {
     Bio
   </h3>
   <div className="text-white/80 drop-shadow-sm leading-relaxed">
-    Love coding, hiking, and good coffee. Always up for exploring new places around campus!
+    {modalUser.bio || 'No bio available'}
   </div>
 </div>
 
@@ -685,11 +707,11 @@ const DiscoverPage: React.FC = () => {
                   <div className="space-y-2">
                   <div className="flex justify-between mt-[1.2rem]">
   <span className="text-white/80 font-medium drop-shadow-sm">Department:</span>
-  <span className="text-white drop-shadow-sm">{currentUser.department}</span>
+  <span className="text-white drop-shadow-sm">{modalUser.department || 'N/A'}</span>
 </div>
 <div className="flex justify-between mt-[1.2rem]">
       <span className="text-white/80 font-medium drop-shadow-sm">Year:</span>
-      <span className="text-white drop-shadow-sm">{currentUser.year}</span>
+      <span className="text-white drop-shadow-sm">{modalUser.year || 'N/A'}</span>
     </div>
                   </div>
                 </div>
@@ -702,12 +724,11 @@ const DiscoverPage: React.FC = () => {
   <div className="space-y-2">
                   <div className="flex justify-between mt-[1.2rem]">
   <span className="text-white/80 font-medium drop-shadow-sm">Looking For:</span>
-  <span className="text-white drop-shadow-sm">{currentUser.lookingFor}</span>
+  <span className="text-white drop-shadow-sm">{Array.isArray(modalUser.lookingFor) ? modalUser.lookingFor.join(', ') : modalUser.lookingFor || 'N/A'}</span>
 </div>
-<div className="space-y-2">
-                  <div className="flex justify-between mt-[1.2rem]">
+<div className="flex justify-between mt-[1.2rem]">
   <span className="text-white/80 font-medium drop-shadow-sm">RelationShip Status:</span>
-  <span className="text-white drop-shadow-sm">{currentUser.relationshipStatus}</span>
+  <span className="text-white drop-shadow-sm">{modalUser.relationshipStatus || 'Single'}</span>
 </div>
 </div>
 </div>
@@ -716,14 +737,16 @@ const DiscoverPage: React.FC = () => {
    <div>
     <span className="text-white/80 text-sm font-medium block mb-2">Interests:</span>
     <div className="flex flex-wrap gap-2">
-      {currentUser.interests?.map((interest: string, index: number) => (
+      {(modalUser.interests && modalUser.interests.length > 0) ? modalUser.interests.map((interest: string, index: number) => (
         <span
           key={index}
           className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white text-xs px-3 py-1 rounded-full border border-white/20 shadow-sm hover:scale-105 transition-transform duration-200"
         >
           {interest}
         </span>
-      ))}
+      )) : (
+        <span className="text-white/60 text-sm">No interests listed</span>
+      )}
     </div>
   </div>
 
@@ -740,8 +763,11 @@ const DiscoverPage: React.FC = () => {
               >
                 <motion.button
                   onClick={() => {
+                    if (modalUser?.id || modalUser?._id) {
+                      openChat((modalUser.id || modalUser._id) as number);
+                    }
                     setShowProfileModal(false);
-                    handleAction('like');
+                    setSelectedUserId(null);
                   }}
                   className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold py-3 rounded-xl"
                   whileHover={{ scale: 1.02 }}
@@ -753,6 +779,7 @@ const DiscoverPage: React.FC = () => {
                 <motion.button
                   onClick={() => {
                     setShowProfileModal(false);
+                    setSelectedUserId(null);
                   }}
                   className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 rounded-xl"
                   whileHover={{ scale: 1.02 }}

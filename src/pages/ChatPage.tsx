@@ -24,9 +24,39 @@ import { useAuth } from '../contexts/AuthContext';
 const ChatPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-const state = location.state as { userId?: number } | undefined;
-const initialChatId = state?.userId ?? null;
-const [selectedChat, setSelectedChat] = useState<number | null>(initialChatId);
+  const state = location.state as { userId?: number | string } | undefined;
+  const initialUserId = state?.userId ?? null;
+  const [selectedChat, setSelectedChat] = useState<number | null>(null);
+  
+  // When navigating from DM, find or create chat
+  useEffect(() => {
+    if (initialUserId && !selectedChat) {
+      const findOrCreateChat = async () => {
+        try {
+          // Use GET endpoint to get or create chat
+          const response = await api.get(`/chat/${initialUserId}`);
+          if (response.data.status === 'success') {
+            const chat = response.data.data.chat;
+            // Set selected chat directly using chat._id
+            setSelectedChat(chat._id || chat.id);
+            
+            // Refresh chats list in background
+            const { queryClient } = require('@tanstack/react-query');
+            queryClient.invalidateQueries({ queryKey: ['chats'] });
+          }
+        } catch (err: any) {
+          console.error('Error getting/creating chat:', err);
+          const errorMsg = err.response?.data?.message || 'Failed to start chat';
+          if (errorMsg.includes('matched')) {
+            alert('You need to match with this user first before you can chat.');
+          } else {
+            alert(errorMsg);
+          }
+        }
+      };
+      findOrCreateChat();
+    }
+  }, [initialUserId]);
 
 const [showEmojiPicker, setShowEmojiPicker] = useState(false); // Emoji picker toggle
 
@@ -226,7 +256,31 @@ const filteredChats = transformedChats.filter(
 
 
   if (selectedChat !== null) {
-    const chat = transformedChats.find((c: any) => c.id === selectedChat);
+    // Find chat by chatId (which is the actual MongoDB _id)
+    let chat = transformedChats.find((c: any) => c.chatId?.toString() === selectedChat.toString());
+    // If not found, it might be a new chat - check if it's in the raw chats list
+    if (!chat && chats.length > 0) {
+      const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat.toString());
+      if (rawChat) {
+        const userIdStr = (user?.id || user?._id)?.toString();
+        const otherParticipant = rawChat.participants?.find((p: any) => {
+          const pIdStr = (p._id || p.id)?.toString();
+          return pIdStr !== userIdStr;
+        });
+        chat = {
+          id: rawChat._id || rawChat.id,
+          name: otherParticipant?.name || 'Unknown',
+          avatar: otherParticipant?.profileImage || '/images/login.jpeg',
+          lastMessage: rawChat.lastMessage?.content || 'No messages yet',
+          time: rawChat.lastMessageAt ? formatTime(rawChat.lastMessageAt) : 'Just now',
+          unreadCount: rawChat.unreadCount || 0,
+          isOnline: false,
+          isDMRequest: false,
+          compatibilityScore: rawChat.compatibilityScore,
+          chatId: rawChat._id || rawChat.id
+        };
+      }
+    }
     if (!chat) return null;
 
     return (
@@ -813,7 +867,7 @@ const filteredChats = transformedChats.filter(
           </AnimatePresence>
         )}
 
-        {!loading && !chatsError && filteredChats.length === 0 && (
+        {!loading && !chatsError && filteredChats.length === 0 && searchQuery.trim() !== '' && (
           <div className="text-center py-12 text-white/70">
             <Search size={48} className="mx-auto text-white/40 mb-4" />
             <h3 className="text-base font-medium mb-1">

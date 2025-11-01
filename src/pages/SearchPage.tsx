@@ -8,6 +8,7 @@ import { Sliders } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSearchUsers } from '../hooks/useUsersQuery';
 import { InfiniteScroll } from '../components/InfiniteScroll';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -370,7 +371,7 @@ const SearchPage: React.FC = () => {
               {filteredUsers.map((user) => (
               <motion.div
                 key={user.id ?? user.name}
-                onClick={() => { setSelectedUser(user); setCurrentPhotoIndex(0); setShowProfileModal(true); }}
+                onClick={() => { setSelectedUserId(user.id); setCurrentPhotoIndex(0); setShowProfileModal(true); }}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
@@ -440,12 +441,18 @@ const SearchPage: React.FC = () => {
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring" }}
                 >
-                  <img
-                    src={selectedUser?.photos[currentPhotoIndex]}
-                    alt={selectedUser?.name}
-                    className="w-full h-full rounded-full object-cover border-2 border-pink-400 shadow-lg"
-                  />
-                  {selectedUser?.verified && (
+                  {(modalUser?.photos && modalUser.photos[currentPhotoIndex]) || modalUser?.profileImage ? (
+                    <img
+                      src={modalUser.photos?.[currentPhotoIndex] || modalUser.profileImage}
+                      alt={modalUser?.name}
+                      className="w-full h-full rounded-full object-cover border-2 border-pink-400 shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
+                      {modalUser?.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                  {modalUser?.verified && (
                     <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-1 rounded-full">
                       <Star size={12} />
                     </div>
@@ -457,7 +464,7 @@ const SearchPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  {selectedUser?.name}, {selectedUser?.age}
+                  {modalUser?.name}, {modalUser?.age}
                 </motion.h2>
                 <motion.p 
                   className="text-white/80 text-sm drop-shadow-sm"
@@ -465,12 +472,18 @@ const SearchPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  {selectedUser?.college} • {selectedUser?.department}
+                  {modalUser?.college || 'N/A'} • {modalUser?.department || 'N/A'}
                 </motion.p>
               </div>
 
               {/* Profile Details */}
-              <motion.div 
+              {profileLoading ? (
+                <div className="text-center py-12 text-white/70">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
+                  <p className="text-sm">Loading profile...</p>
+                </div>
+              ) : modalUser ? (
+                <motion.div 
                 className="space-y-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -483,7 +496,7 @@ const SearchPage: React.FC = () => {
     Bio
   </h3>
   <div className="text-white/80 drop-shadow-sm leading-relaxed">
-    Love coding, hiking, and good coffee. Always up for exploring new places around campus!
+    {modalUser.bio || 'No bio available'}
   </div>
 </div>
 
@@ -496,11 +509,11 @@ const SearchPage: React.FC = () => {
                   <div className="space-y-2">
                   <div className="flex justify-between mt-[1.2rem]">
   <span className="text-white/80 font-medium drop-shadow-sm">Department:</span>
-  <span className="text-white drop-shadow-sm">{selectedUser?.department}</span>
+  <span className="text-white drop-shadow-sm">{modalUser.department || 'N/A'}</span>
 </div>
 <div className="flex justify-between mt-[1.2rem]">
       <span className="text-white/80 font-medium drop-shadow-sm">Year:</span>
-      <span className="text-white drop-shadow-sm">{selectedUser?.year}</span>
+      <span className="text-white drop-shadow-sm">{modalUser.year || 'N/A'}</span>
     </div>
                   </div>
                 </div>
@@ -513,12 +526,11 @@ const SearchPage: React.FC = () => {
   <div className="space-y-2">
                   <div className="flex justify-between mt-[1.2rem]">
   <span className="text-white/80 font-medium drop-shadow-sm">Looking For:</span>
-  <span className="text-white drop-shadow-sm">{selectedUser?.lookingFor}</span>
+  <span className="text-white drop-shadow-sm">{Array.isArray(modalUser.lookingFor) ? modalUser.lookingFor.join(', ') : modalUser.lookingFor || 'N/A'}</span>
 </div>
-<div className="space-y-2">
-                  <div className="flex justify-between mt-[1.2rem]">
+<div className="flex justify-between mt-[1.2rem]">
   <span className="text-white/80 font-medium drop-shadow-sm">RelationShip Status:</span>
-  <span className="text-white drop-shadow-sm">{selectedUser?.relationshipStatus}</span>
+  <span className="text-white drop-shadow-sm">{modalUser.relationshipStatus || 'Single'}</span>
 </div>
 </div>
 </div>
@@ -527,16 +539,18 @@ const SearchPage: React.FC = () => {
    <div>
     <span className="text-white/80 text-sm font-medium block mb-2">Interests:</span>
     <div className="flex flex-wrap gap-2">
-      {selectedUser?.interests.map((interest: string, index: number) => (
+      {(modalUser?.interests && modalUser.interests.length > 0) ? modalUser.interests.map((interest: string, index: number) => (
         <span
           key={index}
           className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white text-xs px-3 py-1 rounded-full border border-white/20 shadow-sm hover:scale-105 transition-transform duration-200"
         >
-          {interest}
-        </span>
-      ))}
-    </div>
+        {interest}
+      </span>
+    )) : (
+      <span className="text-white/60 text-sm">No interests listed</span>
+    )}
   </div>
+</div>
 
 
                 
@@ -551,8 +565,11 @@ const SearchPage: React.FC = () => {
               >
                 <motion.button
                   onClick={() => {
+                    if (modalUser?.id || modalUser?._id) {
+                      navigate("/chat", { state: { userId: modalUser.id || modalUser._id } });
+                    }
                     setShowProfileModal(false);
-                    // TODO: Implement like functionality via API
+                    setSelectedUserId(null);
                   }}
                   className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold py-3 rounded-xl"
                   whileHover={{ scale: 1.02 }}
@@ -562,9 +579,11 @@ const SearchPage: React.FC = () => {
                   Like
                 </motion.button>
                 <motion.button
-                  onClick={() => {
-                    setShowProfileModal(false);
-                  }}
+            onClick={() => {
+              setShowProfileModal(false);
+              setSelectedUserId(null);
+              setCurrentPhotoIndex(0);
+            }}
                   className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 rounded-xl"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

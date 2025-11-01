@@ -31,6 +31,7 @@ const ProfilePage: React.FC = () => {
     relationshipStatus: string;
     interests: string[];
     photos: string[];
+    lookingFor: string[];
   };
 
   const [profile, setProfile] = useState<Profile>({
@@ -42,7 +43,8 @@ const ProfilePage: React.FC = () => {
     bio: '',
     relationshipStatus: 'Single',
     interests: [],
-    photos: []
+    photos: [],
+    lookingFor: []
   });
 
   // Initialize from authenticated user without changing existing fields
@@ -60,7 +62,8 @@ const ProfilePage: React.FC = () => {
       interests: Array.isArray((user as any).interests) && (user as any).interests.length > 0 ? (user as any).interests : prev.interests,
       photos: Array.isArray((user as any).photos) && (user as any).photos.length > 0
         ? (user as any).photos
-        : ((user as any).profileImage ? [(user as any).profileImage] : prev.photos)
+        : ((user as any).profileImage ? [(user as any).profileImage] : prev.photos),
+      lookingFor: Array.isArray((user as any).lookingFor) && (user as any).lookingFor.length > 0 ? (user as any).lookingFor : prev.lookingFor
     }));
   }, [user]);
 
@@ -132,10 +135,35 @@ const ProfilePage: React.FC = () => {
   });
 
   // Handlers
-  const handleSaveProfile = () => {
-    // here you can send profile to API
-    setIsEditing(false);
-    console.log('profile saved', profile);
+  const handleSaveProfile = async () => {
+    try {
+      const updateData: any = {
+        name: profile.name,
+        age: profile.age,
+        bio: profile.bio || '',
+        interests: profile.interests,
+        relationshipStatus: profile.relationshipStatus,
+        lookingFor: profile.lookingFor
+      };
+
+      // Only include college/department/year if they exist
+      if (profile.college) updateData.college = profile.college;
+      if (profile.department) updateData.department = profile.department;
+      if (profile.year) updateData.year = profile.year;
+
+      const response = await api.put('/auth/profile', updateData);
+      
+      if (response.data.status === 'success') {
+        setIsEditing(false);
+        // Update auth context with new user data
+        const { useAuth } = require('../contexts/AuthContext');
+        // Profile updated successfully
+        alert('Profile updated successfully!');
+      }
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      alert(err.response?.data?.message || 'Failed to update profile');
+    }
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -325,22 +353,85 @@ const ProfilePage: React.FC = () => {
 
                   <Field label="Bio" type="textarea" value={profile.bio} editable={isEditing} onChange={(v: string) => setProfile({ ...profile, bio: v })} />
 
+                  {/* Relationship Status */}
+                  <motion.div variants={itemVariants}>
+                    <label className="block text-sm font-medium text-white/80 mb-2">Relationship Status</label>
+                    {isEditing ? (
+                      <select
+                        value={profile.relationshipStatus}
+                        onChange={(e) => setProfile({ ...profile, relationshipStatus: e.target.value })}
+                        className="w-full bg-white/10 border border-white/20 text-white rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                      >
+                        <option value="Single">Single</option>
+                        <option value="In a relationship">In a relationship</option>
+                        <option value="Married">Married</option>
+                        <option value="It's complicated">It's complicated</option>
+                      </select>
+                    ) : (
+                      <div className="text-white">{profile.relationshipStatus}</div>
+                    )}
+                  </motion.div>
+
+                  {/* Looking For */}
+                  <motion.div variants={itemVariants}>
+                    <label className="block text-sm font-medium text-white/80 mb-2">Looking For</label>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        {['Long term', 'Short term', 'Friendship'].map((option) => (
+                          <label key={option} className="flex items-center text-white/90">
+                            <input
+                              type="checkbox"
+                              checked={profile.lookingFor?.includes(option) || false}
+                              onChange={(e) => {
+                                const current = profile.lookingFor || [];
+                                if (e.target.checked) {
+                                  setProfile({ ...profile, lookingFor: [...current, option] });
+                                } else {
+                                  setProfile({ ...profile, lookingFor: current.filter((o: string) => o !== option) });
+                                }
+                              }}
+                              className="mr-2 rounded"
+                            />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-white">{profile.lookingFor?.join(', ') || 'Not specified'}</div>
+                    )}
+                  </motion.div>
+
                   <motion.div variants={itemVariants}>
                     <label className="block text-sm font-medium text-white/80 mb-2">Interests</label>
                     <div className="flex flex-wrap gap-2">
                       {profile.interests.map((interest, i) => (
-                        <motion.span key={i} className="bg-white/10 border border-white/10 text-white text-sm px-3 py-1 rounded-full shadow-inner">
+                        <motion.span 
+                          key={i} 
+                          className="bg-white/10 border border-white/10 text-white text-sm px-3 py-1 rounded-full shadow-inner flex items-center gap-2"
+                        >
                           {interest}
+                          {isEditing && (
+                            <button
+                              onClick={() => setProfile(prev => ({ ...prev, interests: prev.interests.filter((_, idx) => idx !== i) }))}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              ×
+                            </button>
+                          )}
                         </motion.span>
                       ))}
                       {isEditing && (
-                        <motion.button
-                          onClick={() => setProfile(prev => ({ ...prev, interests: [...prev.interests, 'New'] }))}
-                          className="bg-white/10 text-white text-sm px-3 py-1 rounded-full border border-dashed border-white/20"
-                          whileHover={{ scale: 1.03 }}
-                        >
-                          + Add
-                        </motion.button>
+                        <motion.input
+                          type="text"
+                          placeholder="Add interest"
+                          onKeyPress={(e: any) => {
+                            if (e.key === 'Enter' && e.target.value.trim()) {
+                              setProfile(prev => ({ ...prev, interests: [...prev.interests, e.target.value.trim()] }));
+                              e.target.value = '';
+                            }
+                          }}
+                          className="bg-white/10 border border-dashed border-white/20 text-white text-sm px-3 py-1 rounded-full placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-500 w-32"
+                        />
                       )}
                     </div>
                   </motion.div>
