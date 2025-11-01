@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Chat queries
 export const useChats = (page = 1, limit = 20) => {
@@ -72,6 +73,7 @@ export const useInfiniteMessages = (chatId: string | number | null) => {
 export const useSendMessage = () => {
   const queryClient = useQueryClient();
   const socket = useSocket();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ chatId, content }: { chatId: string | number; content: string }) => {
@@ -79,6 +81,10 @@ export const useSendMessage = () => {
       return response.data.data;
     },
     onMutate: async ({ chatId, content }) => {
+      // Get actual user ID for sender
+      const userId = (user as any)?._id || (user as any)?.id;
+      const userIdStr = userId?.toString();
+      
       // Optimistic update
       const messageId = `temp-${Date.now()}`;
       const now = new Date().toISOString();
@@ -88,8 +94,12 @@ export const useSendMessage = () => {
         content,
         createdAt: now,
         timestamp: now,
-        isOwn: true,
-        sender: { id: 'current-user', name: 'You', _id: 'current-user' },
+        isOwn: true, // Explicitly set to true
+        sender: { 
+          id: userIdStr || 'current-user', 
+          name: (user as any)?.name || 'You', 
+          _id: userIdStr || 'current-user' 
+        },
         _id: messageId
       };
 

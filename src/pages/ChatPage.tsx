@@ -184,16 +184,29 @@ const handleEmojiSelect = (emoji: any) => {
   const allMessages = messagesData?.pages.flatMap((page: any) => page?.messages || []) || [];
   
   // Transform messages to match UI and sort by timestamp
+  const userIdStr = ((user as any)?.id?.toString() || (user as any)?._id?.toString()) || '';
+  
   const transformedMessages = allMessages
-    .map((msg: any) => ({
-      text: msg.content || msg.text,
-      time: msg.timestamp ? formatTime(msg.timestamp) : (msg.createdAt ? formatTime(msg.createdAt) : 'Just now'),
-      timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
-      isOwn: (msg.sender?._id || msg.sender?.id?.toString()) === ((user as any)?.id?.toString() || (user as any)?._id?.toString()),
-      id: msg._id || msg.id || `temp-${Date.now()}`
-    }))
+    .map((msg: any) => {
+      // Use isOwn if explicitly set (for optimistic updates), otherwise calculate
+      let isOwn: boolean;
+      if (msg.isOwn !== undefined) {
+        isOwn = msg.isOwn;
+      } else {
+        const senderId = (msg.sender?._id || msg.sender?.id)?.toString();
+        isOwn = senderId === userIdStr;
+      }
+      
+      return {
+        text: msg.content || msg.text,
+        time: msg.timestamp ? formatTime(msg.timestamp) : (msg.createdAt ? formatTime(msg.createdAt) : 'Just now'),
+        timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
+        isOwn,
+        id: msg._id || msg.id || `temp-${Date.now()}`
+      };
+    })
     .sort((a: any, b: any) => {
-      // Sort by timestamp - newest first (then reverse for display)
+      // Sort by timestamp - oldest to newest for display (messages appear bottom to top)
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
