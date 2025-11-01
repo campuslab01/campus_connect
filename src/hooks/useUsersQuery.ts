@@ -2,7 +2,7 @@ import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import api from '../config/axios';
 
 // User queries
-export const useUserSuggestions = (page = 1, limit = 20) => {
+export const useUserSuggestions = (limit = 50) => {
   return useInfiniteQuery({
     queryKey: ['userSuggestions'],
     queryFn: async ({ pageParam = 1 }) => {
