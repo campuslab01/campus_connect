@@ -28,6 +28,7 @@ const ChatPage: React.FC = () => {
   const state = location.state as { userId?: number | string } | undefined;
   const initialUserId = state?.userId ?? null;
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
+  const [directChatInfo, setDirectChatInfo] = useState<any>(null); // Store chat info when created from DM
   
   // When navigating from DM, find or create chat
   useEffect(() => {
@@ -38,12 +39,36 @@ const ChatPage: React.FC = () => {
           const response = await api.get(`/chat/${initialUserId}`);
           if (response.data.status === 'success') {
             const chat = response.data.data.chat;
-            // Set selected chat directly using chat._id
-            setSelectedChat(chat._id || chat.id);
+            const chatId = chat._id || chat.id;
             
-            // Refresh chats list in background
+            // Store chat info for immediate use
+            const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
+            const participants = chat.participants || [];
+            const otherParticipant = participants.find((p: any) => {
+              const pIdStr = (p._id || p.id)?.toString();
+              return pIdStr !== userIdStr;
+            });
+            
+            setDirectChatInfo({
+              id: chatId,
+              name: otherParticipant?.name || 'Unknown',
+              avatar: otherParticipant?.profileImage || '/images/login.jpeg',
+              lastMessage: chat.lastMessage?.content || chat.lastMessage || 'No messages yet',
+              time: chat.lastMessageAt ? formatTime(chat.lastMessageAt) : 'Just now',
+              unreadCount: chat.unreadCount || 0,
+              isOnline: false,
+              isDMRequest: false,
+              compatibilityScore: chat.compatibilityScore,
+              chatId: chatId
+            });
+            
+            // Set selected chat directly using chat._id
+            setSelectedChat(chatId);
+            
+            // Refresh chats list in background to ensure it's available
             const { queryClient } = require('@tanstack/react-query');
-            queryClient.invalidateQueries({ queryKey: ['chats'] });
+            await queryClient.invalidateQueries({ queryKey: ['chats'] });
+            await queryClient.refetchQueries({ queryKey: ['chats'] });
           }
         } catch (err: any) {
           console.error('Error getting/creating chat:', err);
@@ -266,7 +291,13 @@ const filteredChats = transformedChats.filter(
   if (selectedChat !== null) {
     // Find chat by chatId (which is the actual MongoDB _id)
     let chat = transformedChats.find((c: any) => c.chatId?.toString() === selectedChat.toString());
-    // If not found, it might be a new chat - check if it's in the raw chats list
+    
+    // If not found, check if we have direct chat info (from DM navigation)
+    if (!chat && directChatInfo && directChatInfo.chatId?.toString() === selectedChat.toString()) {
+      chat = directChatInfo;
+    }
+    
+    // If still not found, it might be in the raw chats list
     if (!chat && chats.length > 0) {
       const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat.toString());
       if (rawChat) {
@@ -279,7 +310,7 @@ const filteredChats = transformedChats.filter(
           id: rawChat._id || rawChat.id,
           name: otherParticipant?.name || 'Unknown',
           avatar: otherParticipant?.profileImage || '/images/login.jpeg',
-          lastMessage: rawChat.lastMessage?.content || 'No messages yet',
+          lastMessage: rawChat.lastMessage?.content || rawChat.lastMessage || 'No messages yet',
           time: rawChat.lastMessageAt ? formatTime(rawChat.lastMessageAt) : 'Just now',
           unreadCount: rawChat.unreadCount || 0,
           isOnline: false,
@@ -289,6 +320,7 @@ const filteredChats = transformedChats.filter(
         };
       }
     }
+    
     if (!chat) return null;
 
     return (
