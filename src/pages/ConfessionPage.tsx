@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConfessions, useCreateConfession } from '../hooks/useConfessionsQuery';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 import { InfiniteScroll } from '../components/InfiniteScroll';
 import api from '../config/axios';
 
@@ -20,6 +21,7 @@ const ConfessionPage: React.FC = () => {
   const navigate = useNavigate();
   const socket = useSocket();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Helper function to format time - MUST be defined before it's used
   const formatTime = (dateString: string) => {
@@ -66,7 +68,7 @@ const ConfessionPage: React.FC = () => {
     isAnonymous: confession.isAnonymous !== false,
     college: confession.author?.college || confession.college || '',
     tags: confession.tags || [],
-    commentsList: confession.comments?.map((comment: any, commentIndex: number): Comment => {
+    commentsList: confession.comments?.map((comment: any, commentIndex: number) => {
       const userId = (user as any)?._id || (user as any)?.id;
       const userIdStr = userId?.toString();
       
@@ -86,7 +88,7 @@ const ConfessionPage: React.FC = () => {
         isLiked: commentIsLiked,
         isAnonymous: comment.isAnonymous !== false,
         commentIndex, // Store MongoDB array index for API calls
-        replies: comment.replies?.map((reply: any, replyIndex: number): Reply => {
+        replies: comment.replies?.map((reply: any, replyIndex: number) => {
           // Check if user liked this reply
           const replyIsLiked = Array.isArray(reply.likes) && reply.likes.some((likeId: any) => {
             const likeIdStr = (likeId._id || likeId)?.toString();
@@ -104,9 +106,9 @@ const ConfessionPage: React.FC = () => {
             isAnonymous: reply.isAnonymous !== false,
             commentIndex, // Store for API calls
             replyIndex // Store MongoDB array index for API calls
-          };
+          } as Reply;
         }) || []
-      };
+      } as Comment;
     }) || []
   }));
 

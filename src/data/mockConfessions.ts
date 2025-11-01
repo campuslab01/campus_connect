@@ -8,6 +8,7 @@ export interface Comment {
   isLiked: boolean;
   isAnonymous: boolean;
   replies: Reply[];
+  commentIndex?: number; // MongoDB array index for API calls
 }
 
 export interface Reply {
@@ -19,6 +20,8 @@ export interface Reply {
   likes: number;
   isLiked: boolean;
   isAnonymous: boolean;
+  commentIndex?: number; // For API calls
+  replyIndex?: number; // MongoDB array index for API calls
 }
 
 export interface Confession {
