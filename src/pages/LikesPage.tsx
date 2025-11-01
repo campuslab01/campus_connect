@@ -47,12 +47,12 @@ const LikesPage: React.FC = () => {
   useEffect(() => {
     if (!socket.isConnected) return;
 
-    const handleNewLike = (data: any) => {
+    const handleNewLike = (_data: any) => {
       // Invalidate React Query cache to refetch
       queryClient.invalidateQueries({ queryKey: ['userLikes'] });
     };
 
-    const handleNewMatch = (data: any) => {
+    const handleNewMatch = (_data: any) => {
       // Invalidate React Query cache to refetch
       queryClient.invalidateQueries({ queryKey: ['userLikes'] });
     };
@@ -176,7 +176,7 @@ const LikesPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {likes.map((like, index) => (
+              {likes.map((like: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
@@ -259,7 +259,7 @@ const LikesPage: React.FC = () => {
             transition={{ duration: 0.4 }}
             className="space-y-4"
           >
-            {matches.map((match, index) => (
+              {matches.map((match: any, index: number) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}

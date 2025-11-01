@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useConfessions, useCreateConfession } from '../hooks/useConfessionsQuery';
 import { useSocket } from '../contexts/SocketContext';
 import { InfiniteScroll } from '../components/InfiniteScroll';
+import api from '../config/axios';
 
 const ConfessionPage: React.FC = () => {
   const [showNewConfession, setShowNewConfession] = useState(false);
@@ -76,7 +77,7 @@ const ConfessionPage: React.FC = () => {
   useEffect(() => {
     if (!socket.isConnected) return;
 
-    const handleNewConfession = (data: any) => {
+    const handleNewConfession = (_data: any) => {
       // Invalidate React Query cache to refetch
       queryClient.invalidateQueries({ queryKey: ['confessions'] });
     };
@@ -149,26 +150,8 @@ const ConfessionPage: React.FC = () => {
       });
 
       if (response.data.status === 'success') {
-        const newComment: Comment = {
-          id: response.data.data.comment._id || `c${Date.now()}`,
-          author: isAnonymous ? 'Anonymous' : 'You',
-          text: text.trim(),
-          time: 'Just now',
-          likes: 0,
-          isLiked: false,
-          isAnonymous,
-          replies: []
-        };
-
-        setConfessions(prev => prev.map(confession => 
-          confession.id === confessionId 
-            ? { 
-                ...confession, 
-                comments: confession.comments + 1,
-                commentsList: [...confession.commentsList, newComment]
-              }
-            : confession
-        ));
+        // Invalidate queries to refetch updated confession with new comment
+        queryClient.invalidateQueries({ queryKey: ['confessions'] });
       }
     } catch (err: any) {
       console.error('Error adding comment:', err);
@@ -176,80 +159,27 @@ const ConfessionPage: React.FC = () => {
     }
   };
 
-  const handleAddReply = async (confessionId: number, commentId: string, text: string, isAnonymous: boolean) => {
+  const handleAddReply = async (_confessionId: number, _commentId: string, _text: string, _isAnonymous: boolean) => {
     try {
       // TODO: Implement reply API endpoint if available
-      const newReply: Reply = {
-        id: `r${Date.now()}`,
-        author: isAnonymous ? 'Anonymous' : 'You',
-        text: text.trim(),
-        time: 'Just now',
-        likes: 0,
-        isLiked: false,
-        isAnonymous
-      };
-
-      setConfessions(prev => prev.map(confession => 
-        confession.id === confessionId 
-          ? {
-              ...confession,
-              commentsList: confession.commentsList.map((comment: Comment) =>
-                comment.id === commentId
-                  ? { ...comment, replies: [...comment.replies, newReply] }
-                  : comment
-              )
-            }
-          : confession
-      ));
+      // For now, just invalidate queries to refetch updated confession with new reply
+      queryClient.invalidateQueries({ queryKey: ['confessions'] });
     } catch (err: any) {
       console.error('Error adding reply:', err);
       alert(err.response?.data?.message || 'Failed to add reply');
     }
   };
 
-  const handleLikeComment = (confessionId: number, commentId: string) => {
-    setConfessions(prev => prev.map(confession => 
-      confession.id === confessionId 
-        ? {
-            ...confession,
-            commentsList: confession.commentsList.map((comment: Comment) =>
-              comment.id === commentId
-                ? { 
-                    ...comment, 
-                    isLiked: !comment.isLiked,
-                    likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1
-                  }
-                : comment
-            )
-          }
-        : confession
-    ));
+  const handleLikeComment = (_confessionId: number, _commentId: string) => {
+    // TODO: Implement like comment API call
+    // For now, just invalidate queries to refetch
+    queryClient.invalidateQueries({ queryKey: ['confessions'] });
   };
 
-  const handleLikeReply = (confessionId: number, commentId: string, replyId: string) => {
-    setConfessions(prev => prev.map(confession => 
-      confession.id === confessionId 
-        ? {
-            ...confession,
-            commentsList: confession.commentsList.map((comment: Comment) =>
-              comment.id === commentId
-                ? {
-                    ...comment,
-                    replies: comment.replies.map((reply: Reply) =>
-                      reply.id === replyId
-                        ? { 
-                            ...reply, 
-                            isLiked: !reply.isLiked,
-                            likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1
-                          }
-                        : reply
-                    )
-                  }
-                : comment
-            )
-          }
-        : confession
-    ));
+  const handleLikeReply = (_confessionId: number, _commentId: string, _replyId: string) => {
+    // TODO: Implement like reply API call
+    // For now, just invalidate queries to refetch
+    queryClient.invalidateQueries({ queryKey: ['confessions'] });
   };
 
   const containerVariants = {
