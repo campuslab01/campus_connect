@@ -18,24 +18,25 @@ import {
   Star,
   Sparkles
 } from "lucide-react";
-import { User, mockUsers } from "../data/mockUsers";
+import { User } from "../data/mockUsers"; // Type kept for API integration
 import bgImage from "/images/login.jpeg";
 import { useNavigate } from "react-router-dom";
+import { useUserSuggestions } from '../hooks/useUsersQuery';
+import { InfiniteScroll } from '../components/InfiniteScroll';
 
 
 
 const DiscoverPage: React.FC = () => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [swipeCount, setSwipeCount] = useState(0);
+  const [, setSwipeCount] = useState(0); // swipeCount is used via setSwipeCount
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [exitDirection, setExitDirection] = useState<1 | -1 | 0>(0);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [photoLoading, setPhotoLoading] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
   const [showNextCard, setShowNextCard] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [modalPhotoIndex, setModalPhotoIndex] = useState(0);
+  // Removed unused variables: selectedUser, modalPhotoIndex
   const navigate = useNavigate();
   // 
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -45,42 +46,84 @@ const DiscoverPage: React.FC = () => {
   };
 
 
+  // Fetch suggested users with infinite scroll using React Query
+  const { 
+    data, 
+    fetchNextPage, 
+    hasNextPage, 
+    isLoading: loading, 
+    isFetchingNextPage,
+    error: queryError 
+  } = useUserSuggestions();
+
+  // Flatten paginated users
+  const usersData = data?.pages.flatMap(page => page.users) || [];
+  
+  // Transform API response to match User type
+  const users: User[] = usersData.map((user: any) => ({
+    id: user._id || user.id,
+    name: user.name,
+    age: user.age,
+    gender: user.gender,
+    college: user.college,
+    department: user.department,
+    year: user.year,
+    bio: user.bio || '',
+    relationshipStatus: user.relationshipStatus || 'Single',
+    interests: user.interests || [],
+    photos: user.photos && user.photos.length > 0 
+      ? user.photos 
+      : user.profileImage 
+        ? [user.profileImage] 
+        : ['/images/login.jpeg'],
+    verified: user.verified || false,
+    lookingFor: user.lookingFor || []
+  }));
+
+  const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load users') : null;
+
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 0, 220], [-10, 0, 10]);
   const likeOpacity = useTransform(x, [0, 20, 100], [0, 0.5, 1]);
   const nopeOpacity = useTransform(x, [0, -20, -100], [0, 0.5, 1]);
 
-  const currentUser = mockUsers[currentUserIndex];
+  const currentUser = users[currentUserIndex] || null;
   const nextUser = useMemo(
-    () => mockUsers[(currentUserIndex + 1) % mockUsers.length],
-    [currentUserIndex]
+    () => users[(currentUserIndex + 1) % users.length] || null,
+    [currentUserIndex, users]
   );
   const upcomingUser = useMemo(
-    () => mockUsers[(currentUserIndex + 2) % mockUsers.length],
-    [currentUserIndex]
+    () => users[(currentUserIndex + 2) % users.length] || null,
+    [currentUserIndex, users]
   );
 
   useEffect(() => {
-    const preloadImages = [...nextUser.photos, ...upcomingUser.photos];
-    preloadImages.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-      img.loading = "eager";
-    });
+    if (nextUser && upcomingUser) {
+      const preloadImages = [...nextUser.photos, ...upcomingUser.photos];
+      preloadImages.forEach((src) => {
+        const img = new Image();
+        img.src = src;
+        img.loading = "eager";
+      });
+    }
   }, [nextUser, upcomingUser]);
 
   const toggleLike = (id: string) =>
     setLiked((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const nextPhoto = useCallback(() => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % currentUser.photos.length);
+    if (currentUser?.photos) {
+      setCurrentPhotoIndex((prev) => (prev + 1) % currentUser.photos.length);
+    }
   }, [currentUser]);
 
   const prevPhoto = useCallback(() => {
-    setCurrentPhotoIndex(
-      (prev) =>
-        (prev - 1 + currentUser.photos.length) % currentUser.photos.length
-    );
+    if (currentUser?.photos) {
+      setCurrentPhotoIndex(
+        (prev) =>
+          (prev - 1 + currentUser.photos.length) % currentUser.photos.length
+      );
+    }
   }, [currentUser]);
 
   const handleAction = useCallback((action: "like" | "dislike") => {
@@ -102,7 +145,7 @@ const DiscoverPage: React.FC = () => {
 
       return newCount;
     });
-  }, []);
+  }, [setSwipeCount, setShowLimitModal, setExitDirection, setIsSwiping, setPhotoLoading, setCurrentPhotoIndex, setShowNextCard]);
   const handleDragEnd = useCallback(
     (_event: any, info: PanInfo) => {
       const offset = info.offset.x;
@@ -153,16 +196,46 @@ const DiscoverPage: React.FC = () => {
   style={{ height: "calc(100vh - 110px)", overflow: "hidden" }} // subtract header + nav
 >
 
-        <AnimatePresence
-          initial={false}
-          onExitComplete={() => {
-            setCurrentUserIndex((prev) => (prev + 1) % mockUsers.length);
-            setExitDirection(0);
-            setCurrentPhotoIndex(0);
-            setIsSwiping(false);
-          }}
-        >
-          {!isSwiping && (
+        {loading ? (
+          <div className="flex items-center justify-center h-full text-white text-center">
+            <div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+              <p className="text-white/70">Loading users...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full text-white text-center">
+            <div>
+              <h3 className="text-xl font-semibold mb-2 text-red-400">Error</h3>
+              <p className="text-white/70">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:opacity-90"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-white text-center">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">No users found</h3>
+              <p className="text-white/70">Try again later or adjust your preferences</p>
+            </div>
+          </div>
+        ) : (
+          <AnimatePresence
+            initial={false}
+            onExitComplete={() => {
+              if (users.length > 0) {
+                setCurrentUserIndex((prev) => (prev + 1) % users.length);
+              }
+              setExitDirection(0);
+              setCurrentPhotoIndex(0);
+              setIsSwiping(false);
+            }}
+          >
+            {!isSwiping && currentUser && (
             <motion.div
               key={currentUser.id}
               className="absolute inset-0 bg-black/20 flex flex-col cursor-grab"
@@ -297,19 +370,21 @@ const DiscoverPage: React.FC = () => {
 
               {/* Fullscreen photo */}
               <div className="relative w-full h-[70vh]" style={{ borderRadius:'30%'}}>
-                <img
-                  src={currentUser.photos[currentPhotoIndex]}
-                  alt={currentUser.name}
-                  className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => {
-                    console.log("Opening profile modal for:", currentUser.name);
-                    setShowProfileModal(true);
-                  }}
-                />
+                {currentUser.photos && currentUser.photos[currentPhotoIndex] && (
+                  <img
+                    src={currentUser.photos[currentPhotoIndex]}
+                    alt={currentUser.name}
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => {
+                      console.log("Opening profile modal for:", currentUser.name);
+                      setShowProfileModal(true);
+                    }}
+                  />
+                )}
 
                 {/* Carousel Progress Line */}
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-2/3 h-1 flex items-center justify-between z-20">
-                  {currentUser.photos.map((_, index) => (
+                  {currentUser.photos?.map((_, index) => (
                     <div
                       key={index}
                       className={`h-1 rounded-full transition-all duration-500 ease-in-out ${
@@ -337,7 +412,7 @@ const DiscoverPage: React.FC = () => {
               </div>
 
               {/* Info Overlay */}
-              {!photoLoading && (
+              {!photoLoading && currentUser && (
                 <div
                 className="absolute inset-x-0 bottom-0 z-40 flex flex-col justify-end pb-[calc(3rem+env(safe-area-inset-bottom))]"
                 style={{
@@ -397,10 +472,10 @@ const DiscoverPage: React.FC = () => {
                       <div>
                         <h3 className="text-2xl font-bold">Bio</h3>
                         <p className="text-white/90 font-medium">
-                          {currentUser.bio}
+                          {currentUser.bio || 'No bio available'}
                         </p>
                         <div className="flex flex-nowrap gap-2 mt-2">
-                          {currentUser.interests.map((i, idx) => (
+                          {currentUser.interests?.map((i, idx) => (
                             <span
                               key={idx}
                               className="bg-neon-blue/30 text-blue-200 text-xs px-2 py-1 rounded-full"
@@ -417,7 +492,7 @@ const DiscoverPage: React.FC = () => {
                         <h3 className="text-2xl font-bold">Preferences</h3>
                         <div className="mt-2">
                           <strong>Looking For:</strong>{" "}
-                          {currentUser.lookingFor.join(", ")}
+                          {Array.isArray(currentUser.lookingFor) ? currentUser.lookingFor.join(", ") : currentUser.lookingFor}
                         </div>
                         <div className="mt-1">
                           <strong>Relationship Status:</strong>{" "}
@@ -475,7 +550,7 @@ const DiscoverPage: React.FC = () => {
             </motion.div>
           )}
 
-{showNextCard && (
+{showNextCard && nextUser && (
   <motion.div
     key={nextUser.id}
     className="absolute inset-0 flex items-center justify-center"
@@ -514,7 +589,9 @@ const DiscoverPage: React.FC = () => {
   </motion.div>
 )}
 
-        </AnimatePresence>
+            </AnimatePresence>
+          </InfiniteScroll>
+        )}
       </div>
 
       {/* New */}
@@ -544,11 +621,13 @@ const DiscoverPage: React.FC = () => {
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring" }}
                 >
-                  <img
-                    src={currentUser.photos[currentPhotoIndex]}
-                    alt={currentUser.name}
-                    className="w-full h-full rounded-full object-cover border-2 border-pink-400 shadow-lg"
-                  />
+                  {currentUser.photos && currentUser.photos[currentPhotoIndex] && (
+                    <img
+                      src={currentUser.photos[currentPhotoIndex]}
+                      alt={currentUser.name}
+                      className="w-full h-full rounded-full object-cover border-2 border-pink-400 shadow-lg"
+                    />
+                  )}
                   {currentUser.verified && (
                     <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-1 rounded-full">
                       <Star size={12} />
@@ -631,7 +710,7 @@ const DiscoverPage: React.FC = () => {
    <div>
     <span className="text-white/80 text-sm font-medium block mb-2">Interests:</span>
     <div className="flex flex-wrap gap-2">
-      {currentUser.interests.map((interest: string, index: number) => (
+      {currentUser.interests?.map((interest: string, index: number) => (
         <span
           key={index}
           className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white text-xs px-3 py-1 rounded-full border border-white/20 shadow-sm hover:scale-105 transition-transform duration-200"

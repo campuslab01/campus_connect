@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Filter, MapPin, GraduationCap, Heart, X, Sparkles, MessageCircle, Star } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, MapPin, GraduationCap, Heart, X, Sparkles, MessageCircle, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // import { Link } from 'react-router-dom';
-import { User, mockUsers } from '../data/mockUsers';
+import { User } from '../data/mockUsers'; // Type kept for API integration
 import bgImage from "/images/login.jpeg";
 import { Sliders } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSearchUsers } from '../hooks/useUsersQuery';
+import { InfiniteScroll } from '../components/InfiniteScroll';
 
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,23 +84,53 @@ const SearchPage: React.FC = () => {
 
   const allInterests = ['Sports', 'Music', 'Travel', 'Photography', 'Art', 'Books', 'Gaming', 'Movies', 'Cooking', 'Dancing'];
 
+  // Debounce hook
   const debouncedQuery = useDebounce(searchQuery, 200);
-  const filteredUsers = useMemo(() => {
-    const q = debouncedQuery.trim().toLowerCase();
-    return mockUsers.filter(user => {
-      const matchesSearch = q.length === 0 ||
-        user.name.toLowerCase().includes(q) ||
-        user.college.toLowerCase().includes(q) ||
-        user.department.toLowerCase().includes(q);
 
-      const matchesGender = filters.gender === 'all' || user.gender === filters.gender;
-      const matchesDepartment = filters.department === 'all' || user.department === filters.department;
-      const matchesInterests = filters.interests.length === 0 ||
-        filters.interests.some(interest => user.interests.includes(interest));
-      const matchesLookingFor = filters.lookingFor === 'all' || user.lookingFor.includes(filters.lookingFor as any);
-      return matchesSearch && matchesGender && matchesDepartment && matchesInterests && matchesLookingFor;
-    });
-  }, [debouncedQuery, filters]);
+  // Build search filters
+  const searchFilters = {
+    query: debouncedQuery.trim() || undefined,
+    gender: filters.gender !== 'all' ? filters.gender : undefined,
+    department: filters.department !== 'all' ? filters.department : undefined,
+    lookingFor: filters.lookingFor !== 'all' ? filters.lookingFor : undefined,
+    interests: filters.interests.length > 0 ? filters.interests : undefined,
+  };
+
+  // Fetch users with infinite scroll using React Query
+  const { 
+    data, 
+    fetchNextPage, 
+    hasNextPage, 
+    isLoading: loading, 
+    isFetchingNextPage,
+    error: queryError 
+  } = useSearchUsers(searchFilters, true);
+
+  // Flatten paginated users
+  const usersData = data?.pages.flatMap(page => page.users) || [];
+  
+  // Transform API response to match User type
+  const filteredUsers: User[] = usersData.map((user: any) => ({
+    id: user._id || user.id,
+    name: user.name,
+    age: user.age,
+    gender: user.gender,
+    college: user.college,
+    department: user.department,
+    year: user.year,
+    bio: user.bio || '',
+    relationshipStatus: user.relationshipStatus || 'Single',
+    interests: user.interests || [],
+    photos: user.photos && user.photos.length > 0 
+      ? user.photos 
+      : user.profileImage 
+        ? [user.profileImage] 
+        : ['/images/login.jpeg'],
+    verified: user.verified || false,
+    lookingFor: Array.isArray(user.lookingFor) ? user.lookingFor : user.lookingFor ? [user.lookingFor] : []
+  }));
+
+  const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load users') : null;
 
   const toggleInterest = (interest: string) => {
     setFilters(prev => ({
@@ -119,9 +151,7 @@ const SearchPage: React.FC = () => {
 
  
 
-  function handleAction(arg0: string) {
-    throw new Error('Function not implemented.');
-  }
+  // handleAction function removed - not used
 
   return (
     <div
@@ -311,6 +341,17 @@ const SearchPage: React.FC = () => {
 
         {/* Results List */}
         <div className="space-y-2 max-h-[calc(100vh-170px)] overflow-y-auto pt-4 pb-8 px-1">
+          {loading && !data && (
+            <div className="text-center py-8 text-white/70">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
+              <p className="text-sm">Searching...</p>
+            </div>
+          )}
+          {error && !loading && (
+            <div className="text-center py-8 text-red-400">
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
           <div className="flex justify-between items-center text-white/80">
             <h3 className="text-sm z-20">{filteredUsers.length} results</h3>
             {debouncedQuery && (
@@ -320,8 +361,13 @@ const SearchPage: React.FC = () => {
             )}
           </div>
 
-          <AnimatePresence>
-            {filteredUsers.map((user) => (
+          <InfiniteScroll 
+            fetchNext={fetchNextPage} 
+            hasMore={hasNextPage || false} 
+            isLoading={isFetchingNextPage}
+          >
+            <AnimatePresence>
+              {filteredUsers.map((user) => (
               <motion.div
                 key={user.id ?? user.name}
                 onClick={() => { setSelectedUser(user); setCurrentPhotoIndex(0); setShowProfileModal(true); }}
@@ -364,8 +410,9 @@ const SearchPage: React.FC = () => {
                   </div>
                 </div>
               </motion.div>
-            ))}
-          </AnimatePresence>
+              ))}
+            </AnimatePresence>
+          </InfiniteScroll>
 
           {/* Profile Details Modal */}
        <AnimatePresence>
@@ -505,7 +552,7 @@ const SearchPage: React.FC = () => {
                 <motion.button
                   onClick={() => {
                     setShowProfileModal(false);
-                    handleAction('like');
+                    // TODO: Implement like functionality via API
                   }}
                   className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold py-3 rounded-xl"
                   whileHover={{ scale: 1.02 }}

@@ -1,13 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, MessageCircle, Star, Crown } from 'lucide-react';
-import { mockLikes } from '../data/mockLikes';
+import { Heart, X, Star, Crown } from 'lucide-react';
+// Mock data removed - data will be fetched from MongoDB
 import bgImage from '/images/login.jpeg';
+import { useUserLikes } from '../hooks/useUsersQuery';
+import { useSocket } from '../contexts/SocketContext';
 
 
 const LikesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'likes' | 'matches'>('likes');
   const [showPremium, setShowPremium] = useState(false);
+  const socket = useSocket();
+  
+  // Fetch likes and matches using React Query
+  const { data: likesData, isLoading: loading, error: queryError } = useUserLikes();
+
+  // Transform likes (users who liked you)
+  const likes = (likesData?.likedBy || []).map((user: any) => ({
+    id: user._id || user.id,
+    name: user.name,
+    age: user.age,
+    photo: user.profileImage || user.photos?.[0] || '/images/login.jpeg',
+    college: user.college,
+    verified: user.verified || false,
+    isPremiumVisible: true, // TODO: Implement premium logic
+    likedAt: 'Recently'
+  }));
+
+  // Transform matches
+  const matches = (likesData?.matches || []).map((user: any) => ({
+    id: user._id || user.id,
+    name: user.name,
+    age: user.age,
+    photo: user.profileImage || user.photos?.[0] || '/images/login.jpeg',
+    college: user.college,
+    matchedAt: 'Recently',
+    compatibilityScore: user.compatibilityScore,
+    mutualInterests: user.mutualInterests || 0
+  }));
+
+  const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load likes') : null;
+
+  // Real-time like/match notifications
+  useEffect(() => {
+    if (!socket.isConnected) return;
+
+    const handleNewLike = (data: any) => {
+      // Invalidate React Query cache to refetch
+      const { queryClient } = require('@tanstack/react-query');
+      const client = queryClient;
+      if (client) {
+        client.invalidateQueries({ queryKey: ['userLikes'] });
+      }
+    };
+
+    const handleNewMatch = (data: any) => {
+      // Invalidate React Query cache to refetch
+      const { queryClient } = require('@tanstack/react-query');
+      const client = queryClient;
+      if (client) {
+        client.invalidateQueries({ queryKey: ['userLikes'] });
+      }
+    };
+
+    socket.onLikeNew(handleNewLike);
+    socket.onMatchNew(handleNewMatch);
+
+    return () => {
+      // Cleanup handled by SocketContext
+    };
+  }, [socket]);
 
   const handleAction = (userId: number, action: 'like' | 'dislike' | 'dm') => {
     alert(`Action: ${action} for user ${userId}`);
@@ -33,53 +95,69 @@ const LikesPage: React.FC = () => {
       <div className="max-w-2xl mx-auto">
         {/* HEAD */}
       <div className="sticky top-0 z-20 bg-black/70 backdrop-blur-md pb-4 pt-2">
-          {/* Header */}
-        <div className="flex justify-between items-center mb-2 p-4">
-          <h2 className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
+        {loading && (
+          <div className="text-center py-8 text-white/70">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
+            <p className="text-sm">Loading...</p>
+          </div>
+        )}
+        {error && !loading && (
+          <div className="text-center py-8 text-red-400">
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+        {!loading && !error && (
+          <>
+            {/* Header */}
+            <div className="flex justify-between items-center mb-2 p-4">
+              <h2 className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
  bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Matches</h2>
-          <button
-            onClick={() => setShowPremium(true)}
-            className="flex items-center space-x-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-medium px-3 py-2 rounded-xl hover:shadow-lg transition-all"
-          >
-            <Crown size={16} />
-            <span className="text-sm">Premium</span>
-          </button>
-        </div>
+              <button
+                onClick={() => setShowPremium(true)}
+                className="flex items-center space-x-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-medium px-3 py-2 rounded-xl hover:shadow-lg transition-all"
+              >
+                <Crown size={16} />
+                <span className="text-sm">Premium</span>
+              </button>
+            </div>
 
-        {/* Tabs */}
-        <div className="flex mx-2 my-2 bg-white/5 rounded-2xl p-1 mb-6 backdrop-blur-md border border-white/10">
-          <button
-            onClick={() => setActiveTab('likes')}
-            className={`flex-1 py-2 px-4 rounded-xl font-medium transition-all relative overflow-hidden ${
-              activeTab === 'likes'
-                ? 'text-white'
-                : 'text-white/60 hover:text-white/80'
-            }`}
-          >
-            {activeTab === 'likes' && (
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl" />
-            )}
-            <span className="relative z-10">Likes ({mockLikes.likes.length})</span>
-          </button>
+            {/* Tabs */}
+            <div className="flex mx-2 my-2 bg-white/5 rounded-2xl p-1 mb-6 backdrop-blur-md border border-white/10">
+              <button
+                onClick={() => setActiveTab('likes')}
+                className={`flex-1 py-2 px-4 rounded-xl font-medium transition-all relative overflow-hidden ${
+                  activeTab === 'likes'
+                    ? 'text-white'
+                    : 'text-white/60 hover:text-white/80'
+                }`}
+              >
+                {activeTab === 'likes' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl" />
+                )}
+                <span className="relative z-10">Likes ({likes.length})</span>
+              </button>
 
-          <button
-            onClick={() => setActiveTab('matches')}
-            className={`flex-1 py-2 px-4 rounded-xl font-medium transition-all relative overflow-hidden ${
-              activeTab === 'matches'
-                ? 'text-white'
-                : 'text-white/60 hover:text-white/80'
-            }`}
-          >
-            {activeTab === 'matches' && (
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl" />
-            )}
-            <span className="relative z-10">Matches ({mockLikes.matches.length})</span>
-          </button>
-        </div>
-        </div>
+              <button
+                onClick={() => setActiveTab('matches')}
+                className={`flex-1 py-2 px-4 rounded-xl font-medium transition-all relative overflow-hidden ${
+                  activeTab === 'matches'
+                    ? 'text-white'
+                    : 'text-white/60 hover:text-white/80'
+                }`}
+              >
+                {activeTab === 'matches' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl" />
+                )}
+                <span className="relative z-10">Matches ({matches.length})</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
         
-{/* sCROLL-Y */}
-<div className="overflow-y-auto max-h-[calc(100vh-120px)] px-4 pt-2 pb-32 space-y-4 ">
+      {/* sCROLL-Y */}
+      {!loading && !error && (
+        <div className="overflow-y-auto max-h-[calc(100vh-120px)] px-4 pt-2 pb-32 space-y-4 ">
         {/* Likes Tab */}
         {activeTab === 'likes' && (
           <motion.div
@@ -104,7 +182,7 @@ const LikesPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {mockLikes.likes.map((like, index) => (
+              {likes.map((like, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
@@ -187,7 +265,7 @@ const LikesPage: React.FC = () => {
             transition={{ duration: 0.4 }}
             className="space-y-4"
           >
-            {mockLikes.matches.map((match, index) => (
+            {matches.map((match, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
@@ -222,7 +300,8 @@ const LikesPage: React.FC = () => {
             ))}
           </motion.div>
         )}
-      </div>
+        </div>
+      )}
       
     </div>
 

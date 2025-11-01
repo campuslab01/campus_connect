@@ -12,10 +12,13 @@ import {
   Search,
   Star,
 } from "lucide-react";
-import { mockChats } from "../data/mockChats";
+// Mock data removed - data will be fetched from MongoDB
 import bgImage from "/images/login.jpeg";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
+import { useChats, useInfiniteMessages, useSendMessage } from '../hooks/useChatQuery';
+import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 
 
 const ChatPage: React.FC = () => {
@@ -34,10 +37,97 @@ const handleEmojiSelect = (emoji: any) => {
   // const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [messages, setMessages] = useState<{ [key: number]: any[] }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [chats, setChats] = useState(mockChats);
   const [activeTab, setActiveTab] = useState<"primary" | "requests">("primary");
+  const { user } = useAuth();
+  const socket = useSocket();
+  
+  // Fetch chats using React Query
+  const { data: chatsData, isLoading: loading, error: chatsError } = useChats(1, 50);
+  const chats = chatsData?.chats || (chatsData as any)?.data?.chats || [];
+  
+  // Transform chats to match UI structure
+  const transformedChats = chats.map((chat: any) => {
+    const userIdStr = (user?.id || user?._id)?.toString();
+    const otherParticipant = chat.participants?.find((p: any) => {
+      const pIdStr = (p._id || p.id)?.toString();
+      return pIdStr !== userIdStr;
+    });
+    
+    return {
+      id: chat._id || chat.id,
+      name: otherParticipant?.name || 'Unknown',
+      avatar: otherParticipant?.profileImage || '/images/login.jpeg',
+      lastMessage: chat.lastMessage?.content || chat.lastMessage || 'No messages yet',
+      time: chat.lastMessageAt ? formatTime(chat.lastMessageAt) : 'Just now',
+      unreadCount: chat.unreadCount || 0,
+      isOnline: false, // TODO: Implement online status
+      isDMRequest: false, // TODO: Implement DM request logic
+      compatibilityScore: chat.compatibilityScore,
+      chatId: chat._id || chat.id
+    };
+  });
+
+  // Get messages for selected chat with infinite scroll
+  const selectedChatData = transformedChats.find((c: any) => c.id === selectedChat);
+  const { data: messagesData, fetchNextPage: fetchMoreMessages, hasNextPage: hasMoreMessages } = useInfiniteMessages(
+    selectedChatData?.chatId || null
+  );
+
+  // Flatten paginated messages
+  const allMessages = messagesData?.pages.flatMap((page: any) => page?.messages || []) || [];
+  
+  // Transform messages to match UI
+  const transformedMessages = allMessages.map((msg: any) => ({
+    text: msg.content || msg.text,
+    time: msg.createdAt ? formatTime(msg.createdAt) : 'Just now',
+    isOwn: (msg.sender?._id || msg.sender?.id?.toString()) === (user?.id?.toString() || user?._id?.toString()),
+    id: msg._id || msg.id
+  }));
+
+  // Send message mutation with optimistic updates
+  const sendMessageMutation = useSendMessage();
+
+  // Real-time message updates via Socket.io
+  useEffect(() => {
+    if (!socket.isConnected || !selectedChatData?.chatId) return;
+
+    const handleNewMessage = (_data: any) => {
+      // Invalidate React Query cache to refetch messages
+      // React Query will handle the update automatically
+      const { queryClient } = require('@tanstack/react-query');
+      const client = queryClient;
+      if (client) {
+        client.invalidateQueries({ queryKey: ['chatMessages', selectedChatData.chatId] });
+      }
+    };
+
+    socket.onMessage(handleNewMessage);
+    socket.joinChat(String(selectedChatData.chatId));
+
+    return () => {
+      socket.offMessage(handleNewMessage);
+      if (selectedChatData?.chatId) {
+        socket.leaveChat(String(selectedChatData.chatId));
+      }
+    };
+  }, [socket, selectedChatData?.chatId]);
+
+  // Helper function to format time
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return date.toLocaleDateString();
+  };
   const isQuizComplete = () => {
     return quizQuestions.every(q => {
       if (q.type === "select") return !!quizAnswers[q.id];
@@ -93,37 +183,42 @@ const handleEmojiSelect = (emoji: any) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, selectedChat]);
+  }, [transformedMessages, selectedChat]);
 
-  const handleSendMessage = (e: React.FormEvent | null = null) => {
+  const handleSendMessage = async (e: React.FormEvent | null = null) => {
     if (e) e.preventDefault();
     if (!message.trim() || selectedChat === null) return;
 
-    const newMessage = {
-      text: message,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isOwn: true,
-    };
+    const chat = transformedChats.find((c: any) => c.id === selectedChat);
+    if (!chat || !chat.chatId) return;
 
-    const initialMessages = mockChats.find(c => c.id === selectedChat)?.messages || [];
-    const allMessagesNow = [...(messages[selectedChat] || []), newMessage];
-
-    // Trigger quiz after 5 user messages
-    if (allMessagesNow.length === 5) {
-      setShowQuiz(true);
-      setQuizTimeLeft(300);
+    // Send via Socket.io immediately (optimistic) and API (for persistence)
+    if (socket.isConnected) {
+      socket.sendMessage(String(chat.chatId), message.trim());
     }
 
-    setMessages(prev => ({
-      ...prev,
-      [selectedChat]: allMessagesNow,
-    }));
-
-    setMessage("");
+    // Use mutation for API call (includes optimistic update)
+    sendMessageMutation.mutate(
+      { chatId: chat.chatId, content: message.trim() },
+      {
+        onSuccess: () => {
+          // Trigger quiz after 5 user messages
+          if (transformedMessages.length + 1 >= 5) {
+            setShowQuiz(true);
+            setQuizTimeLeft(300);
+          }
+          setMessage("");
+        },
+        onError: (err: any) => {
+          console.error('Error sending message:', err);
+          alert(err.response?.data?.message || 'Failed to send message');
+        }
+      }
+    );
   };
 
- // Replace the old filteredChats with this:
-const filteredChats = mockChats.filter(
+ // Filter chats based on search query
+const filteredChats = transformedChats.filter(
   (chat) =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
@@ -131,10 +226,8 @@ const filteredChats = mockChats.filter(
 
 
   if (selectedChat !== null) {
-    const chat = chats.find(c => c.id === selectedChat);
+    const chat = transformedChats.find((c: any) => c.id === selectedChat);
     if (!chat) return null;
-
-    const allMessages = [...chat.messages, ...(messages[selectedChat] || [])];
 
     return (
       <motion.div
@@ -204,8 +297,17 @@ const filteredChats = mockChats.filter(
 
           {/* Messages */}
           <motion.div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Load more button */}
+            {hasMoreMessages && (
+              <button
+                onClick={() => fetchMoreMessages()}
+                className="w-full py-2 text-white/70 hover:text-white text-sm"
+              >
+                Load older messages...
+              </button>
+            )}
             <AnimatePresence>
-              {allMessages.map((msg, index) => (
+              {transformedMessages.map((msg, index) => (
                 <motion.div key={index} className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`} initial={{ opacity: 0, y: 20, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: index * 0.05, type: "spring", stiffness: 500, damping: 30 }}>
                   <motion.div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border ${msg.isOwn ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white border-pink-400/30 shadow-lg shadow-pink-500/20" : "bg-white/10 text-white border-white/10"}`} whileHover={{ scale: 1.02 }}>
                     <p className="text-sm">{msg.text}</p>
@@ -370,11 +472,7 @@ const filteredChats = mockChats.filter(
     if (!selectedChat) return;
     const score = Math.floor(Math.random() * 100);
     setCompletedScores((prev) => ({ ...prev, [selectedChat]: score }));
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === selectedChat ? { ...chat, compatibilityScore: score } : chat
-      )
-    );
+    // Compatibility score updated via React Query cache (TODO: Update via API)
     setShowScoreCard(true);
     setIsQuizSubmitted(true); // mark as submitted
     setShowQuiz(false);
@@ -509,9 +607,31 @@ const filteredChats = mockChats.filter(
 </motion.div>
 
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-16 text-white/70">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+            <p className="text-sm">Loading chats...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {chatsError && !loading && (
+          <div className="text-center py-16 text-red-400">
+            <p className="text-sm mb-4">{(chatsError as any)?.response?.data?.message || 'Failed to load chats'}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:opacity-90"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Tab Content with Animation */}
-        <AnimatePresence mode="wait">
-          {activeTab === "requests" ? (
+        {!loading && !chatsError && (
+          <AnimatePresence mode="wait">
+            {activeTab === "requests" ? (
             /* DM Requests Tab */
             <motion.div
               key="requests"
@@ -690,9 +810,10 @@ const filteredChats = mockChats.filter(
               )}
             </motion.div>
           )}
-        </AnimatePresence>
+          </AnimatePresence>
+        )}
 
-        {filteredChats.length === 0 && (
+        {!loading && !chatsError && filteredChats.length === 0 && (
           <div className="text-center py-12 text-white/70">
             <Search size={48} className="mx-auto text-white/40 mb-4" />
             <h3 className="text-base font-medium mb-1">
@@ -752,13 +873,7 @@ const filteredChats = mockChats.filter(
     const score = Math.floor(Math.random() * 100);
     if (selectedChat !== null) {
       setCompletedScores((prev) => ({ ...prev, [selectedChat]: score }));
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === selectedChat
-            ? { ...chat, compatibilityScore: score }
-            : chat
-        )
-      );
+      // Compatibility score updated via React Query cache (TODO: Update via API)
       setShowScoreCard(true);
       setShowQuiz(false);
     }

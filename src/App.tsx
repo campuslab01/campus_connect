@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { SocketProvider } from './contexts/SocketContext';
 import { useLenis } from './hooks/useLenis';
 import { ToastProvider } from './contexts/ToastContext';
 import Toaster from './components/Toaster';
@@ -82,11 +83,13 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <ChatProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
-      </ChatProvider>
+      <SocketProvider>
+        <ChatProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </ChatProvider>
+      </SocketProvider>
     </AuthProvider>
   );
 }

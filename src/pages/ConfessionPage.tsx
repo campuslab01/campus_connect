@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Eye, EyeOff, ArrowLeft, MessageCircle, Share2 } from 'lucide-react';
-import { mockConfessions, Comment, Reply } from '../data/mockConfessions';
+import { Heart, Eye, EyeOff, MessageCircle, Share2 } from 'lucide-react';
+import { Comment, Reply } from '../data/mockConfessions'; // Types kept for API integration
 import CommentSection from '../components/CommentSection';
 import bgImage from '/images/login.jpeg';
 import { useNavigate } from 'react-router-dom';
+import { useConfessions, useCreateConfession } from '../hooks/useConfessionsQuery';
+import { useSocket } from '../contexts/SocketContext';
+import { InfiniteScroll } from '../components/InfiniteScroll';
 
 const ConfessionPage: React.FC = () => {
   const [showNewConfession, setShowNewConfession] = useState(false);
@@ -12,17 +15,123 @@ const ConfessionPage: React.FC = () => {
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [likedConfessions, setLikedConfessions] = useState<Set<number>>(new Set());
   const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
-  const [confessions, setConfessions] = useState(mockConfessions);
   const navigate = useNavigate();
+  const socket = useSocket();
 
-  const handleSubmitConfession = (e: React.FormEvent) => {
+  // Fetch confessions with infinite scroll using React Query
+  const { 
+    data, 
+    fetchNextPage, 
+    hasNextPage, 
+    isLoading: loading, 
+    isFetchingNextPage,
+    error: queryError 
+  } = useConfessions();
+
+  // Create confession mutation
+  const createConfessionMutation = useCreateConfession();
+
+  // Flatten paginated confessions
+  const confessionsData = data?.pages.flatMap(page => page.confessions) || [];
+  
+  // Transform API response to match Confession structure
+  const confessions = confessionsData.map((confession: any) => ({
+    id: confession._id || confession.id,
+    author: confession.isAnonymous ? undefined : confession.author?.name,
+    avatar: confession.isAnonymous ? undefined : confession.author?.profileImage,
+    text: confession.content || confession.text,
+    time: confession.createdAt ? formatTime(confession.createdAt) : 'Just now',
+    likes: confession.likes?.length || 0,
+    comments: confession.comments?.length || 0,
+    isAnonymous: confession.isAnonymous !== false,
+    college: confession.author?.college || confession.college || '',
+    tags: confession.tags || [],
+    commentsList: confession.comments?.map((comment: any): Comment => ({
+      id: comment._id || comment.id,
+      author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
+      authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
+      text: comment.content || comment.text,
+      time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
+      likes: comment.likes?.length || 0,
+      isLiked: false, // TODO: Check if current user liked
+      isAnonymous: comment.isAnonymous !== false,
+      replies: comment.replies?.map((reply: any): Reply => ({
+        id: reply._id || reply.id,
+        author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
+        authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
+        text: reply.content || reply.text,
+        time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
+        likes: reply.likes?.length || 0,
+        isLiked: false,
+        isAnonymous: reply.isAnonymous !== false
+      })) || []
+    })) || []
+  }));
+
+  const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load confessions') : null;
+
+  // Real-time confession updates
+  useEffect(() => {
+    if (!socket.isConnected) return;
+
+    const handleNewConfession = (data: any) => {
+      // Invalidate React Query cache to refetch
+      const { queryClient } = require('@tanstack/react-query');
+      const client = queryClient;
+      if (client) {
+        client.invalidateQueries({ queryKey: ['confessions'] });
+      }
+    };
+
+    socket.onConfessionNew(handleNewConfession);
+
+    return () => {
+      // Cleanup handled by SocketContext
+    };
+  }, [socket]);
+
+  // Helper function to format time
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  const handleSubmitConfession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confessionText.trim()) return;
 
-    console.log('New confession:', { text: confessionText, anonymous: isAnonymous });
-
-    setConfessionText('');
-    setShowNewConfession(false);
+    createConfessionMutation.mutate(
+      {
+        content: confessionText.trim(),
+        isAnonymous: isAnonymous
+      },
+      {
+        onSuccess: () => {
+          setConfessionText('');
+          setShowNewConfession(false);
+          
+          // Broadcast via Socket.io
+          if (socket.isConnected) {
+            // The socket will emit from backend after saving
+          }
+        },
+        onError: (err: any) => {
+          console.error('Error creating confession:', err);
+          alert(err.response?.data?.message || 'Failed to post confession');
+        }
+      }
+    );
   };
 
   const handleLike = (confessionId: number) => {
@@ -34,52 +143,70 @@ const ConfessionPage: React.FC = () => {
     });
   };
 
-  const handleAddComment = (confessionId: number, text: string, isAnonymous: boolean) => {
-    const newComment: Comment = {
-      id: `c${Date.now()}`,
-      author: isAnonymous ? 'Anonymous' : 'You',
-      text,
-      time: 'now',
-      likes: 0,
-      isLiked: false,
-      isAnonymous,
-      replies: []
-    };
+  const handleAddComment = async (confessionId: number, text: string, isAnonymous: boolean) => {
+    try {
+      const response = await api.post(`/confessions/${confessionId}/comments`, {
+        content: text.trim(),
+        isAnonymous: isAnonymous
+      });
 
-    setConfessions(prev => prev.map(confession => 
-      confession.id === confessionId 
-        ? { 
-            ...confession, 
-            comments: confession.comments + 1,
-            commentsList: [...confession.commentsList, newComment]
-          }
-        : confession
-    ));
+      if (response.data.status === 'success') {
+        const newComment: Comment = {
+          id: response.data.data.comment._id || `c${Date.now()}`,
+          author: isAnonymous ? 'Anonymous' : 'You',
+          text: text.trim(),
+          time: 'Just now',
+          likes: 0,
+          isLiked: false,
+          isAnonymous,
+          replies: []
+        };
+
+        setConfessions(prev => prev.map(confession => 
+          confession.id === confessionId 
+            ? { 
+                ...confession, 
+                comments: confession.comments + 1,
+                commentsList: [...confession.commentsList, newComment]
+              }
+            : confession
+        ));
+      }
+    } catch (err: any) {
+      console.error('Error adding comment:', err);
+      alert(err.response?.data?.message || 'Failed to add comment');
+    }
   };
 
-  const handleAddReply = (confessionId: number, commentId: string, text: string, isAnonymous: boolean) => {
-    const newReply: Reply = {
-      id: `r${Date.now()}`,
-      author: isAnonymous ? 'Anonymous' : 'You',
-      text,
-      time: 'now',
-      likes: 0,
-      isLiked: false,
-      isAnonymous
-    };
+  const handleAddReply = async (confessionId: number, commentId: string, text: string, isAnonymous: boolean) => {
+    try {
+      // TODO: Implement reply API endpoint if available
+      const newReply: Reply = {
+        id: `r${Date.now()}`,
+        author: isAnonymous ? 'Anonymous' : 'You',
+        text: text.trim(),
+        time: 'Just now',
+        likes: 0,
+        isLiked: false,
+        isAnonymous
+      };
 
-    setConfessions(prev => prev.map(confession => 
-      confession.id === confessionId 
-        ? {
-            ...confession,
-            commentsList: confession.commentsList.map(comment =>
-              comment.id === commentId
-                ? { ...comment, replies: [...comment.replies, newReply] }
-                : comment
-            )
-          }
-        : confession
-    ));
+      setConfessions(prev => prev.map(confession => 
+        confession.id === confessionId 
+          ? {
+              ...confession,
+              commentsList: confession.commentsList.map((comment: Comment) =>
+                comment.id === commentId
+                  ? { ...comment, replies: [...comment.replies, newReply] }
+                  : comment
+              )
+            }
+          : confession
+      ));
+    } catch (err: any) {
+      console.error('Error adding reply:', err);
+      alert(err.response?.data?.message || 'Failed to add reply');
+    }
   };
 
   const handleLikeComment = (confessionId: number, commentId: string) => {
@@ -87,7 +214,7 @@ const ConfessionPage: React.FC = () => {
       confession.id === confessionId 
         ? {
             ...confession,
-            commentsList: confession.commentsList.map(comment =>
+            commentsList: confession.commentsList.map((comment: Comment) =>
               comment.id === commentId
                 ? { 
                     ...comment, 
@@ -106,11 +233,11 @@ const ConfessionPage: React.FC = () => {
       confession.id === confessionId 
         ? {
             ...confession,
-            commentsList: confession.commentsList.map(comment =>
+            commentsList: confession.commentsList.map((comment: Comment) =>
               comment.id === commentId
                 ? {
                     ...comment,
-                    replies: comment.replies.map(reply =>
+                    replies: comment.replies.map((reply: Reply) =>
                       reply.id === replyId
                         ? { 
                             ...reply, 
@@ -283,8 +410,25 @@ const ConfessionPage: React.FC = () => {
 
         {/* Confessions List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <motion.div className="space-y-4" variants={containerVariants}>
-            {confessions.map((confession, index) => (
+          {loading && !data && (
+            <div className="text-center py-8 text-white/70">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
+              <p className="text-sm">Loading confessions...</p>
+            </div>
+          )}
+          {error && !loading && (
+            <div className="text-center py-8 text-red-400">
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+          {!loading && !error && (
+            <InfiniteScroll 
+              fetchNext={fetchNextPage} 
+              hasMore={hasNextPage || false} 
+              isLoading={isFetchingNextPage}
+            >
+              <motion.div className="space-y-4" variants={containerVariants}>
+                {confessions.map((confession, index) => (
               <motion.div 
                 key={index}
                 className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg flex flex-col space-y-2"
@@ -314,7 +458,7 @@ const ConfessionPage: React.FC = () => {
 
                     {confession.tags && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {confession.tags.map((tag, idx) => (
+                        {confession.tags.map((tag: string, idx: number) => (
                           <motion.span
                             key={idx}
                             className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-pink-300 text-xs px-2 py-1 rounded-full"
@@ -360,12 +504,14 @@ const ConfessionPage: React.FC = () => {
                 </div>
 
 
+                </motion.div>
+                ))}
               </motion.div>
-            ))}
-          </motion.div>
+            </InfiniteScroll>
+          )}
         </div>
 
-        {confessions.length === 0 && (
+        {!loading && !error && confessions.length === 0 && (
           <div className="text-center py-12 text-white/70">
             <h3 className="text-base font-medium mb-1">No confessions yet</h3>
             <p className="text-sm">Be the first to share one!</p>
