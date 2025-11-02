@@ -14,6 +14,7 @@ import AuthPage from './pages/AuthPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { useLenis } from './hooks/useLenis';
 import { ToastProvider } from './contexts/ToastContext';
 import Toaster from './components/Toaster';
@@ -88,11 +89,13 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <ChatProvider>
-          <ToastProvider>
-            <AppContent />
-          </ToastProvider>
-        </ChatProvider>
+        <NotificationProvider>
+          <ChatProvider>
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
+          </ChatProvider>
+        </NotificationProvider>
       </SocketProvider>
     </AuthProvider>
   );

@@ -22,7 +22,18 @@ const LikesPage: React.FC = () => {
     id: user._id || user.id,
     name: user.name,
     age: user.age,
-    photo: user.profileImage || user.photos?.[0] || '/images/login.jpeg',
+    photo: (() => {
+      const getImageUrl = (url: string | undefined) => {
+        if (!url) return '/images/login.jpeg';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/uploads')) {
+          const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+          return `${apiUrl.replace('/api', '')}${url}`;
+        }
+        return url;
+      };
+      return getImageUrl(user.profileImage || user.photos?.[0]);
+    })(),
     college: user.college,
     verified: user.verified || false,
     isPremiumVisible: true, // TODO: Implement premium logic
@@ -34,7 +45,18 @@ const LikesPage: React.FC = () => {
     id: user._id || user.id,
     name: user.name,
     age: user.age,
-    photo: user.profileImage || user.photos?.[0] || '/images/login.jpeg',
+    photo: (() => {
+      const getImageUrl = (url: string | undefined) => {
+        if (!url) return '/images/login.jpeg';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/uploads')) {
+          const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+          return `${apiUrl.replace('/api', '')}${url}`;
+        }
+        return url;
+      };
+      return getImageUrl(user.profileImage || user.photos?.[0]);
+    })(),
     college: user.college,
     matchedAt: 'Recently',
     compatibilityScore: user.compatibilityScore,
@@ -48,13 +70,17 @@ const LikesPage: React.FC = () => {
     if (!socket.isConnected) return;
 
     const handleNewLike = (_data: any) => {
+      console.log('New like received:', _data);
       // Invalidate React Query cache to refetch
       queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
     };
 
     const handleNewMatch = (_data: any) => {
+      console.log('New match received:', _data);
       // Invalidate React Query cache to refetch
       queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
     };
 
     socket.onLikeNew(handleNewLike);
@@ -63,7 +89,7 @@ const LikesPage: React.FC = () => {
     return () => {
       // Cleanup handled by SocketContext
     };
-  }, [socket]);
+  }, [socket, queryClient]);
 
   const handleAction = (userId: number, action: 'like' | 'dislike' | 'dm') => {
     alert(`Action: ${action} for user ${userId}`);

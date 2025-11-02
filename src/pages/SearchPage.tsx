@@ -127,9 +127,18 @@ const SearchPage: React.FC = () => {
     relationshipStatus: user.relationshipStatus || 'Single',
     interests: user.interests || [],
     photos: user.photos && user.photos.length > 0 
-      ? user.photos 
+      ? user.photos.map((photo: string) => {
+          if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
+          if (photo.startsWith('/uploads')) {
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+            return `${apiUrl.replace('/api', '')}${photo}`;
+          }
+          return photo;
+        })
       : user.profileImage 
-        ? [user.profileImage] 
+        ? [user.profileImage.startsWith('/uploads') 
+            ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
+            : user.profileImage] 
         : ['/images/login.jpeg'],
     verified: user.verified || false,
     lookingFor: Array.isArray(user.lookingFor) ? user.lookingFor : user.lookingFor ? [user.lookingFor] : []

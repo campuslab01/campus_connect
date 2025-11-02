@@ -24,6 +24,8 @@ import { useNavigate } from "react-router-dom";
 import { useUserSuggestions } from '../hooks/useUsersQuery';
 import { InfiniteScroll } from '../components/InfiniteScroll';
 import { useUserProfile } from '../hooks/useUserProfile';
+import api from '../config/axios';
+import { useQueryClient } from '@tanstack/react-query';
 
 
 
@@ -40,6 +42,7 @@ const DiscoverPage: React.FC = () => {
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | number | null>(null);
+  const queryClient = useQueryClient();
 
   // Fetch full profile when modal is opened
   const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
@@ -81,9 +84,22 @@ const DiscoverPage: React.FC = () => {
     relationshipStatus: user.relationshipStatus || 'Single',
     interests: user.interests || [],
     photos: user.photos && user.photos.length > 0 
-      ? user.photos 
+      ? user.photos.map((photo: string) => {
+          // Ensure full URL for photos
+          if (photo.startsWith('http://') || photo.startsWith('https://')) {
+            return photo;
+          }
+          if (photo.startsWith('/uploads')) {
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+            const baseUrl = apiUrl.replace('/api', '');
+            return `${baseUrl}${photo}`;
+          }
+          return photo;
+        })
       : user.profileImage 
-        ? [user.profileImage] 
+        ? [user.profileImage.startsWith('/uploads') 
+            ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
+            : user.profileImage] 
         : ['/images/login.jpeg'],
     verified: user.verified || false,
     lookingFor: user.lookingFor || []
@@ -117,8 +133,29 @@ const DiscoverPage: React.FC = () => {
     }
   }, [nextUser, upcomingUser]);
 
-  const toggleLike = (id: string) =>
-    setLiked((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleLike = async (id: string) => {
+    const isCurrentlyLiked = liked[id];
+    
+    try {
+      if (isCurrentlyLiked) {
+        // Unlike user
+        await api.delete(`/users/${id}/like`);
+      } else {
+        // Like user
+        await api.post(`/users/${id}/like`);
+      }
+      
+      // Update local state
+      setLiked((prev) => ({ ...prev, [id]: !prev[id] }));
+      
+      // Invalidate queries to refresh likes and notification counts
+      queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
+      queryClient.invalidateQueries({ queryKey: ['userSuggestions'] });
+    } catch (err: any) {
+      console.error('Error toggling like:', err);
+    }
+  };
 
   const nextPhoto = useCallback(() => {
     if (currentUser?.photos) {
@@ -135,7 +172,10 @@ const DiscoverPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  const handleAction = useCallback((action: "like" | "dislike") => {
+  const handleAction = useCallback(async (action: "like" | "dislike", userId?: string | number) => {
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
     setSwipeCount((prev) => {
       const newCount = prev + 1;
       if (newCount > 15) {
@@ -152,9 +192,28 @@ const DiscoverPage: React.FC = () => {
       setShowNextCard(false);
       setTimeout(() => setShowNextCard(true), 400);
 
+      // Call backend API for like/dislike
+      if (action === "like") {
+        api.post(`/users/${targetUserId}/like`)
+          .then(() => {
+            // Invalidate queries to refresh likes and notification counts
+            queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+            queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
+            queryClient.invalidateQueries({ queryKey: ['userSuggestions'] });
+            setLiked((prev) => ({ ...prev, [String(targetUserId)]: true }));
+          })
+          .catch((err) => {
+            console.error('Error liking user:', err);
+            // Still move to next card even if API fails
+          });
+      } else if (action === "dislike") {
+        // Optional: Unlike user if they want to undo
+        // For now, we don't call unlike API on swipe left
+      }
+
       return newCount;
     });
-  }, [setSwipeCount, setShowLimitModal, setExitDirection, setIsSwiping, setPhotoLoading, setCurrentPhotoIndex, setShowNextCard]);
+  }, [currentUser, setSwipeCount, setShowLimitModal, setExitDirection, setIsSwiping, setPhotoLoading, setCurrentPhotoIndex, setShowNextCard, queryClient]);
   const handleDragEnd = useCallback(
     (_event: any, info: PanInfo) => {
       const offset = info.offset.x;
@@ -162,13 +221,17 @@ const DiscoverPage: React.FC = () => {
       const threshold = 100;
 
       if (Math.abs(offset) > threshold || Math.abs(velocity) > 500) {
-        if (offset > 0) handleAction("like");
-        else handleAction("dislike");
+        if (offset > 0) {
+          // Like action - pass current user ID
+          handleAction("like", currentUser?.id);
+        } else {
+          handleAction("dislike", currentUser?.id);
+        }
       } else {
         x.set(0);
       }
     },
-    [handleAction, x]
+    [handleAction, x, currentUser]
   );
 
   return (

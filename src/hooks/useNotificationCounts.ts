@@ -14,28 +14,31 @@ export const useNotificationCounts = () => {
     queryFn: async () => {
       try {
         // Fetch all notification counts in parallel
-        const [unreadMessages, likesData, confessionsData] = await Promise.allSettled([
-          api.get('/chat/unread-count').catch(() => ({ data: { data: { count: 0 } } })),
-          api.get('/users/likes').catch(() => ({ data: { data: { newMatches: 0, newLikes: 0 } } })),
-          api.get('/confessions').catch(() => ({ data: { data: { unreadCount: 0 } } }))
+        const [unreadMessages, likesData] = await Promise.allSettled([
+          api.get('/chat/unread-count').catch(() => ({ data: { data: { unreadCount: 0 } } })),
+          api.get('/users/likes').catch(() => ({ data: { data: { likedBy: [], matches: [] } } }))
         ]);
 
-        // Extract message count
+        // Extract message count - API returns { data: { unreadCount } }
         const messagesCount = unreadMessages.status === 'fulfilled' 
-          ? unreadMessages.value.data?.data?.count || 0
+          ? unreadMessages.value.data?.data?.unreadCount || 0
           : 0;
 
-        // Extract likes count (new matches + new likes)
+        // Extract likes count - count likedBy (people who liked you) that aren't matches
         const likesDataResult = likesData.status === 'fulfilled'
           ? likesData.value.data?.data || {}
           : {};
-        const likesCount = (likesDataResult.newMatches || 0) + (likesDataResult.newLikes || 0);
+        
+        // Count likes: likedBy count minus matches (since matches are also in likedBy)
+        const likedByCount = Array.isArray(likesDataResult.likedBy) ? likesDataResult.likedBy.length : 0;
+        const matchesCount = Array.isArray(likesDataResult.matches) ? likesDataResult.matches.length : 0;
+        // People who liked you but you haven't matched with yet = new likes
+        const likesCount = Math.max(0, likedByCount - matchesCount);
 
-        // For confessions, we'll use a simple count - you can adjust this based on your API
-        // For now, assuming we track unread confessions or new ones
-        const confessionsCount = confessionsData.status === 'fulfilled'
-          ? confessionsData.value.data?.data?.unreadCount || 0
-          : 0;
+        // For confessions, count total confessions (you can add read tracking later)
+        // For now, return 0 as confessions don't have unread tracking yet
+        // You can implement read tracking similar to messages if needed
+        const confessionsCount = 0;
 
         // Profile notifications - could be new profile views, etc.
         // For now, set to 0 unless you have a specific endpoint

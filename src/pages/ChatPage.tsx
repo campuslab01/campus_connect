@@ -20,6 +20,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useChats, useInfiniteMessages, useSendMessage } from '../hooks/useChatQuery';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import { QuizConsentPopup } from '../components/QuizConsentPopup';
 import api from '../config/axios';
 
 
@@ -80,7 +81,7 @@ const ChatPage: React.FC = () => {
             const chatInfo = {
               id: chatId,
               name: otherParticipant?.name || 'Unknown',
-              avatar: otherParticipant?.profileImage || '/images/login.jpeg',
+              avatar: otherParticipant?.profileImage || otherParticipant?.photos?.[0] || '/images/login.jpeg',
               lastMessage: chat.lastMessage?.content || chat.lastMessage || 'No messages yet',
               time: chat.lastMessageAt ? formatTime(chat.lastMessageAt) : 'Just now',
               unreadCount: chat.unreadCount || 0,
@@ -210,29 +211,196 @@ const handleEmojiSelect = (emoji: any) => {
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
+  // Quiz states - track per chat (declared before useEffect to avoid hoisting issues)
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState<{ [key: number]: string }>({});
+  const [quizTimeLeft, setQuizTimeLeft] = useState(300);
+  const [completedScores, setCompletedScores] = useState<{ [key: string]: number | string }>({});
+  const [showScoreCard, setShowScoreCard] = useState(false);
+  const [isQuizSubmitted, setIsQuizSubmitted] = useState(false);
+  // Track quiz completion per chat ID
+  const [quizCompletedForChats, setQuizCompletedForChats] = useState<Set<string>>(new Set());
+  // Track quiz consent states
+  const [showQuizConsent, setShowQuizConsent] = useState(false);
+  const [userQuizConsent, setUserQuizConsent] = useState<{ [chatId: string]: boolean | null }>({});
+  const [otherUserQuizConsent, setOtherUserQuizConsent] = useState<{ [chatId: string]: boolean | null }>({});
+  const [quizDeniedBy, setQuizDeniedBy] = useState<{ [chatId: string]: 'you' | 'other' | null }>({});
+
   // Send message mutation with optimistic updates
   const sendMessageMutation = useSendMessage();
 
   // Real-time message updates via Socket.io
   useEffect(() => {
-    if (!socket.isConnected || !selectedChatData?.chatId) return;
+    if (!socket.isConnected || !socket.socket || !selectedChatData?.chatId) return;
 
-    const handleNewMessage = (_data: any) => {
+    const chatIdStr = String(selectedChatData.chatId);
+    
+    const handleNewMessage = () => {
       // Invalidate React Query cache to refetch messages
-      // React Query will handle the update automatically
       queryClient.invalidateQueries({ queryKey: ['chatMessages', selectedChatData.chatId] });
     };
 
+    const handleQuizConsentUpdate = (data: any) => {
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
+        setOtherUserQuizConsent(prev => ({
+          ...prev,
+          [chatIdStr]: data.consent
+        }));
+        
+        // If both consented, start quiz
+        if (data.consent === true && userQuizConsent[chatIdStr] === true) {
+          setShowQuizConsent(false);
+          setShowQuiz(true);
+          setQuizTimeLeft(300);
+        }
+        
+        // If other user denied
+        if (data.consent === false) {
+          setQuizDeniedBy(prev => ({
+            ...prev,
+            [chatIdStr]: 'other'
+          }));
+          setShowQuizConsent(true); // Show who denied
+        }
+      }
+    };
+
+    const handleQuizScore = (data: any) => {
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
+        // Store other user's score with their name
+        setCompletedScores(prev => {
+          const updated = {
+            ...prev,
+            [`${chatIdStr}_other`]: data.score,
+            [`${chatIdStr}_otherName`]: data.userName || 'Your match'
+          };
+          
+          // Show score card if both scores are available
+          const myScore = updated[chatIdStr];
+          if (myScore !== undefined) {
+            setShowScoreCard(true);
+          }
+          
+          return updated;
+        });
+      }
+    };
+
     socket.onMessage(handleNewMessage);
-    socket.joinChat(String(selectedChatData.chatId));
+    socket.socket.on('quiz:consent-update', handleQuizConsentUpdate);
+    socket.socket.on('quiz:score', handleQuizScore);
+    socket.joinChat(chatIdStr);
 
     return () => {
       socket.offMessage(handleNewMessage);
+      if (socket.socket) {
+        socket.socket.off('quiz:consent-update', handleQuizConsentUpdate);
+        socket.socket.off('quiz:score', handleQuizScore);
+      }
       if (selectedChatData?.chatId) {
-        socket.leaveChat(String(selectedChatData.chatId));
+        socket.leaveChat(chatIdStr);
       }
     };
-  }, [socket, selectedChatData?.chatId]);
+  }, [socket, selectedChatData?.chatId, queryClient, userQuizConsent]);
+
+  // Fetch quiz consent status from backend
+  const fetchQuizConsentStatus = async (chatId: string | number) => {
+    try {
+      const response = await api.get(`/chat/${chatId}/quiz-consent`);
+      if (response.data.status === 'success') {
+        const chatIdStr = String(chatId);
+        setOtherUserQuizConsent(prev => ({
+          ...prev,
+          [chatIdStr]: response.data.data.otherUserConsent
+        }));
+        setUserQuizConsent(prev => ({
+          ...prev,
+          [chatIdStr]: response.data.data.userConsent
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching quiz consent:', error);
+    }
+  };
+
+  // Handle quiz consent
+  const handleQuizConsentAllow = async () => {
+    if (!selectedChatData?.chatId) return;
+    const chatIdStr = String(selectedChatData.chatId);
+    
+    try {
+      // Send consent to backend
+      await api.post(`/chat/${selectedChatData.chatId}/quiz-consent`, { consent: true });
+      
+      setUserQuizConsent(prev => ({
+        ...prev,
+        [chatIdStr]: true
+      }));
+      
+      // Emit socket event for real-time update
+      if (socket.isConnected && socket.socket) {
+        socket.socket.emit('quiz:consent', {
+          chatId: selectedChatData.chatId,
+          consent: true
+        });
+      }
+      
+      // Check if both users have consented
+      const otherConsent = otherUserQuizConsent[chatIdStr];
+      if (otherConsent === true) {
+        // Both consented, start quiz
+        setShowQuizConsent(false);
+        setShowQuiz(true);
+        setQuizTimeLeft(300);
+      } else {
+        // Wait for other user
+        // Consent popup will show waiting state
+      }
+    } catch (error) {
+      console.error('Error sending quiz consent:', error);
+    }
+  };
+
+  const handleQuizConsentDeny = async () => {
+    if (!selectedChatData?.chatId) return;
+    const chatIdStr = String(selectedChatData.chatId);
+    
+    try {
+      await api.post(`/chat/${selectedChatData.chatId}/quiz-consent`, { consent: false });
+      
+      setUserQuizConsent(prev => ({
+        ...prev,
+        [chatIdStr]: false
+      }));
+      
+      setQuizDeniedBy(prev => ({
+        ...prev,
+        [chatIdStr]: 'you'
+      }));
+      
+      // Emit socket event
+      if (socket.isConnected && socket.socket) {
+        socket.socket.emit('quiz:consent', {
+          chatId: selectedChatData.chatId,
+          consent: false
+        });
+      }
+      
+      setShowQuizConsent(false);
+    } catch (error) {
+      console.error('Error denying quiz consent:', error);
+    }
+  };
+
+  // Quiz questions (static)
+  const quizQuestions = [
+    { id: 1, q: "What's your favorite color?", options: ["Red", "Blue", "Green", "Black"], type: "select" },
+    { id: 2, q: "Choose a weekend hobby:", options: ["Reading", "Gaming", "Sports", "Traveling"], type: "select" },
+    { id: 3, q: "Preferred music genre?", options: ["Rock", "Pop", "Jazz", "Classical"], type: "select" },
+    { id: 4, q: "Favorite season?", options: ["Summer", "Winter", "Spring", "Autumn"], type: "select" },
+    { id: 5, q: "Pick a pet:", options: ["Dog", "Cat", "Bird", "Fish"], type: "select" },
+    { id: 6, q: "Any custom answer?", options: [], type: "input" },
+  ];
 
   const isQuizComplete = () => {
     return quizQuestions.every(q => {
@@ -241,16 +409,6 @@ const handleEmojiSelect = (emoji: any) => {
       return false;
     });
   };
-  const [isQuizSubmitted, setIsQuizSubmitted] = useState(false);
-
-  
-
-  // Quiz states
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [quizAnswers, setQuizAnswers] = useState<{ [key: number]: string }>({});
-  const [quizTimeLeft, setQuizTimeLeft] = useState(300);
-  const [completedScores, setCompletedScores] = useState<{ [key: number]: number }>({});
-  const [showScoreCard, setShowScoreCard] = useState(false);
 
   // Lock scroll when quiz modal is open
   useEffect(() => {
@@ -262,17 +420,6 @@ const handleEmojiSelect = (emoji: any) => {
       window.history.replaceState({}, document.title);
     }
   }, [initialUserId]);
-  
-
-  // Quiz questions (static)
-  const quizQuestions = [
-    { id: 1, q: "What's your favorite color?", options: ["Red", "Blue", "Green", "Black"], type: "select" },
-    { id: 2, q: "Choose a weekend hobby:", options: ["Reading", "Gaming", "Sports", "Traveling"], type: "select" },
-    { id: 3, q: "Preferred music genre?", options: ["Rock", "Pop", "Jazz", "Classical"], type: "select" },
-    { id: 4, q: "Favorite season?", options: ["Summer", "Winter", "Spring", "Autumn"], type: "select" },
-    { id: 5, q: "Pick a pet:", options: ["Dog", "Cat", "Bird", "Fish"], type: "select" },
-    { id: 6, q: "Any custom answer?", options: [], type: "input" }, // example input
-  ];
   
 
   // Timer effect
@@ -306,10 +453,18 @@ const handleEmojiSelect = (emoji: any) => {
       { chatId: chat.chatId, content: messageContent },
       {
         onSuccess: () => {
-          // Trigger quiz after 5 user messages
-          if (transformedMessages.length + 1 >= 5) {
-            setShowQuiz(true);
-            setQuizTimeLeft(300);
+          // Check if quiz should be triggered at 15 messages
+          const messageCount = transformedMessages.length + 1;
+          const chatIdStr = String(chat.chatId);
+          
+          // Only show consent popup if:
+          // 1. We've reached exactly 15 messages
+          // 2. Quiz hasn't been completed for this chat
+          // 3. Consent popup hasn't been shown yet
+          if (messageCount === 15 && !quizCompletedForChats.has(chatIdStr) && userQuizConsent[chatIdStr] === undefined) {
+            setShowQuizConsent(true);
+            // Fetch other user's consent status from backend
+            fetchQuizConsentStatus(chat.chatId);
           }
         },
         onError: (err: any) => {
@@ -382,7 +537,7 @@ const filteredChats = transformedChats.filter(
         chat = {
           id: rawChat._id || rawChat.id,
           name: otherParticipant?.name || 'Unknown',
-          avatar: otherParticipant?.profileImage || '/images/login.jpeg',
+          avatar: otherParticipant?.profileImage || otherParticipant?.photos?.[0] || '/images/login.jpeg',
           lastMessage: rawChat.lastMessage?.content || rawChat.lastMessage || 'No messages yet',
           time: rawChat.lastMessageAt ? formatTime(rawChat.lastMessageAt) : 'Just now',
           unreadCount: rawChat.unreadCount || 0,
@@ -526,21 +681,60 @@ const filteredChats = transformedChats.filter(
               ))}
             </AnimatePresence>
 
-            {showScoreCard && selectedChat !== null && completedScores[selectedChat] && (
-              <motion.div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-4 text-center backdrop-blur-md border border-pink-400/30 shadow-lg shadow-pink-500/20 relative" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.02 }}>
-                <button className="absolute top-2 right-2 text-white/70 hover:text-white" onClick={() => setShowScoreCard(false)}>✕</button>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Star className="text-yellow-300" size={20} fill="currentColor" />
-                  <h4 className="font-bold text-white">Compatibility Quiz Complete!</h4>
-                </div>
-                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">
-                  {completedScores[selectedChat]}% Match
-                </div>
-                <p className="text-xs text-white/70">
-                  You both answered 8/12 questions similarly!
-                </p>
-              </motion.div>
-            )}
+            {showScoreCard && selectedChatData?.chatId && (() => {
+              const chatIdStr = String(selectedChatData.chatId);
+              const myScore = completedScores[chatIdStr];
+              const otherScore = completedScores[`${chatIdStr}_other`];
+              // Get other participant name from selectedChatData or completedScores
+              const chatOtherName = selectedChatData?.name || 'Your match';
+              const otherName = (completedScores[`${chatIdStr}_otherName`] as string) || chatOtherName;
+              
+              if (!myScore && !otherScore) return null;
+              
+              return (
+                <motion.div 
+                  className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-4 text-center backdrop-blur-md border border-pink-400/30 shadow-lg shadow-pink-500/20 relative" 
+                  initial={{ opacity: 0, scale: 0.8 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <button className="absolute top-2 right-2 text-white/70 hover:text-white" onClick={() => setShowScoreCard(false)}>✕</button>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Star className="text-yellow-300" size={20} fill="currentColor" />
+                    <h4 className="font-bold text-white">Compatibility Quiz Results</h4>
+                  </div>
+                  
+                  {myScore !== undefined && (
+                    <div className="mb-3">
+                      <p className="text-xs text-white/70 mb-1">{user?.name || 'You'}</p>
+                      <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                        {myScore}% Match
+                      </div>
+                    </div>
+                  )}
+                  
+                  {otherScore !== undefined && (
+                    <div className="mb-3">
+                      <p className="text-xs text-white/70 mb-1">{otherName}</p>
+                      <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+                        {otherScore}% Match
+                      </div>
+                    </div>
+                  )}
+                  
+                  {myScore === undefined && (
+                    <p className="text-xs text-white/70">
+                      Waiting for your quiz results...
+                    </p>
+                  )}
+                  {otherScore === undefined && (
+                    <p className="text-xs text-white/70">
+                      Waiting for {otherName} to complete the quiz...
+                    </p>
+                  )}
+                </motion.div>
+              );
+            })()}
 
             <div ref={messagesEndRef} />
           </motion.div>
@@ -584,9 +778,22 @@ const filteredChats = transformedChats.filter(
           </motion.form>
         </div>
 
+        {/* Quiz Consent Popup */}
+        {showQuizConsent && selectedChatData?.chatId && (
+          <QuizConsentPopup
+            isOpen={showQuizConsent}
+            onAllow={handleQuizConsentAllow}
+            onDeny={handleQuizConsentDeny}
+            otherUserName={selectedChatData?.name || 'Your match'}
+            userConsent={userQuizConsent[String(selectedChatData.chatId)]}
+            otherUserConsent={otherUserQuizConsent[String(selectedChatData.chatId)]}
+            deniedBy={quizDeniedBy[String(selectedChatData.chatId)] || null}
+          />
+        )}
+
         {/* Quiz Modal */}
         <AnimatePresence>
-  {showQuiz && (
+  {showQuiz && !quizCompletedForChats.has(String(selectedChatData?.chatId || '')) && (
     <motion.div
       className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
       initial={{ opacity: 0 }}
@@ -673,14 +880,56 @@ const filteredChats = transformedChats.filter(
               bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg
               border border-pink-400/40 hover:from-purple-600 hover:to-pink-600
               ${(!isQuizComplete() || isQuizSubmitted) ? "opacity-50 cursor-not-allowed" : ""}`}
-  onClick={() => {
-    if (!selectedChat) return;
+  onClick={async () => {
+    if (!selectedChat || !selectedChatData?.chatId) return;
+    
+    // Calculate score (you can implement real scoring logic here)
     const score = Math.floor(Math.random() * 100);
-    setCompletedScores((prev) => ({ ...prev, [selectedChat]: score }));
-    // Compatibility score updated via React Query cache (TODO: Update via API)
-    setShowScoreCard(true);
-    setIsQuizSubmitted(true); // mark as submitted
-    setShowQuiz(false);
+    const chatIdStr = String(selectedChatData.chatId);
+    
+    try {
+      // Submit quiz answers and get score from backend
+      const response = await api.post(`/chat/${selectedChatData.chatId}/quiz/submit`, {
+        answers: quizAnswers,
+        score: score
+      });
+      
+      const finalScore = response.data.data?.score || score;
+      
+      setCompletedScores((prev) => ({ ...prev, [chatIdStr]: finalScore }));
+      
+      // Mark quiz as completed for this chat
+      setQuizCompletedForChats(prev => new Set([...prev, chatIdStr]));
+      
+      // Exchange score with other user via socket
+      if (socket.isConnected && socket.socket) {
+        socket.socket.emit('quiz:score', {
+          chatId: selectedChatData.chatId,
+          score: finalScore,
+          userName: user?.name || 'You'
+        });
+      }
+      
+      setIsQuizSubmitted(true);
+      setShowQuiz(false);
+      
+      // Check if other user's score is already available
+      const otherScore = completedScores[`${chatIdStr}_other`];
+      if (otherScore !== undefined) {
+        setShowScoreCard(true);
+      }
+      
+      // If other user hasn't completed yet, wait for their score via socket
+      // The score card will be shown when their score arrives
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      // Still show score locally
+      setCompletedScores((prev) => ({ ...prev, [chatIdStr]: score }));
+      setQuizCompletedForChats(prev => new Set([...prev, chatIdStr]));
+      setIsQuizSubmitted(true);
+      setShowQuiz(false);
+      setShowScoreCard(true);
+    }
   }}
 >
   Submit Quiz
@@ -1074,13 +1323,44 @@ const filteredChats = transformedChats.filter(
 
 <button
   className="w-full bg-gradient-to-r from-purple-500 to-pink-500 py-2 rounded-xl mt-4 font-semibold shadow-lg shadow-pink-500/30"
-  onClick={() => {
+  onClick={async () => {
+    if (!selectedChat || !selectedChatData?.chatId) return;
+    
     const score = Math.floor(Math.random() * 100);
-    if (selectedChat !== null) {
-      setCompletedScores((prev) => ({ ...prev, [selectedChat]: score }));
-      // Compatibility score updated via React Query cache (TODO: Update via API)
-      setShowScoreCard(true);
+    const chatIdStr = String(selectedChatData.chatId);
+    
+    try {
+      const response = await api.post(`/chat/${selectedChatData.chatId}/quiz/submit`, {
+        answers: quizAnswers,
+        score: score
+      });
+      
+      const finalScore = response.data.data?.score || score;
+      setCompletedScores((prev) => ({ ...prev, [chatIdStr]: finalScore }));
+      setQuizCompletedForChats(prev => new Set([...prev, chatIdStr]));
+      
+      // Exchange score via socket
+      if (socket.isConnected && socket.socket) {
+        socket.socket.emit('quiz:score', {
+          chatId: selectedChatData.chatId,
+          score: finalScore,
+          userName: user?.name || 'You'
+        });
+      }
+      
       setShowQuiz(false);
+      setIsQuizSubmitted(true);
+      
+      const otherScore = completedScores[`${chatIdStr}_other`];
+      if (otherScore !== undefined) {
+        setShowScoreCard(true);
+      }
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      setCompletedScores((prev) => ({ ...prev, [chatIdStr]: score }));
+      setQuizCompletedForChats(prev => new Set([...prev, chatIdStr]));
+      setShowQuiz(false);
+      setIsQuizSubmitted(true);
     }
   }}
   

@@ -10,9 +10,12 @@ import {
   HeartStraight,
   UserCircle
 } from 'phosphor-react';
+import { useNotificationCounts } from '../hooks/useNotificationCounts';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
+  const { data: notificationCounts = { messages: 0, likes: 0, confessions: 0, profile: 0 } } = useNotificationCounts();
+  
   const isDiscover =
     location.pathname.endsWith('/discover') ||
     location.pathname === '/discover' ||
@@ -21,13 +24,13 @@ const Navigation: React.FC = () => {
   const baseItems = [
     { to: '/discover', icon: Compass, label: 'Discover', notifications: 0 },
     { to: '/search', icon: MagnifyingGlass, label: 'Search', notifications: 0 },
-    { to: '/chat', icon: ChatCircleDots, label: 'Message', notifications: 7 },
-    { to: '/confessions', icon: UsersThree, label: 'Confession', notifications: 2 },
-    { to: '/likes', icon: HeartStraight, label: 'Likes', notifications: 3 }
-  ] as const;
+    { to: '/chat', icon: ChatCircleDots, label: 'Message', notifications: notificationCounts.messages },
+    { to: '/confessions', icon: UsersThree, label: 'Confession', notifications: notificationCounts.confessions },
+    { to: '/likes', icon: HeartStraight, label: 'Likes', notifications: notificationCounts.likes }
+  ];
 
   const navItems = isDiscover
-    ? [...baseItems, { to: '/profile', icon: UserCircle, label: 'Profile', notifications: 1 }]
+    ? [...baseItems, { to: '/profile', icon: UserCircle, label: 'Profile', notifications: notificationCounts.profile }]
     : baseItems;
 
   return (

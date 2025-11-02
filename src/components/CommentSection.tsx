@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageCircle, Reply, MoreVertical, Eye, EyeOff, Send } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { Heart, Reply, Eye, EyeOff, Send } from 'lucide-react';
 
 interface Comment {
   id: string;
@@ -39,7 +38,6 @@ interface CommentSectionProps {
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({
-  confessionId,
   comments,
   onAddComment,
   onAddReply,
@@ -52,7 +50,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const [replyText, setReplyText] = useState('');
   const [replyAnonymous, setReplyAnonymous] = useState(true);
   const [showAllComments, setShowAllComments] = useState(false);
-  const { user } = useAuth();
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +114,16 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                     </div>
                   ) : (
                     <img
-                      src={comment.authorAvatar || '/images/login.jpeg'}
+                      src={(() => {
+                        const img = comment.authorAvatar;
+                        if (!img) return '/images/login.jpeg';
+                        if (img.startsWith('http://') || img.startsWith('https://')) return img;
+                        if (img.startsWith('/uploads')) {
+                          const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+                          return `${apiUrl.replace('/api', '')}${img}`;
+                        }
+                        return img;
+                      })()}
                       alt={comment.author}
                       className="w-8 h-8 rounded-full object-cover"
                     />
@@ -183,7 +189,16 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                               </div>
                             ) : (
                               <img
-                                src={reply.authorAvatar || '/images/login.jpeg'}
+                                src={(() => {
+                                  const img = reply.authorAvatar;
+                                  if (!img) return '/images/login.jpeg';
+                                  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+                                  if (img.startsWith('/uploads')) {
+                                    const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+                                    return `${apiUrl.replace('/api', '')}${img}`;
+                                  }
+                                  return img;
+                                })()}
                                 alt={reply.author}
                                 className="w-6 h-6 rounded-full object-cover"
                               />

@@ -62,15 +62,24 @@ const ConfessionPage: React.FC = () => {
     const commentsArray = Array.isArray(confession.comments) ? confession.comments : [];
     
     return {
-      id: confession._id || confession.id,
-      author: confession.isAnonymous ? undefined : confession.author?.name,
-      avatar: confession.isAnonymous ? undefined : confession.author?.profileImage,
-      text: confession.content || confession.text,
-      time: confession.createdAt ? formatTime(confession.createdAt) : 'Just now',
+    id: confession._id || confession.id,
+    author: confession.isAnonymous ? undefined : confession.author?.name,
+    avatar: confession.isAnonymous ? undefined : (() => {
+      const img = confession.author?.profileImage || confession.author?.photos?.[0];
+      if (!img) return undefined;
+      if (img.startsWith('http://') || img.startsWith('https://')) return img;
+      if (img.startsWith('/uploads')) {
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+        return `${apiUrl.replace('/api', '')}${img}`;
+      }
+      return img;
+    })(),
+    text: confession.content || confession.text,
+    time: confession.createdAt ? formatTime(confession.createdAt) : 'Just now',
       likes: Array.isArray(confession.likes) ? confession.likes.length : (typeof confession.likes === 'number' ? confession.likes : 0),
       comments: commentsArray.length,
-      isAnonymous: confession.isAnonymous !== false,
-      college: confession.author?.college || confession.college || '',
+    isAnonymous: confession.isAnonymous !== false,
+    college: confession.author?.college || confession.college || '',
       tags: Array.isArray(confession.tags) ? confession.tags : [],
       commentsList: commentsArray.map((comment: any, commentIndex: number) => {
         const userId = (user as any)?._id || (user as any)?.id;
@@ -83,14 +92,14 @@ const ConfessionPage: React.FC = () => {
         });
         
         return {
-          id: comment._id || comment.id,
-          author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
-          authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
-          text: comment.content || comment.text,
-          time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
+      id: comment._id || comment.id,
+      author: comment.isAnonymous ? 'Anonymous' : comment.author?.name || 'Unknown',
+      authorAvatar: comment.isAnonymous ? undefined : comment.author?.profileImage,
+      text: comment.content || comment.text,
+      time: comment.createdAt ? formatTime(comment.createdAt) : 'Just now',
           likes: Array.isArray(comment.likes) ? comment.likes.length : 0,
           isLiked: commentIsLiked,
-          isAnonymous: comment.isAnonymous !== false,
+      isAnonymous: comment.isAnonymous !== false,
           commentIndex, // Store MongoDB array index for API calls
           replies: Array.isArray(comment.replies) ? comment.replies.map((reply: any, replyIndex: number) => {
             // Check if user liked this reply
@@ -100,11 +109,11 @@ const ConfessionPage: React.FC = () => {
             });
             
             return {
-              id: reply._id || reply.id,
-              author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
-              authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
-              text: reply.content || reply.text,
-              time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
+        id: reply._id || reply.id,
+        author: reply.isAnonymous ? 'Anonymous' : reply.author?.name || 'Unknown',
+        authorAvatar: reply.isAnonymous ? undefined : reply.author?.profileImage,
+        text: reply.content || reply.text,
+        time: reply.createdAt ? formatTime(reply.createdAt) : 'Just now',
               likes: Array.isArray(reply.likes) ? reply.likes.length : 0,
               isLiked: replyIsLiked,
               isAnonymous: reply.isAnonymous !== false,

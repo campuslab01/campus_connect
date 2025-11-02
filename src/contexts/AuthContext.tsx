@@ -31,6 +31,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (userData: any) => Promise<AuthResult>;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
   isLoading: boolean;
   isBootstrapping: boolean;
   isAuthenticated: boolean;
@@ -272,11 +273,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...userData } : null);
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    updateUser,
     isLoading,
     isBootstrapping,
     isAuthenticated: !!user

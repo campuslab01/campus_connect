@@ -14,13 +14,17 @@ import {
 } from 'lucide-react';
 import bgImage from "/images/login.jpeg";
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState<string | null>(null);
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
   type Profile = {
     name: string;
     age: number;
@@ -50,6 +54,37 @@ const ProfilePage: React.FC = () => {
   // Initialize from authenticated user without changing existing fields
   useEffect(() => {
     if (!user) return;
+    
+    // Process photos to ensure full URLs
+    const processPhotos = (photos: any[] | undefined, profileImage: string | undefined) => {
+      if (Array.isArray(photos) && photos.length > 0) {
+        return photos.map((photo: string) => {
+          if (!photo) return null;
+          if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
+          if (photo.startsWith('/uploads')) {
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+            const baseUrl = apiUrl.replace('/api', '');
+            return `${baseUrl}${photo}`;
+          }
+          return photo;
+        }).filter((p: any) => p !== null);
+      }
+      if (profileImage) {
+        if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
+          return [profileImage];
+        }
+        if (profileImage.startsWith('/uploads')) {
+          const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+          const baseUrl = apiUrl.replace('/api', '');
+          return [`${baseUrl}${profileImage}`];
+        }
+        return [profileImage];
+      }
+      return [];
+    };
+    
+    const processedPhotos = processPhotos((user as any).photos, (user as any).profileImage);
+    
     setProfile(prev => ({
       ...prev,
       name: user.name || prev.name,
@@ -60,9 +95,7 @@ const ProfilePage: React.FC = () => {
       bio: (user as any).bio ?? prev.bio,
       relationshipStatus: (user as any).relationshipStatus || prev.relationshipStatus,
       interests: Array.isArray((user as any).interests) && (user as any).interests.length > 0 ? (user as any).interests : prev.interests,
-      photos: Array.isArray((user as any).photos) && (user as any).photos.length > 0
-        ? (user as any).photos
-        : ((user as any).profileImage ? [(user as any).profileImage] : prev.photos),
+      photos: processedPhotos.length > 0 ? processedPhotos.filter((p): p is string => p !== null) : prev.photos,
       lookingFor: Array.isArray((user as any).lookingFor) && (user as any).lookingFor.length > 0 ? (user as any).lookingFor : prev.lookingFor
     }));
   }, [user]);
@@ -95,9 +128,28 @@ const ProfilePage: React.FC = () => {
           ...prev,
           photos: Array.isArray(updated.photos) && updated.photos.length > 0 ? updated.photos : prev.photos,
         }));
+        
+        // Update AuthContext
+        if (updateUser) {
+          updateUser(updated);
+        }
+        
+        // Invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+        
+        showToast({
+          type: 'success',
+          message: 'Photos uploaded successfully',
+          duration: 2000
+        });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Photo upload failed', e);
+      showToast({
+        type: 'error',
+        message: e.response?.data?.message || 'Failed to upload photos',
+        duration: 3000
+      });
     } finally {
       setIsUploading(false);
       const inp = document.getElementById(fileInputId) as HTMLInputElement | null;
@@ -118,9 +170,28 @@ const ProfilePage: React.FC = () => {
       const updated = res.data?.data?.user;
       if (updated) {
         setProfile((prev) => ({ ...prev, photos: updated.photos || prev.photos }));
+        
+        // Update AuthContext
+        if (updateUser) {
+          updateUser(updated);
+        }
+        
+        // Invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+        
+        showToast({
+          type: 'success',
+          message: 'Photo updated successfully',
+          duration: 2000
+        });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Photo replace failed', e);
+      showToast({
+        type: 'error',
+        message: e.response?.data?.message || 'Failed to update photo',
+        duration: 3000
+      });
     } finally {
       setIsUploading(false);
       const inp = document.getElementById(replaceInputId(index)) as HTMLInputElement | null;
@@ -155,21 +226,41 @@ const ProfilePage: React.FC = () => {
       
       if (response.data.status === 'success') {
         setIsEditing(false);
+        
         // Update local profile state with new data
         if (response.data.data?.user) {
+          const updatedUser = response.data.data.user;
           setProfile(prev => ({
             ...prev,
-            ...response.data.data.user
+            ...updatedUser
           }));
+          
+          // Update AuthContext user
+          if (updateUser) {
+            updateUser(updatedUser);
+          }
         }
-        // Profile updated successfully
-        alert('Profile updated successfully!');
-        // Optionally reload page to get fresh user data
-        window.location.reload();
+        
+        // Show success toast
+        showToast({
+          type: 'success',
+          title: 'Success!',
+          message: 'Profile updated successfully',
+          duration: 3000
+        });
+        
+        // Invalidate user queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+        queryClient.invalidateQueries({ queryKey: ['userSuggestions'] });
       }
     } catch (err: any) {
       console.error('Error updating profile:', err);
-      alert(err.response?.data?.message || 'Failed to update profile');
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: err.response?.data?.message || 'Failed to update profile',
+        duration: 4000
+      });
     }
   };
 
@@ -298,29 +389,78 @@ const ProfilePage: React.FC = () => {
 
                 <div className="grid grid-cols-3 gap-3">
                   {[0,1,2].map((index) => {
-                    const photo = profile.photos[index];
+                    const photo = profile.photos?.[index];
+                    // Get full image URL - ensure it includes base URL if relative
+                    const getImageUrl = (url: string | undefined) => {
+                      if (!url) return null;
+                      // If it's already a full URL (http/https), use as is
+                      if (url.startsWith('http://') || url.startsWith('https://')) {
+                        return url;
+                      }
+                      // If it starts with /uploads, prepend server URL
+                      if (url.startsWith('/uploads')) {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com';
+                        return `${apiUrl.replace('/api', '')}${url}`;
+                      }
+                      // Otherwise assume it's already complete or return as is
+                      return url;
+                    };
+                    
+                    const imageUrl = photo ? getImageUrl(photo) : null;
+                    
                     return (
                       <motion.div key={index} className="relative group overflow-hidden rounded-lg">
-                        {photo ? (
+                        {imageUrl ? (
                           <>
-                            <img src={photo} alt={`Profile ${index + 1}`} className="w-full h-24 object-cover rounded-lg cursor-pointer" onClick={() => document.getElementById(replaceInputId(index))?.click()} />
-                            <input id={replaceInputId(index)} type="file" accept="image/*" className="hidden" onChange={(e) => handleReplacePhoto(index, e.target.files)} />
-                            <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                              <Camera className="h-5 w-5 text-white" />
-                            </motion.div>
+                            <img 
+                              src={imageUrl} 
+                              alt={`Profile ${index + 1}`} 
+                              className="w-full h-24 object-cover rounded-lg cursor-pointer" 
+                              onClick={() => {
+                                // Allow editing only for index 1 and 2 (not 0 - registration photo)
+                                if (index > 0) {
+                                  document.getElementById(replaceInputId(index))?.click();
+                                }
+                              }}
+                              onError={(e) => {
+                                // Fallback if image fails to load
+                                (e.target as HTMLImageElement).src = '/images/login.jpeg';
+                              }}
+                            />
+                            {index > 0 && (
+                              <>
+                                <input id={replaceInputId(index)} type="file" accept="image/*" className="hidden" onChange={(e) => handleReplacePhoto(index, e.target.files)} />
+                                <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                  <Camera className="h-5 w-5 text-white" />
+                                </motion.div>
+                              </>
+                            )}
                             {index === 0 && (
                               <motion.div className="absolute top-1 right-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs px-2 py-0.5 rounded-full shadow-md">
                                 Main
+                              </motion.div>
+                            )}
+                            {index > 0 && (
+                              <motion.div className="absolute top-1 left-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-0.5 rounded-full shadow-md">
+                                Editable
                               </motion.div>
                             )}
                           </>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => document.getElementById(fileInputId)?.click()}
-                            className="w-full h-24 flex items-center justify-center rounded-lg border border-dashed border-white/20 text-white/70 hover:text-white hover:border-white/40 bg-white/5"
+                            onClick={() => {
+                              // Only allow adding to slots 1 and 2 (index 1, 2)
+                              if (index > 0 && profile.photos?.length < index + 1) {
+                                document.getElementById(fileInputId)?.click();
+                              }
+                            }}
+                            disabled={index === 0 || (profile.photos?.length || 0) >= 3}
+                            className={`w-full h-24 flex items-center justify-center rounded-lg border border-dashed border-white/20 text-white/70 hover:text-white hover:border-white/40 bg-white/5 ${
+                              index === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                           >
-                            + Add
+                            {index === 0 ? 'Registration Photo' : '+ Add'}
                           </button>
                         )}
                       </motion.div>
@@ -485,7 +625,31 @@ const ProfilePage: React.FC = () => {
                     title="Push Notifications"
                     subtitle="Get notified about matches and messages"
                     checked={settings.notifications}
-                    onToggle={() => setSettings(prev => ({ ...prev, notifications: !prev.notifications }))}
+                    onToggle={async () => {
+                      const newValue = !settings.notifications;
+                      setSettings(prev => ({ ...prev, notifications: newValue }));
+                      
+                      // Save to backend
+                      try {
+                        await api.put('/auth/profile', {
+                          notificationsEnabled: newValue
+                        });
+                        showToast({
+                          type: 'success',
+                          message: 'Notification preferences updated',
+                          duration: 2000
+                        });
+                      } catch (err: any) {
+                        console.error('Error updating notification settings:', err);
+                        // Revert on error
+                        setSettings(prev => ({ ...prev, notifications: !newValue }));
+                        showToast({
+                          type: 'error',
+                          message: 'Failed to update notification settings',
+                          duration: 3000
+                        });
+                      }
+                    }}
                   />
 
                   

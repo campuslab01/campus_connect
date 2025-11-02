@@ -9,6 +9,7 @@ import { TypeAnimation } from "react-type-animation";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import { validateRegistrationForm, validateLoginForm, UserFormData } from "../utils/validation";
+import { PermissionPopup } from "../components/PermissionPopup";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -45,6 +46,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     }
   });
 
+  const [showPermissionPopup, setShowPermissionPopup] = useState(false);
+  const [isNewRegistration, setIsNewRegistration] = useState(false);
+  
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
   const { showToast } = useToast();
@@ -141,9 +145,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         });
         console.log('[AUTH PAGE] Registration result:', result);
         if (result?.success) {
-          onAuth();
-          showToast({ type: 'success', title: 'Welcome!', message: 'Registration successful' });
-          navigate("/discover");
+          setIsSubmitting(false);
+          setIsNewRegistration(true);
+          setShowPermissionPopup(true);
+          // Don't navigate yet - wait for permission popup
         } else {
           setError(result?.message || "Registration failed. Please try again.");
           showToast({ type: 'error', title: 'Registration failed', message: result?.message || 'Please try again.' });
@@ -220,7 +225,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     } catch {}
   }, []);
 
+  const handlePermissionComplete = () => {
+    setShowPermissionPopup(false);
+    onAuth();
+    showToast({ type: 'success', title: 'Welcome!', message: 'Registration successful' });
+    navigate("/discover");
+  };
+
   return (
+    <>
+      {showPermissionPopup && isNewRegistration && (
+        <PermissionPopup onComplete={handlePermissionComplete} />
+      )}
     <div
       className="min-h-screen flex items-center justify-center p-5 bg-cover bg-center relative"
       style={{ backgroundImage: `url(${bgImage})` }}
