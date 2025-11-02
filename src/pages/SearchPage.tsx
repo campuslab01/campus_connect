@@ -9,8 +9,10 @@ import { useNavigate } from 'react-router-dom';
 import { useSearchUsers } from '../hooks/useUsersQuery';
 import { InfiniteScroll } from '../components/InfiniteScroll';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { useAuth } from '../contexts/AuthContext';
 
 const SearchPage: React.FC = () => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const navigate = useNavigate();
@@ -189,12 +191,15 @@ const SearchPage: React.FC = () => {
     {/* Right: Profile Button */}
     <button
       onClick={() => navigate('/profile')}
-      className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md"
+      className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md cursor-pointer"
     >
       <img
-        src="/images/login.jpeg" // replace with dynamic user avatar if available
+        src={user?.profileImage || user?.photos?.[0] || '/images/login.jpeg'}
         alt="Profile"
         className="w-full h-full object-cover"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = '/images/login.jpeg';
+        }}
       />
     </button>
   </div>

@@ -13,6 +13,7 @@ interface User {
   lookingFor?: string[];
   relationshipStatus?: string;
   profileImage?: string;
+  photos?: string[];
   isActive: boolean;
   createdAt: string;
   lastSeen: string;

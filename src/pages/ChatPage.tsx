@@ -127,7 +127,7 @@ const ChatPage: React.FC = () => {
             // }
             // For now, only show alert for non-matching errors during testing
             if (!errorMsg.includes('matched')) {
-              alert(errorMsg);
+            alert(errorMsg);
             }
           }
         }
@@ -201,7 +201,7 @@ const handleEmojiSelect = (emoji: any) => {
       }
       
       return {
-        text: msg.content || msg.text,
+    text: msg.content || msg.text,
         time: msg.timestamp ? formatTime(msg.timestamp) : (msg.createdAt ? formatTime(msg.createdAt) : 'Just now'),
         timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
         isOwn,
@@ -747,19 +747,19 @@ const filteredChats = transformedChats.filter(
                   animate={{ opacity: 1, scale: 1 }} 
                   whileHover={{ scale: 1.02 }}
                 >
-                  <button className="absolute top-2 right-2 text-white/70 hover:text-white" onClick={() => setShowScoreCard(false)}>✕</button>
+                <button className="absolute top-2 right-2 text-white/70 hover:text-white" onClick={() => setShowScoreCard(false)}>✕</button>
                   
                   <div className="flex items-center justify-center gap-2 mb-4">
-                    <Star className="text-yellow-300" size={20} fill="currentColor" />
+                  <Star className="text-yellow-300" size={20} fill="currentColor" />
                     <h4 className="font-bold text-white">Compatibility Results</h4>
-                  </div>
+                </div>
                   
                   {/* Combined Match Percentage */}
                   <div className="bg-gradient-to-r from-purple-500/40 to-pink-500/40 rounded-xl p-4 mb-4 border border-white/20">
                     <p className="text-white/80 mb-1 text-xs">Your Compatibility</p>
                     <p className="text-3xl font-bold text-white">{matchPercentage}%</p>
                     <p className="text-white/60 text-xs mt-1">Based on both your answers</p>
-                  </div>
+                </div>
                   
                   {/* Individual Scores Comparison */}
                   <div className="grid grid-cols-2 gap-2">
@@ -780,7 +780,7 @@ const filteredChats = transformedChats.filter(
                       Scores represent how well your answers align
                     </p>
                   </div>
-                </motion.div>
+              </motion.div>
               );
             })()}
 
@@ -794,12 +794,12 @@ const filteredChats = transformedChats.filter(
           >
             <div className="flex items-center gap-2 w-full">
               <motion.input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1 px-4 py-2 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-pink-400/60 backdrop-blur-sm"
-              />
+  type="text"
+  value={message}
+  onChange={(e) => setMessage(e.target.value)}
+  placeholder="Type your message..."
+  className="flex-1 px-4 py-2 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-pink-400/60 backdrop-blur-sm"
+/>
 
 
              {/* Emoji Button */}
@@ -964,7 +964,7 @@ const filteredChats = transformedChats.filter(
       // Check if other user's score is already available
       const otherScore = completedScores[`${chatIdStr}_other`];
       if (otherScore !== undefined) {
-        setShowScoreCard(true);
+    setShowScoreCard(true);
       }
       
       // If other user hasn't completed yet, wait for their score via socket
@@ -975,7 +975,7 @@ const filteredChats = transformedChats.filter(
       setCompletedScores((prev) => ({ ...prev, [chatIdStr]: score }));
       setQuizCompletedForChats(prev => new Set([...prev, chatIdStr]));
       setIsQuizSubmitted(true);
-      setShowQuiz(false);
+    setShowQuiz(false);
       setShowScoreCard(true);
     }
   }}
@@ -1023,12 +1023,17 @@ const filteredChats = transformedChats.filter(
     </div>
 
    
-    <button className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md">
+    <button 
+      onClick={() => navigate('/profile')}
+      className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md cursor-pointer"
+    >
       <img
-        src="/images/login.jpeg"
+        src={user?.profileImage || user?.photos?.[0] || '/images/login.jpeg'}
         alt="Profile"
-        onClick={() => navigate('/profile')}
         className="w-full h-full object-cover"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = '/images/login.jpeg';
+        }}
       />
     </button>
   </div>
@@ -1401,7 +1406,7 @@ const filteredChats = transformedChats.filter(
       
       const otherScore = completedScores[`${chatIdStr}_other`];
       if (otherScore !== undefined) {
-        setShowScoreCard(true);
+      setShowScoreCard(true);
       }
     } catch (error: any) {
       console.error('Error submitting quiz:', error);

@@ -417,24 +417,20 @@ const ProfilePage: React.FC = () => {
                               alt={`Profile ${index + 1}`} 
                               className="w-full h-24 object-cover rounded-lg cursor-pointer" 
                               onClick={() => {
-                                // Allow editing only for index 1 and 2 (not 0 - registration photo)
-                                if (index > 0) {
-                                  document.getElementById(replaceInputId(index))?.click();
-                                }
+                                // Allow editing for all images
+                                document.getElementById(replaceInputId(index))?.click();
                               }}
                               onError={(e) => {
                                 // Fallback if image fails to load
                                 (e.target as HTMLImageElement).src = '/images/login.jpeg';
                               }}
                             />
-                            {index > 0 && (
-                              <>
-                                <input id={replaceInputId(index)} type="file" accept="image/*" className="hidden" onChange={(e) => handleReplacePhoto(index, e.target.files)} />
-                                <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                                  <Camera className="h-5 w-5 text-white" />
-                                </motion.div>
-                              </>
-                            )}
+                            <>
+                              <input id={replaceInputId(index)} type="file" accept="image/*" className="hidden" onChange={(e) => handleReplacePhoto(index, e.target.files)} />
+                              <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                <Camera className="h-5 w-5 text-white" />
+                              </motion.div>
+                            </>
                             {index === 0 && (
                               <motion.div className="absolute top-1 right-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs px-2 py-0.5 rounded-full shadow-md">
                                 Main
