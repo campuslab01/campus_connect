@@ -83,9 +83,12 @@ const DiscoverPage: React.FC = () => {
     bio: user.bio || '',
     relationshipStatus: user.relationshipStatus || 'Single',
     interests: user.interests || [],
-    photos: user.photos && user.photos.length > 0 
-      ? user.photos.map((photo: string) => {
-          // Ensure full URL for photos
+    photos: (() => {
+      // Get all available photos
+      const availablePhotos: string[] = [];
+      
+      if (user.photos && Array.isArray(user.photos) && user.photos.length > 0) {
+        availablePhotos.push(...user.photos.map((photo: string) => {
           if (photo.startsWith('http://') || photo.startsWith('https://')) {
             return photo;
           }
@@ -95,12 +98,22 @@ const DiscoverPage: React.FC = () => {
             return `${baseUrl}${photo}`;
           }
           return photo;
-        })
-      : user.profileImage 
-        ? [user.profileImage.startsWith('/uploads') 
-            ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
-            : user.profileImage] 
-        : ['/images/login.jpeg'],
+        }));
+      } else if (user.profileImage) {
+        const profileImg = user.profileImage.startsWith('/uploads') 
+          ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
+          : user.profileImage;
+        availablePhotos.push(profileImg);
+      }
+      
+      // Always ensure 3 slots, pad with fallback image
+      const fallbackImage = '/images/login.jpeg';
+      while (availablePhotos.length < 3) {
+        availablePhotos.push(fallbackImage);
+      }
+      
+      return availablePhotos.slice(0, 3); // Ensure max 3
+    })(),
     verified: user.verified || false,
     lookingFor: user.lookingFor || []
   }));
@@ -153,6 +166,11 @@ const DiscoverPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
       queryClient.invalidateQueries({ queryKey: ['userSuggestions'] });
     } catch (err: any) {
+      console.error('Error toggling like:', err);
+      // If already liked error, update state anyway
+      if (err.response?.status === 400 && err.response?.data?.message?.includes('already liked')) {
+        setLiked((prev) => ({ ...prev, [id]: true }));
+      }
       console.error('Error toggling like:', err);
     }
   };
@@ -457,6 +475,13 @@ const DiscoverPage: React.FC = () => {
                     onClick={() => {
                       openProfileModal(currentUser.id);
                     }}
+                    onError={(e) => {
+                      // Fallback to default image if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== '/images/login.jpeg') {
+                        target.src = '/images/login.jpeg';
+                      }
+                    }}
                   />
                 )}
 
@@ -640,9 +665,15 @@ const DiscoverPage: React.FC = () => {
     <div className="w-full h-[80vh] rounded-2xl overflow-hidden relative">
       {/* Next User Photo */}
       <img
-        src={nextUser.photos[0]}
+        src={nextUser.photos?.[0] || '/images/login.jpeg'}
         alt={nextUser.name}
         className="w-full h-full object-cover blur-sm"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          if (target.src !== '/images/login.jpeg') {
+            target.src = '/images/login.jpeg';
+          }
+        }}
       />
 
       {/* Placeholder Info Overlay */}

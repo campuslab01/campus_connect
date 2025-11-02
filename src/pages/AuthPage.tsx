@@ -145,9 +145,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         });
         console.log('[AUTH PAGE] Registration result:', result);
         if (result?.success) {
+          console.log('[AUTH PAGE] Setting permission popup to show');
           setIsSubmitting(false);
           setIsNewRegistration(true);
-          setShowPermissionPopup(true);
+          // Use setTimeout to ensure state updates properly
+          setTimeout(() => {
+            setShowPermissionPopup(true);
+          }, 100);
           // Don't navigate yet - wait for permission popup
         } else {
           setError(result?.message || "Registration failed. Please try again.");
