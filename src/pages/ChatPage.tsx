@@ -246,10 +246,10 @@ const handleEmojiSelect = (emoji: any) => {
       // This event is emitted when total messages reach 15-20
       // Show consent popup for both users simultaneously
       if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
-        const chatIdStr = String(data.chatId);
+        const requestChatIdStr = String(data.chatId);
         
         // Only show if quiz hasn't been completed and consent hasn't been set
-        if (!quizCompletedForChats.has(chatIdStr) && userQuizConsent[chatIdStr] === undefined) {
+        if (!quizCompletedForChats.has(requestChatIdStr) && userQuizConsent[requestChatIdStr] === undefined) {
           setShowQuizConsent(true);
           // Fetch current consent status from backend
           fetchQuizConsentStatus(data.chatId);
