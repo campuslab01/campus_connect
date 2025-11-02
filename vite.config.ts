@@ -3,7 +3,36 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Plugin to inject Firebase config into service worker
+    {
+      name: 'firebase-config-injector',
+      generateBundle(options, bundle) {
+        // Inject Firebase config into service worker
+        const swFileName = 'firebase-messaging-sw.js';
+        const swFile = bundle[swFileName] || Object.values(bundle).find(
+          (file: any) => file.fileName === swFileName || file.name === swFileName
+        ) as any;
+        
+        if (swFile && swFile.type === 'asset' && typeof swFile.source === 'string') {
+          const replacements: Record<string, string> = {
+            '{{VITE_FIREBASE_API_KEY}}': process.env.VITE_FIREBASE_API_KEY || '',
+            '{{VITE_FIREBASE_AUTH_DOMAIN}}': process.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+            '{{VITE_FIREBASE_PROJECT_ID}}': process.env.VITE_FIREBASE_PROJECT_ID || '',
+            '{{VITE_FIREBASE_STORAGE_BUCKET}}': process.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+            '{{VITE_FIREBASE_MESSAGING_SENDER_ID}}': process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+            '{{VITE_FIREBASE_APP_ID}}': process.env.VITE_FIREBASE_APP_ID || ''
+          };
+          
+          // Replace all placeholders
+          Object.entries(replacements).forEach(([placeholder, value]) => {
+            swFile.source = swFile.source.replace(new RegExp(placeholder, 'g'), value);
+          });
+        }
+      }
+    }
+  ],
   base: '/',
   build: {
     outDir: 'dist',
