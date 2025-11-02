@@ -1,5 +1,5 @@
 // ProfilePage.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera,
@@ -109,6 +109,10 @@ const ProfilePage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputId = 'add-photo-input';
   const replaceInputId = (idx: number) => `replace-photo-input-${idx}`;
+  
+  // Refs for file inputs to ensure reliable clicking
+  const addPhotoInputRef = useRef<HTMLInputElement>(null);
+  const replacePhotoInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleAddPhotos = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -370,13 +374,20 @@ const ProfilePage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     {isUploading && <span className="text-xs text-white/70">Uploading...</span>}
                     <motion.button
-                      onClick={() => document.getElementById(fileInputId)?.click()}
+                      onClick={() => {
+                        if (addPhotoInputRef.current) {
+                          addPhotoInputRef.current.click();
+                        } else {
+                          document.getElementById(fileInputId)?.click();
+                        }
+                      }}
                       className={`bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500 text-white font-medium px-4 py-1 rounded-full shadow-md ${isUploading || (profile.photos?.length||0) >= 3 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'}`}
                       disabled={isUploading || (profile.photos?.length||0) >= 3}
                     >
                       {(profile.photos?.length||0) >= 3 ? 'Max 3 photos' : 'Add Photo'}
                     </motion.button>
                     <input
+                      ref={addPhotoInputRef}
                       id={fileInputId}
                       type="file"
                       multiple
@@ -416,9 +427,17 @@ const ProfilePage: React.FC = () => {
                               src={imageUrl} 
                               alt={`Profile ${index + 1}`} 
                               className="w-full h-24 object-cover rounded-lg cursor-pointer" 
-                              onClick={() => {
-                                // Allow editing for all images
-                                document.getElementById(replaceInputId(index))?.click();
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Allow editing for all images using ref
+                                const inputRef = replacePhotoInputRefs.current[index];
+                                if (inputRef) {
+                                  inputRef.click();
+                                } else {
+                                  // Fallback to getElementById if ref not available
+                                  const input = document.getElementById(replaceInputId(index)) as HTMLInputElement | null;
+                                  input?.click();
+                                }
                               }}
                               onError={(e) => {
                                 // Fallback if image fails to load
@@ -426,8 +445,17 @@ const ProfilePage: React.FC = () => {
                               }}
                             />
                             <>
-                              <input id={replaceInputId(index)} type="file" accept="image/*" className="hidden" onChange={(e) => handleReplacePhoto(index, e.target.files)} />
-                              <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                              <input 
+                                ref={(el) => {
+                                  replacePhotoInputRefs.current[index] = el;
+                                }}
+                                id={replaceInputId(index)} 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={(e) => handleReplacePhoto(index, e.target.files)} 
+                              />
+                              <motion.div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all pointer-events-none">
                                 <Camera className="h-5 w-5 text-white" />
                               </motion.div>
                             </>
@@ -448,7 +476,11 @@ const ProfilePage: React.FC = () => {
                             onClick={() => {
                               // Only allow adding to slots 1 and 2 (index 1, 2)
                               if (index > 0 && profile.photos?.length < index + 1) {
-                                document.getElementById(fileInputId)?.click();
+                                if (addPhotoInputRef.current) {
+                                  addPhotoInputRef.current.click();
+                                } else {
+                                  document.getElementById(fileInputId)?.click();
+                                }
                               }
                             }}
                             disabled={index === 0 || (profile.photos?.length || 0) >= 3}

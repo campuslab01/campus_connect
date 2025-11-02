@@ -87,33 +87,56 @@ const DiscoverPage: React.FC = () => {
       // Get all available photos
       const availablePhotos: string[] = [];
       
+      // Debug logging (remove in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[DiscoverPage] Processing user photos:', {
+          userId: user._id || user.id,
+          userName: user.name,
+          hasPhotos: !!user.photos,
+          photosCount: Array.isArray(user.photos) ? user.photos.length : 0,
+          photos: user.photos,
+          hasProfileImage: !!user.profileImage,
+          profileImage: user.profileImage
+        });
+      }
+      
       if (user.photos && Array.isArray(user.photos) && user.photos.length > 0) {
         availablePhotos.push(...user.photos.map((photo: string) => {
+          if (!photo || typeof photo !== 'string') return null;
+          
           // Cloudinary URLs are already full URLs (https://res.cloudinary.com/...)
-          if (photo && (photo.startsWith('http://') || photo.startsWith('https://'))) {
+          if (photo.startsWith('http://') || photo.startsWith('https://')) {
             return photo;
           }
           // Handle /uploads paths (legacy local storage)
-          if (photo && photo.startsWith('/uploads')) {
+          if (photo.startsWith('/uploads')) {
             const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
             const baseUrl = apiUrl.replace('/api', '');
             return `${baseUrl}${photo}`;
           }
-          // Return photo as-is or fallback
-          return photo || '/images/login.jpeg';
-        }).filter((photo: string): photo is string => !!photo)); // Filter out any null/undefined
+          // Return photo as-is (might be relative path or already processed)
+          return photo;
+        }).filter((photo: string | null): photo is string => photo !== null && photo !== ''));
       } else if (user.profileImage) {
         // Cloudinary URLs are already full URLs
-        const profileImg = user.profileImage.startsWith('http://') || user.profileImage.startsWith('https://')
-          ? user.profileImage
-          : user.profileImage.startsWith('/uploads')
-            ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
-            : user.profileImage;
+        let profileImg = user.profileImage;
+        if (!profileImg.startsWith('http://') && !profileImg.startsWith('https://')) {
+          if (profileImg.startsWith('/uploads')) {
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+            const baseUrl = apiUrl.replace('/api', '');
+            profileImg = `${baseUrl}${profileImg}`;
+          }
+        }
         availablePhotos.push(profileImg);
       }
       
-      // Always ensure 3 slots, pad with fallback image
+      // Always ensure at least 1 photo (use fallback if none available)
       const fallbackImage = '/images/login.jpeg';
+      if (availablePhotos.length === 0) {
+        availablePhotos.push(fallbackImage);
+      }
+      
+      // Pad to 3 slots for UI consistency (optional)
       while (availablePhotos.length < 3) {
         availablePhotos.push(fallbackImage);
       }
@@ -472,24 +495,46 @@ const DiscoverPage: React.FC = () => {
 
               {/* Fullscreen photo */}
               <div className="relative w-full h-[70vh]" style={{ borderRadius:'30%'}}>
-                {currentUser.photos && currentUser.photos[currentPhotoIndex] && (
-                  <img
-                    src={currentUser.photos[currentPhotoIndex]}
-                    alt={currentUser.name}
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => {
-                      openProfileModal(currentUser.id);
-                    }}
-                    onError={(e) => {
-                      // Fallback to default image if image fails to load
-                      const target = e.target as HTMLImageElement;
-                      const fallback = '/images/login.jpeg';
-                      if (target.src !== fallback && !target.src.includes(fallback)) {
-                        target.src = fallback;
-                      }
-                    }}
-                  />
-                )}
+                {(() => {
+                  // Ensure we always have a photo to display
+                  const photos = currentUser?.photos || [];
+                  const photoIndex = Math.min(currentPhotoIndex, photos.length - 1);
+                  const photoUrl = photos[photoIndex] || '/images/login.jpeg';
+                  
+                  // Debug logging (remove in production)
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('[DiscoverPage] Current user photos:', {
+                      userId: currentUser?.id,
+                      userName: currentUser?.name,
+                      photosArray: photos,
+                      currentPhotoIndex: photoIndex,
+                      photoUrl: photoUrl,
+                      photoUrlType: photoUrl.includes('cloudinary.com') ? 'Cloudinary' : photoUrl.includes('uploads') ? 'Local' : 'Fallback'
+                    });
+                  }
+                  
+                  return (
+                    <img
+                      src={photoUrl}
+                      alt={currentUser?.name || 'User'}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => {
+                        if (currentUser?.id) {
+                          openProfileModal(currentUser.id);
+                        }
+                      }}
+                      onError={(e) => {
+                        // Fallback to default image if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        const fallback = '/images/login.jpeg';
+                        if (target.src !== fallback && !target.src.includes(fallback)) {
+                          console.error('[DiscoverPage] Image failed to load:', target.src);
+                          target.src = fallback;
+                        }
+                      }}
+                    />
+                  );
+                })()}
 
                 {/* Carousel Progress Line */}
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-2/3 h-1 flex items-center justify-between z-20">
@@ -671,7 +716,10 @@ const DiscoverPage: React.FC = () => {
     <div className="w-full h-[80vh] rounded-2xl overflow-hidden relative">
       {/* Next User Photo */}
       <img
-        src={nextUser.photos?.[0] || '/images/login.jpeg'}
+        src={(() => {
+          const photos = nextUser?.photos || [];
+          return photos.length > 0 ? photos[0] : '/images/login.jpeg';
+        })()}
         alt={nextUser.name}
         className="w-full h-full object-cover blur-sm"
         onError={(e) => {
