@@ -830,6 +830,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };
 
