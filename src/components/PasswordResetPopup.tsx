@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import api from '../config/axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 
 interface PasswordResetPopupProps {
   isOpen: boolean;
@@ -122,27 +121,24 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
 
         // Auto-login user
         try {
-          const loginResponse = await api.post('/auth/login', {
-            email: response.data.data.user.email,
-            password
-          });
-
-          if (loginResponse.data.status === 'success') {
-            localStorage.setItem('token', loginResponse.data.data.token);
-            localStorage.setItem('tokenTimestamp', Date.now().toString());
-            
-            // Update auth context
-            await login(response.data.data.user.email, password);
-            
+          const loginResult = await login(response.data.data.user.email, password);
+          
+          if (loginResult.success) {
             // Navigate to discover page
             setTimeout(() => {
               navigate('/discover');
               onClose();
             }, 1500);
+          } else {
+            // Login failed, redirect to auth page
+            setTimeout(() => {
+              navigate('/auth');
+              onClose();
+            }, 2000);
           }
         } catch (loginError) {
           console.error('Auto-login failed:', loginError);
-          // Still close popup and show success
+          // Still close popup and show success, but redirect to login
           setTimeout(() => {
             navigate('/auth');
             onClose();
