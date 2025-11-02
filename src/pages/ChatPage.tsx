@@ -719,7 +719,26 @@ const filteredChats = transformedChats.filter(
               const chatOtherName = selectedChatData?.name || 'Your match';
               const otherName = (completedScores[`${chatIdStr}_otherName`] as string) || chatOtherName;
               
-              if (!myScore && !otherScore) return null;
+              // Only show if both scores are available
+              if (myScore === undefined || otherScore === undefined) {
+                if (myScore === undefined && otherScore === undefined) return null;
+                return (
+                  <motion.div 
+                    className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-4 text-center backdrop-blur-md border border-pink-400/30 shadow-lg shadow-pink-500/20 relative" 
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <p className="text-white/70 text-sm">
+                      {myScore === undefined 
+                        ? 'Waiting for your quiz results...'
+                        : `Waiting for ${otherName} to complete the quiz...`}
+                    </p>
+                  </motion.div>
+                );
+              }
+              
+              // Calculate match percentage (average of both scores)
+              const matchPercentage = Math.round((Number(myScore) + Number(otherScore)) / 2);
               
               return (
                 <motion.div 
@@ -729,39 +748,38 @@ const filteredChats = transformedChats.filter(
                   whileHover={{ scale: 1.02 }}
                 >
                   <button className="absolute top-2 right-2 text-white/70 hover:text-white" onClick={() => setShowScoreCard(false)}>✕</button>
-                  <div className="flex items-center justify-center gap-2 mb-2">
+                  
+                  <div className="flex items-center justify-center gap-2 mb-4">
                     <Star className="text-yellow-300" size={20} fill="currentColor" />
-                    <h4 className="font-bold text-white">Compatibility Quiz Results</h4>
+                    <h4 className="font-bold text-white">Compatibility Results</h4>
                   </div>
                   
-                  {myScore !== undefined && (
-                    <div className="mb-3">
-                      <p className="text-xs text-white/70 mb-1">{user?.name || 'You'}</p>
-                      <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                        {myScore}% Match
-                      </div>
-                    </div>
-                  )}
+                  {/* Combined Match Percentage */}
+                  <div className="bg-gradient-to-r from-purple-500/40 to-pink-500/40 rounded-xl p-4 mb-4 border border-white/20">
+                    <p className="text-white/80 mb-1 text-xs">Your Compatibility</p>
+                    <p className="text-3xl font-bold text-white">{matchPercentage}%</p>
+                    <p className="text-white/60 text-xs mt-1">Based on both your answers</p>
+                  </div>
                   
-                  {otherScore !== undefined && (
-                    <div className="mb-3">
-                      <p className="text-xs text-white/70 mb-1">{otherName}</p>
-                      <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
-                        {otherScore}% Match
-                      </div>
+                  {/* Individual Scores Comparison */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/10 rounded-xl p-3 border border-purple-400/30">
+                      <p className="text-white/80 mb-1 text-xs">{user?.name || 'You'}</p>
+                      <p className="text-xl font-bold text-purple-400">{myScore}%</p>
                     </div>
-                  )}
+                    
+                    <div className="bg-white/10 rounded-xl p-3 border border-pink-400/30">
+                      <p className="text-white/80 mb-1 text-xs">{otherName}</p>
+                      <p className="text-xl font-bold text-pink-400">{otherScore}%</p>
+                    </div>
+                  </div>
                   
-                  {myScore === undefined && (
-                    <p className="text-xs text-white/70">
-                      Waiting for your quiz results...
+                  {/* Answer Comparison Note */}
+                  <div className="mt-3 bg-white/5 rounded-lg p-2">
+                    <p className="text-white/60 text-xs">
+                      Scores represent how well your answers align
                     </p>
-                  )}
-                  {otherScore === undefined && (
-                    <p className="text-xs text-white/70">
-                      Waiting for {otherName} to complete the quiz...
-                    </p>
-                  )}
+                  </div>
                 </motion.div>
               );
             })()}
