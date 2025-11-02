@@ -10,6 +10,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import { validateRegistrationForm, validateLoginForm, UserFormData } from "../utils/validation";
 import { PermissionPopup } from "../components/PermissionPopup";
+import { PasswordResetPopup } from "../components/PasswordResetPopup";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -781,58 +782,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         )}
       </AnimatePresence>
 
-      {/* Forgot Password Modal */}
-      <AnimatePresence>
-        {showForgot && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative bg-white/10 backdrop-blur-lg border border-white/20 
-                   rounded-2xl p-6 max-w-md w-full sm:max-w-sm md:max-w-md shadow-2xl text-gray-200"
-            >
-              <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
-                Reset Password
-              </h3>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="w-full mb-6 px-4 py-3 bg-white/10 border border-white/30 
-                     rounded-xl text-white placeholder-gray-400 focus:ring-2 
-                     focus:ring-purple-400 focus:border-transparent"
-              />
-
-              <div className="flex justify-center gap-4">
-                {/* Send Reset Link Button */}
-                <button
-                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 
-                       text-white rounded-xl shadow-md hover:shadow-lg 
-                       transition-all duration-300 font-semibold"
-                >
-                  Send Reset Link
-                </button>
-
-                {/* Cancel Button with Glass Style */}
-                <button
-                  onClick={() => setShowForgot(false)}
-                  className="px-6 py-2 bg-white/20 backdrop-blur-md border border-white/30 
-                       text-white rounded-xl hover:bg-white/30 hover:scale-105 
-                       transition-all duration-300 font-semibold shadow-lg"
-                >
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Forgot Password Popup */}
+      {showForgot && (
+        <PasswordResetPopup
+          isOpen={showForgot}
+          onClose={() => setShowForgot(false)}
+          mode="forgot"
+        />
+      )}
     </div>
     </>
   );
