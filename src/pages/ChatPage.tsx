@@ -21,6 +21,7 @@ import { useChats, useInfiniteMessages, useSendMessage } from '../hooks/useChatQ
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { QuizConsentPopup } from '../components/QuizConsentPopup';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/axios';
 
 
@@ -33,6 +34,7 @@ const ChatPage: React.FC = () => {
   const [directChatInfo, setDirectChatInfo] = useState<any>(null); // Store chat info when created from DM
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   
   // Helper function to format time (must be defined before use)
   const formatTime = (dateString: string) => {
@@ -240,6 +242,21 @@ const handleEmojiSelect = (emoji: any) => {
       queryClient.invalidateQueries({ queryKey: ['chatMessages', selectedChatData.chatId] });
     };
 
+    const handleQuizConsentRequest = (data: any) => {
+      // This event is emitted when total messages reach 15-20
+      // Show consent popup for both users simultaneously
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
+        const chatIdStr = String(data.chatId);
+        
+        // Only show if quiz hasn't been completed and consent hasn't been set
+        if (!quizCompletedForChats.has(chatIdStr) && userQuizConsent[chatIdStr] === undefined) {
+          setShowQuizConsent(true);
+          // Fetch current consent status from backend
+          fetchQuizConsentStatus(data.chatId);
+        }
+      }
+    };
+
     const handleQuizConsentUpdate = (data: any) => {
       if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
         setOtherUserQuizConsent(prev => ({
@@ -265,6 +282,25 @@ const handleEmojiSelect = (emoji: any) => {
       }
     };
 
+    const handleQuizConsentDenied = (data: any) => {
+      // Show toast notification when other user denies
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
+        const otherUserName = selectedChatData?.name || 'Your match';
+        showToast({
+          type: 'error',
+          message: `${otherUserName} declined to take the compatibility quiz.`,
+          duration: 5000
+        });
+        
+        // Update denied state
+        setQuizDeniedBy(prev => ({
+          ...prev,
+          [chatIdStr]: 'other'
+        }));
+        setShowQuizConsent(false); // Close popup
+      }
+    };
+
     const handleQuizScore = (data: any) => {
       if (data.chatId === chatIdStr || data.chatId === selectedChatData.chatId) {
         // Store other user's score with their name
@@ -287,21 +323,25 @@ const handleEmojiSelect = (emoji: any) => {
     };
 
     socket.onMessage(handleNewMessage);
+    socket.socket.on('quiz:consent-request', handleQuizConsentRequest);
     socket.socket.on('quiz:consent-update', handleQuizConsentUpdate);
+    socket.socket.on('quiz:consent-denied', handleQuizConsentDenied);
     socket.socket.on('quiz:score', handleQuizScore);
     socket.joinChat(chatIdStr);
 
     return () => {
       socket.offMessage(handleNewMessage);
       if (socket.socket) {
+        socket.socket.off('quiz:consent-request', handleQuizConsentRequest);
         socket.socket.off('quiz:consent-update', handleQuizConsentUpdate);
+        socket.socket.off('quiz:consent-denied', handleQuizConsentDenied);
         socket.socket.off('quiz:score', handleQuizScore);
       }
       if (selectedChatData?.chatId) {
         socket.leaveChat(chatIdStr);
       }
     };
-  }, [socket, selectedChatData?.chatId, queryClient, userQuizConsent]);
+  }, [socket, selectedChatData?.chatId, queryClient, userQuizConsent, showToast]);
 
   // Fetch quiz consent status from backend
   const fetchQuizConsentStatus = async (chatId: string | number) => {
@@ -453,19 +493,9 @@ const handleEmojiSelect = (emoji: any) => {
       { chatId: chat.chatId, content: messageContent },
       {
         onSuccess: () => {
-          // Check if quiz should be triggered at 15 messages
-          const messageCount = transformedMessages.length + 1;
-          const chatIdStr = String(chat.chatId);
-          
-          // Only show consent popup if:
-          // 1. We've reached exactly 15 messages
-          // 2. Quiz hasn't been completed for this chat
-          // 3. Consent popup hasn't been shown yet
-          if (messageCount === 15 && !quizCompletedForChats.has(chatIdStr) && userQuizConsent[chatIdStr] === undefined) {
-            setShowQuizConsent(true);
-            // Fetch other user's consent status from backend
-            fetchQuizConsentStatus(chat.chatId);
-          }
+          // Quiz consent will be triggered by backend via socket event
+          // when total messages (both users) reach 15-20
+          // No need to check here as it's handled server-side
         },
         onError: (err: any) => {
           console.error('Error sending message:', err);
