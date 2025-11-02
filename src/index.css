@@ -90,3 +90,14 @@
 .scrollbar-glass::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* Bio truncate class for long bio text */
+.bio-truncate {
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* roughly 20-25 words */
+  line-clamp: 3; /* standard property for compatibility */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}

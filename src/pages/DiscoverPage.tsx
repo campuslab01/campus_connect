@@ -573,7 +573,7 @@ const DiscoverPage: React.FC = () => {
                     {currentPhotoIndex === 1 && (
                       <div>
                         <h3 className="text-2xl font-bold">Bio</h3>
-                        <p className="text-white/90 font-medium">
+                        <p className="text-white/90 font-medium bio-truncate">
                           {currentUser.bio || 'No bio available'}
                         </p>
                         <div className="flex flex-nowrap gap-2 mt-2">
@@ -786,7 +786,7 @@ const DiscoverPage: React.FC = () => {
     <Sparkles size={16} className="mr-2 text-pink-400" />
     Bio
   </h3>
-  <div className="text-white/80 drop-shadow-sm leading-relaxed">
+  <div className="text-white/80 drop-shadow-sm leading-relaxed bio-truncate">
     {modalUser.bio || 'No bio available'}
   </div>
 </div>
