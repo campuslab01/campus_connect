@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
     // Plugin to inject Firebase config into service worker
     {
       name: 'firebase-config-injector',
-      generateBundle(options, bundle) {
+      generateBundle(_options, bundle) {
         // Inject Firebase config into service worker
         const swFileName = 'firebase-messaging-sw.js';
         const swFile = bundle[swFileName] || Object.values(bundle).find(
@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => ({
           
           // Replace all placeholders
           Object.entries(replacements).forEach(([placeholder, value]) => {
-            swFile.source = swFile.source.replace(new RegExp(placeholder, 'g'), value);
+            const source = swFile.source as string;
+            swFile.source = source.replace(new RegExp(placeholder, 'g'), value);
           });
         }
       }
