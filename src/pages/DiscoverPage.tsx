@@ -89,20 +89,26 @@ const DiscoverPage: React.FC = () => {
       
       if (user.photos && Array.isArray(user.photos) && user.photos.length > 0) {
         availablePhotos.push(...user.photos.map((photo: string) => {
-          if (photo.startsWith('http://') || photo.startsWith('https://')) {
+          // Cloudinary URLs are already full URLs (https://res.cloudinary.com/...)
+          if (photo && (photo.startsWith('http://') || photo.startsWith('https://'))) {
             return photo;
           }
-          if (photo.startsWith('/uploads')) {
+          // Handle /uploads paths (legacy local storage)
+          if (photo && photo.startsWith('/uploads')) {
             const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
             const baseUrl = apiUrl.replace('/api', '');
             return `${baseUrl}${photo}`;
           }
-          return photo;
-        }));
+          // Return photo as-is or fallback
+          return photo || '/images/login.jpeg';
+        }).filter((photo: string): photo is string => !!photo)); // Filter out any null/undefined
       } else if (user.profileImage) {
-        const profileImg = user.profileImage.startsWith('/uploads') 
-          ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
-          : user.profileImage;
+        // Cloudinary URLs are already full URLs
+        const profileImg = user.profileImage.startsWith('http://') || user.profileImage.startsWith('https://')
+          ? user.profileImage
+          : user.profileImage.startsWith('/uploads')
+            ? `${(import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api').replace('/api', '')}${user.profileImage}`
+            : user.profileImage;
         availablePhotos.push(profileImg);
       }
       
@@ -477,8 +483,9 @@ const DiscoverPage: React.FC = () => {
                     onError={(e) => {
                       // Fallback to default image if image fails to load
                       const target = e.target as HTMLImageElement;
-                      if (target.src !== '/images/login.jpeg') {
-                        target.src = '/images/login.jpeg';
+                      const fallback = '/images/login.jpeg';
+                      if (target.src !== fallback && !target.src.includes(fallback)) {
+                        target.src = fallback;
                       }
                     }}
                   />
@@ -740,9 +747,26 @@ const DiscoverPage: React.FC = () => {
                 >
                   {(modalUser.photos && modalUser.photos[0]) || modalUser.profileImage ? (
                     <img
-                      src={modalUser.photos?.[0] || modalUser.profileImage}
+                      src={(() => {
+                        const img = modalUser.photos?.[0] || modalUser.profileImage;
+                        if (!img) return '/images/login.jpeg';
+                        // Cloudinary URLs are already full URLs, return as is
+                        if (img.startsWith('http://') || img.startsWith('https://')) return img;
+                        // Handle /uploads paths
+                        if (img.startsWith('/uploads')) {
+                          const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
+                          return `${apiUrl.replace('/api', '')}${img}`;
+                        }
+                        return img;
+                      })()}
                       alt={modalUser.name}
                       className="w-full h-full rounded-full object-cover border-2 border-pink-400 shadow-lg"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== '/images/login.jpeg') {
+                          target.src = '/images/login.jpeg';
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">

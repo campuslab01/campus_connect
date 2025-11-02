@@ -6,6 +6,9 @@ import bgImage from '/images/login.jpeg';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserLikes } from '../hooks/useUsersQuery';
 import { useSocket } from '../contexts/SocketContext';
+import { useToast } from '../contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
+import api from '../config/axios';
 
 
 const LikesPage: React.FC = () => {
@@ -13,6 +16,8 @@ const LikesPage: React.FC = () => {
   const [showPremium, setShowPremium] = useState(false);
   const socket = useSocket();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
   
   // Fetch likes and matches using React Query
   const { data: likesData, isLoading: loading, error: queryError } = useUserLikes();
@@ -91,8 +96,47 @@ const LikesPage: React.FC = () => {
     };
   }, [socket, queryClient]);
 
-  const handleAction = (userId: number, action: 'like' | 'dislike' | 'dm') => {
-    alert(`Action: ${action} for user ${userId}`);
+  const handleAction = async (userId: number, action: 'like' | 'dislike' | 'dm') => {
+    try {
+      if (action === 'dm') {
+        // Navigate to chat page with user ID
+        navigate('/chat', { state: { userId } });
+        showToast({
+          type: 'success',
+          message: 'Opening chat...',
+          duration: 2000
+        });
+      } else if (action === 'like') {
+        // Like the user
+        await api.post(`/users/${userId}/like`);
+        showToast({
+          type: 'success',
+          message: 'User liked successfully!',
+          duration: 2000
+        });
+        // Refresh likes data
+        queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+        queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
+      } else if (action === 'dislike') {
+        // Unlike/remove the user
+        await api.delete(`/users/${userId}/like`);
+        showToast({
+          type: 'success',
+          message: 'User removed from likes',
+          duration: 2000
+        });
+        // Refresh likes data
+        queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+        queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || `Failed to ${action} user`;
+      showToast({
+        type: 'error',
+        message: errorMessage,
+        duration: 3000
+      });
+    }
   };
 
   const containerVariants = {
@@ -217,6 +261,13 @@ const LikesPage: React.FC = () => {
                       className={`w-full h-48 object-cover ${
                         !like.isPremiumVisible ? 'blur-sm' : ''
                       }`}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        const fallback = '/images/login.jpeg';
+                        if (target.src !== fallback && !target.src.includes(fallback)) {
+                          target.src = fallback;
+                        }
+                      }}
                     />
                     {!like.isPremiumVisible && (
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
@@ -297,6 +348,13 @@ const LikesPage: React.FC = () => {
                   src={match.photo}
                   alt={match.name}
                   className="w-16 h-16 rounded-full object-cover border-2 border-pink-400/40"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    const fallback = '/images/login.jpeg';
+                    if (target.src !== fallback && !target.src.includes(fallback)) {
+                      target.src = fallback;
+                    }
+                  }}
                 />
                 <div className="flex-1">
                   <h4 className="text-white font-medium">{match.name}, {match.age}</h4>
