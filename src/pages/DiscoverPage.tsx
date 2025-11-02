@@ -171,7 +171,6 @@ const DiscoverPage: React.FC = () => {
       if (err.response?.status === 400 && err.response?.data?.message?.includes('already liked')) {
         setLiked((prev) => ({ ...prev, [id]: true }));
       }
-      console.error('Error toggling like:', err);
     }
   };
 
