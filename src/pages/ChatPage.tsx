@@ -22,8 +22,6 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { QuizConsentPopup } from '../components/QuizConsentPopup';
 import { useToast } from '../contexts/ToastContext';
-import { useE2EE } from '../hooks/useE2EE';
-import { E2EEIndicator } from '../components/E2EEIndicator';
 import api from '../config/axios';
 
 
@@ -37,7 +35,6 @@ const ChatPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { encryptForUser, decryptFromUser, isInitialized } = useE2EE();
   
   // Helper function to format time (must be defined before use)
   const formatTime = (dateString: string) => {
@@ -60,28 +57,19 @@ const ChatPage: React.FC = () => {
     if (initialUserId && !selectedChat && user) {
       const findOrCreateChat = async () => {
         try {
-          console.log('Creating/finding chat for userId:', initialUserId);
-          const token = localStorage.getItem('token');
-          console.log('Token exists:', !!token);
-          console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
-          
           // Use GET endpoint to get or create chat
           const response = await api.get(`/chat/${initialUserId}`);
-          console.log('Chat response:', response.data);
           if (response.data.status === 'success') {
             const chat = response.data.data.chat;
             const chatId = chat._id || chat.id;
-            console.log('Chat created/found with ID:', chatId);
             
             // Store chat info for immediate use
             const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
             const participants = chat.participants || [];
-            console.log('Participants:', participants);
             const otherParticipant = participants.find((p: any) => {
               const pIdStr = (p._id || p.id)?.toString();
               return pIdStr !== userIdStr;
             });
-            console.log('Other participant:', otherParticipant);
             
             // Determine chat request status
             const chatRequest = chat.chatRequest || {};
@@ -109,11 +97,9 @@ const ChatPage: React.FC = () => {
               chatId: chatId
             };
             
-            console.log('Setting directChatInfo:', chatInfo);
             setDirectChatInfo(chatInfo);
             
             // Set selected chat directly using chat._id - this should trigger message box to show
-            console.log('Setting selectedChat to:', chatId);
             setSelectedChat(chatId);
             
             // Refresh chats list in background to ensure it's available
@@ -211,8 +197,6 @@ const handleEmojiSelect = (emoji: any) => {
 
   // Get messages for selected chat with infinite scroll
   const selectedChatData = transformedChats.find((c: any) => c.id === selectedChat);
-  // Get raw chat data for participant info
-  const rawSelectedChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat?.toString());
   const { data: messagesData, fetchNextPage: fetchMoreMessages, hasNextPage: hasMoreMessages } = useInfiniteMessages(
     selectedChatData?.chatId || null
   );
@@ -222,54 +206,6 @@ const handleEmojiSelect = (emoji: any) => {
   
   // Transform messages to match UI and sort by timestamp
   const userIdStr = ((user as any)?.id?.toString() || (user as any)?._id?.toString()) || '';
-  
-  // Decrypt messages - this will be async, so we'll need to handle it differently
-  const [decryptedMessages, setDecryptedMessages] = useState<Record<string, string>>({});
-  
-  // Decrypt messages when they change
-  useEffect(() => {
-    const decryptAllMessages = async () => {
-      if (!isInitialized || !selectedChatData?.chatId) return;
-      
-      // Get other participant ID - use transformed chat data first, then raw data
-      let otherUserId: string | null = null;
-      if (selectedChatData?.otherParticipantId) {
-        otherUserId = selectedChatData.otherParticipantId;
-      } else if (rawSelectedChat?.participants) {
-        const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
-        const otherParticipant = rawSelectedChat.participants.find((p: any) => {
-          const pId = (p._id || p.id)?.toString();
-          return pId !== userIdStr;
-        });
-        otherUserId = otherParticipant?._id || otherParticipant?.id || null;
-      }
-      if (!otherUserId) return;
-
-      const decrypted: Record<string, string> = {};
-      
-      for (const msg of allMessages) {
-        const msgId = (msg._id || msg.id || `temp-${Date.now()}`).toString();
-        const senderId = (msg.sender?._id || msg.sender?.id)?.toString();
-        const isOwn = senderId === userIdStr;
-        
-        // Only decrypt messages from other user (we know our own messages)
-        if (!isOwn && msg.content) {
-          try {
-            decrypted[msgId] = await decryptFromUser(String(otherUserId), msg.content);
-          } catch (error) {
-            console.error('Failed to decrypt message:', error);
-            decrypted[msgId] = msg.content; // Use original if decryption fails
-          }
-        } else {
-          decrypted[msgId] = msg.content || msg.text;
-        }
-      }
-      
-      setDecryptedMessages(decrypted);
-    };
-
-    decryptAllMessages();
-  }, [allMessages, isInitialized, selectedChatData, rawSelectedChat, decryptFromUser, user]);
 
   const transformedMessages = allMessages
     .map((msg: any) => {
@@ -283,7 +219,8 @@ const handleEmojiSelect = (emoji: any) => {
       }
       
       const msgId = (msg._id || msg.id || `temp-${Date.now()}`).toString();
-      const content = decryptedMessages[msgId] || msg.content || msg.text || '';
+      // Use message content directly (no encryption/decryption)
+      const content = msg.content || msg.text || '';
       
       return {
         text: content,
@@ -633,38 +570,10 @@ const handleEmojiSelect = (emoji: any) => {
     const messageContent = message.trim();
     setMessage(""); // Clear input immediately for better UX
 
-    // Get other participant's user ID for encryption
-    // Use transformed chat data if available, otherwise check raw chats
-    let otherUserId: string | null = null;
-    const transformedChat = transformedChats.find((c: any) => c.chatId === chat.chatId);
-    if (transformedChat?.otherParticipantId) {
-      otherUserId = transformedChat.otherParticipantId;
-    } else {
-      const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === chat.chatId?.toString());
-      if (rawChat?.participants) {
-        const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
-        const otherParticipant = rawChat.participants.find((p: any) => {
-          const pId = (p._id || p.id)?.toString();
-          return pId !== userIdStr;
-        });
-        otherUserId = otherParticipant?._id || otherParticipant?.id || null;
-      }
-    }
-
-    // Encrypt message if E2EE is initialized and we have the other user's ID
-    let encryptedContent = messageContent;
-    if (isInitialized && otherUserId) {
-      try {
-        encryptedContent = await encryptForUser(String(otherUserId), messageContent);
-      } catch (error) {
-        console.error('Encryption failed, sending unencrypted:', error);
-        // Continue with unencrypted message as fallback
-      }
-    }
-
     // Use mutation for API call (includes optimistic update and socket send)
+    // Send message as plain text (no client-side encryption)
     sendMessageMutation.mutate(
-      { chatId: chat.chatId, content: encryptedContent },
+      { chatId: chat.chatId, content: messageContent },
       {
         onSuccess: () => {
           // Quiz consent will be triggered by backend via socket event
@@ -750,23 +659,16 @@ const filteredChats = transformedChats.filter(
 
 
   if (selectedChat !== null) {
-    console.log('selectedChat is not null:', selectedChat);
-    console.log('directChatInfo:', directChatInfo);
-    console.log('transformedChats length:', transformedChats.length);
-    
     // Find chat by chatId (which is the actual MongoDB _id)
     let chat = transformedChats.find((c: any) => c.chatId?.toString() === selectedChat.toString());
-    console.log('Chat found in transformedChats:', chat);
     
     // If not found, check if we have direct chat info (from DM navigation)
     if (!chat && directChatInfo && directChatInfo.chatId?.toString() === selectedChat.toString()) {
-      console.log('Using directChatInfo');
       chat = directChatInfo;
     }
     
     // If still not found, it might be in the raw chats list
     if (!chat && chats.length > 0) {
-      console.log('Checking raw chats list');
       const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat.toString());
       if (rawChat) {
         const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
@@ -791,16 +693,12 @@ const filteredChats = transformedChats.filter(
     
     // If still not found but we have initialUserId, create a minimal chat object
     if (!chat && initialUserId && directChatInfo) {
-      console.log('Using directChatInfo as fallback');
       chat = directChatInfo;
     }
     
     if (!chat) {
-      console.log('No chat found, returning null');
       return null;
     }
-    
-    console.log('Rendering message box with chat:', chat);
 // message box UI
     return (
       <motion.div
@@ -853,7 +751,6 @@ const filteredChats = transformedChats.filter(
                         {chat.compatibilityScore}% Match
                       </span>
                     )}
-                    {isInitialized && <E2EEIndicator isActive={isInitialized} />}
                   </h3>
                   <p className="text-xs text-white/60">{chat.isOnline ? "Online now" : "Last seen recently"}</p>
                 </div>
@@ -1057,12 +954,6 @@ const filteredChats = transformedChats.filter(
             onSubmit={(e) => handleSendMessage(e)}
             className={`flex-shrink-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-20 ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
           >
-            {/* E2EE Status Bar */}
-            {isInitialized && (
-              <div className="mb-2 flex items-center justify-center">
-                <E2EEIndicator isActive={isInitialized} />
-              </div>
-            )}
             <div className="flex items-center gap-2 w-full">
               <motion.input
   type="text"
