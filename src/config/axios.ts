@@ -35,17 +35,54 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle auth errors and logging
 api.interceptors.response.use(
   (response) => {
+    // Log successful API calls in development
+    if (import.meta.env.DEV) {
+      console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    }
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    // Enhanced error handling
+    const status = error.response?.status;
+    const url = error.config?.url;
+    
+    // Log errors for debugging
+    if (import.meta.env.DEV) {
+      console.error(`❌ ${error.config?.method?.toUpperCase()} ${url} - ${status || 'Network Error'}`, {
+        message: error.response?.data?.message,
+        errors: error.response?.data?.errors,
+      });
+    }
+    
+    // Handle 401 Unauthorized
+    if (status === 401) {
       // Token is invalid, clear it and redirect to auth
       localStorage.removeItem('token');
-      window.location.href = '/auth';
+      localStorage.removeItem('user');
+      
+      // Only redirect if not already on auth page
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth';
+      }
     }
+    
+    // Handle 429 Rate Limit
+    if (status === 429) {
+      const retryAfter = error.response?.headers['retry-after'];
+      const message = retryAfter 
+        ? `Too many requests. Please try again in ${retryAfter} seconds.`
+        : 'Too many requests. Please try again later.';
+      
+      // Store rate limit info for retry logic
+      (error as any).rateLimitInfo = {
+        retryAfter: retryAfter ? parseInt(retryAfter) * 1000 : 60000,
+        message,
+      };
+    }
+    
     return Promise.reject(error);
   }
 );

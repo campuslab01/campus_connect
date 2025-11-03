@@ -22,6 +22,8 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { QuizConsentPopup } from '../components/QuizConsentPopup';
 import { useToast } from '../contexts/ToastContext';
+import { useE2EE } from '../hooks/useE2EE';
+import { E2EEIndicator } from '../components/E2EEIndicator';
 import api from '../config/axios';
 
 
@@ -35,6 +37,7 @@ const ChatPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { encryptForUser, decryptFromUser, isInitialized } = useE2EE();
   
   // Helper function to format time (must be defined before use)
   const formatTime = (dateString: string) => {
@@ -80,6 +83,12 @@ const ChatPage: React.FC = () => {
             });
             console.log('Other participant:', otherParticipant);
             
+            // Determine chat request status
+            const chatRequest = chat.chatRequest || {};
+            const currentUserIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
+            const isRequester = chatRequest.requestedBy?.toString() === currentUserIdStr;
+            const isPending = chatRequest.status === 'pending';
+            
             const chatInfo = {
               id: chatId,
               name: otherParticipant?.name || 'Unknown',
@@ -88,7 +97,14 @@ const ChatPage: React.FC = () => {
               time: chat.lastMessageAt ? formatTime(chat.lastMessageAt) : 'Just now',
               unreadCount: chat.unreadCount || 0,
               isOnline: false,
-              isDMRequest: false,
+              isDMRequest: isPending && !isRequester,
+              chatRequest: {
+                status: chatRequest.status || 'none',
+                isRequester,
+                isPending,
+                isRejected: chatRequest.status === 'rejected',
+                isAccepted: chatRequest.status === 'accepted' || !chatRequest.status
+              },
               compatibilityScore: chat.compatibilityScore,
               chatId: chatId
             };
@@ -163,6 +179,13 @@ const handleEmojiSelect = (emoji: any) => {
       return pIdStr !== userIdStr;
     });
     
+    // Determine chat request status
+    const chatRequest = chat.chatRequest || {};
+    const isRequester = chatRequest.requestedBy?.toString() === userIdStr;
+    const isPending = chatRequest.status === 'pending';
+    const isRejected = chatRequest.status === 'rejected';
+    const isAccepted = chatRequest.status === 'accepted' || !chatRequest.status;
+    
     return {
       id: chat._id || chat.id,
       name: otherParticipant?.name || 'Unknown',
@@ -171,14 +194,25 @@ const handleEmojiSelect = (emoji: any) => {
       time: chat.lastMessageAt ? formatTime(chat.lastMessageAt) : 'Just now',
       unreadCount: chat.unreadCount || 0,
       isOnline: false, // TODO: Implement online status
-      isDMRequest: false, // TODO: Implement DM request logic
+      isDMRequest: isPending && !isRequester, // Show in requests tab if pending and user is recipient
+      chatRequest: {
+        status: chatRequest.status || 'none',
+        isRequester,
+        isPending,
+        isRejected,
+        isAccepted
+      },
       compatibilityScore: chat.compatibilityScore,
-      chatId: chat._id || chat.id
+      chatId: chat._id || chat.id,
+      participants: chat.participants || [], // Include participants for E2EE
+      otherParticipantId: otherParticipant?._id || otherParticipant?.id || null
     };
   });
 
   // Get messages for selected chat with infinite scroll
   const selectedChatData = transformedChats.find((c: any) => c.id === selectedChat);
+  // Get raw chat data for participant info
+  const rawSelectedChat = chats.find((c: any) => (c._id || c.id)?.toString() === selectedChat?.toString());
   const { data: messagesData, fetchNextPage: fetchMoreMessages, hasNextPage: hasMoreMessages } = useInfiniteMessages(
     selectedChatData?.chatId || null
   );
@@ -189,6 +223,54 @@ const handleEmojiSelect = (emoji: any) => {
   // Transform messages to match UI and sort by timestamp
   const userIdStr = ((user as any)?.id?.toString() || (user as any)?._id?.toString()) || '';
   
+  // Decrypt messages - this will be async, so we'll need to handle it differently
+  const [decryptedMessages, setDecryptedMessages] = useState<Record<string, string>>({});
+  
+  // Decrypt messages when they change
+  useEffect(() => {
+    const decryptAllMessages = async () => {
+      if (!isInitialized || !selectedChatData?.chatId) return;
+      
+      // Get other participant ID - use transformed chat data first, then raw data
+      let otherUserId: string | null = null;
+      if (selectedChatData?.otherParticipantId) {
+        otherUserId = selectedChatData.otherParticipantId;
+      } else if (rawSelectedChat?.participants) {
+        const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
+        const otherParticipant = rawSelectedChat.participants.find((p: any) => {
+          const pId = (p._id || p.id)?.toString();
+          return pId !== userIdStr;
+        });
+        otherUserId = otherParticipant?._id || otherParticipant?.id || null;
+      }
+      if (!otherUserId) return;
+
+      const decrypted: Record<string, string> = {};
+      
+      for (const msg of allMessages) {
+        const msgId = (msg._id || msg.id || `temp-${Date.now()}`).toString();
+        const senderId = (msg.sender?._id || msg.sender?.id)?.toString();
+        const isOwn = senderId === userIdStr;
+        
+        // Only decrypt messages from other user (we know our own messages)
+        if (!isOwn && msg.content) {
+          try {
+            decrypted[msgId] = await decryptFromUser(String(otherUserId), msg.content);
+          } catch (error) {
+            console.error('Failed to decrypt message:', error);
+            decrypted[msgId] = msg.content; // Use original if decryption fails
+          }
+        } else {
+          decrypted[msgId] = msg.content || msg.text;
+        }
+      }
+      
+      setDecryptedMessages(decrypted);
+    };
+
+    decryptAllMessages();
+  }, [allMessages, isInitialized, selectedChatData, rawSelectedChat, decryptFromUser, user]);
+
   const transformedMessages = allMessages
     .map((msg: any) => {
       // Use isOwn if explicitly set (for optimistic updates), otherwise calculate
@@ -200,12 +282,15 @@ const handleEmojiSelect = (emoji: any) => {
         isOwn = senderId === userIdStr;
       }
       
+      const msgId = (msg._id || msg.id || `temp-${Date.now()}`).toString();
+      const content = decryptedMessages[msgId] || msg.content || msg.text || '';
+      
       return {
-    text: msg.content || msg.text,
+        text: content,
         time: msg.timestamp ? formatTime(msg.timestamp) : (msg.createdAt ? formatTime(msg.createdAt) : 'Just now'),
         timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
         isOwn,
-        id: msg._id || msg.id || `temp-${Date.now()}`
+        id: msgId
       };
     })
     .sort((a: any, b: any) => {
@@ -322,11 +407,51 @@ const handleEmojiSelect = (emoji: any) => {
       }
     };
 
+    // Handle chat request events
+    const handleChatRequest = (data: any) => {
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData?.chatId) {
+        showToast({
+          type: 'info',
+          message: `${data.requesterName || 'Someone'} wants to chat with you`,
+          duration: 5000
+        });
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+      }
+    };
+
+    const handleChatAccepted = (data: any) => {
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData?.chatId) {
+        showToast({
+          type: 'success',
+          message: 'Chat request accepted!',
+          duration: 3000
+        });
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+        queryClient.invalidateQueries({ queryKey: ['chatMessages', data.chatId] });
+      }
+    };
+
+    const handleChatRejected = (data: any) => {
+      if (data.chatId === chatIdStr || data.chatId === selectedChatData?.chatId) {
+        showToast({
+          type: 'info',
+          message: 'Chat request was rejected',
+          duration: 3000
+        });
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+      }
+    };
+
     socket.onMessage(handleNewMessage);
-    socket.socket.on('quiz:consent-request', handleQuizConsentRequest);
-    socket.socket.on('quiz:consent-update', handleQuizConsentUpdate);
-    socket.socket.on('quiz:consent-denied', handleQuizConsentDenied);
-    socket.socket.on('quiz:score', handleQuizScore);
+    if (socket.socket) {
+      socket.socket.on('quiz:consent-request', handleQuizConsentRequest);
+      socket.socket.on('quiz:consent-update', handleQuizConsentUpdate);
+      socket.socket.on('quiz:consent-denied', handleQuizConsentDenied);
+      socket.socket.on('quiz:score', handleQuizScore);
+      socket.socket.on('chat:request', handleChatRequest);
+      socket.socket.on('chat:accepted', handleChatAccepted);
+      socket.socket.on('chat:rejected', handleChatRejected);
+    }
     socket.joinChat(chatIdStr);
 
     return () => {
@@ -336,6 +461,9 @@ const handleEmojiSelect = (emoji: any) => {
         socket.socket.off('quiz:consent-update', handleQuizConsentUpdate);
         socket.socket.off('quiz:consent-denied', handleQuizConsentDenied);
         socket.socket.off('quiz:score', handleQuizScore);
+        socket.socket.off('chat:request', handleChatRequest);
+        socket.socket.off('chat:accepted', handleChatAccepted);
+        socket.socket.off('chat:rejected', handleChatRejected);
       }
       if (selectedChatData?.chatId) {
         socket.leaveChat(chatIdStr);
@@ -485,12 +613,58 @@ const handleEmojiSelect = (emoji: any) => {
     const chat = transformedChats.find((c: any) => c.id === selectedChat);
     if (!chat || !chat.chatId) return;
 
+    // Check if chat request is pending or rejected
+    if (chat.chatRequest?.isPending && !chat.chatRequest?.isRequester) {
+      showToast({ 
+        type: 'error', 
+        message: 'Please wait for the other user to accept your chat request.' 
+      });
+      return;
+    }
+    
+    if (chat.chatRequest?.isRejected) {
+      showToast({ 
+        type: 'error', 
+        message: 'This chat request has been rejected. You cannot send messages.' 
+      });
+      return;
+    }
+
     const messageContent = message.trim();
     setMessage(""); // Clear input immediately for better UX
 
+    // Get other participant's user ID for encryption
+    // Use transformed chat data if available, otherwise check raw chats
+    let otherUserId: string | null = null;
+    const transformedChat = transformedChats.find((c: any) => c.chatId === chat.chatId);
+    if (transformedChat?.otherParticipantId) {
+      otherUserId = transformedChat.otherParticipantId;
+    } else {
+      const rawChat = chats.find((c: any) => (c._id || c.id)?.toString() === chat.chatId?.toString());
+      if (rawChat?.participants) {
+        const userIdStr = ((user as any)?.id || (user as any)?._id)?.toString();
+        const otherParticipant = rawChat.participants.find((p: any) => {
+          const pId = (p._id || p.id)?.toString();
+          return pId !== userIdStr;
+        });
+        otherUserId = otherParticipant?._id || otherParticipant?.id || null;
+      }
+    }
+
+    // Encrypt message if E2EE is initialized and we have the other user's ID
+    let encryptedContent = messageContent;
+    if (isInitialized && otherUserId) {
+      try {
+        encryptedContent = await encryptForUser(String(otherUserId), messageContent);
+      } catch (error) {
+        console.error('Encryption failed, sending unencrypted:', error);
+        // Continue with unencrypted message as fallback
+      }
+    }
+
     // Use mutation for API call (includes optimistic update and socket send)
     sendMessageMutation.mutate(
-      { chatId: chat.chatId, content: messageContent },
+      { chatId: chat.chatId, content: encryptedContent },
       {
         onSuccess: () => {
           // Quiz consent will be triggered by backend via socket event
@@ -504,6 +678,42 @@ const handleEmojiSelect = (emoji: any) => {
         }
       }
     );
+  };
+
+  // Handle chat request accept/reject
+  const handleAcceptChatRequest = async () => {
+    if (!selectedChatData?.chatId) return;
+    
+    try {
+      await api.post(`/chat/${selectedChatData.chatId}/accept`);
+      showToast({ type: 'success', message: 'Chat request accepted!' });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', selectedChatData.chatId] });
+    } catch (error: any) {
+      console.error('Error accepting chat request:', error);
+      showToast({ 
+        type: 'error', 
+        message: error.response?.data?.message || 'Failed to accept chat request' 
+      });
+    }
+  };
+
+  const handleRejectChatRequest = async () => {
+    if (!selectedChatData?.chatId) return;
+    
+    try {
+      await api.post(`/chat/${selectedChatData.chatId}/reject`);
+      showToast({ type: 'info', message: 'Chat request rejected' });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      // Optionally close the chat view
+      setSelectedChat(null);
+    } catch (error: any) {
+      console.error('Error rejecting chat request:', error);
+      showToast({ 
+        type: 'error', 
+        message: error.response?.data?.message || 'Failed to reject chat request' 
+      });
+    }
   };
 
   const handleDeleteChat = async () => {
@@ -636,14 +846,14 @@ const filteredChats = transformedChats.filter(
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-white flex items-center gap-2">
+                  <h3 className="font-semibold text-white flex items-center gap-2 flex-wrap">
                     {chat.name}
                     {chat.compatibilityScore && (
-  <span className="text-xs bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full border border-pink-400/30">
-    {chat.compatibilityScore}% Match
-  </span>
-)}
-
+                      <span className="text-xs bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full border border-pink-400/30">
+                        {chat.compatibilityScore}% Match
+                      </span>
+                    )}
+                    {isInitialized && <E2EEIndicator isActive={isInitialized} />}
                   </h3>
                   <p className="text-xs text-white/60">{chat.isOnline ? "Online now" : "Last seen recently"}</p>
                 </div>
@@ -787,11 +997,72 @@ const filteredChats = transformedChats.filter(
             <div ref={messagesEndRef} />
           </motion.div>
 
+          {/* Chat Request Banner */}
+          {selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester && (
+            <motion.div 
+              className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 backdrop-blur-md border border-pink-400/30 rounded-2xl p-4 mx-4 mb-4 text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-white mb-3 font-medium">
+                {selectedChatData.name} wants to chat with you
+              </p>
+              <div className="flex gap-3 justify-center">
+                <motion.button
+                  onClick={handleAcceptChatRequest}
+                  className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Accept
+                </motion.button>
+                <motion.button
+                  onClick={handleRejectChatRequest}
+                  className="px-6 py-2 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Reject
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+
+          {selectedChatData?.chatRequest?.isPending && selectedChatData?.chatRequest?.isRequester && (
+            <motion.div 
+              className="bg-gradient-to-r from-yellow-500/30 to-orange-500/30 backdrop-blur-md border border-orange-400/30 rounded-2xl p-4 mx-4 mb-4 text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-white font-medium">
+                Waiting for {selectedChatData.name} to accept your chat request...
+              </p>
+            </motion.div>
+          )}
+
+          {selectedChatData?.chatRequest?.isRejected && (
+            <motion.div 
+              className="bg-gradient-to-r from-red-500/30 to-rose-500/30 backdrop-blur-md border border-red-400/30 rounded-2xl p-4 mx-4 mb-4 text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-white font-medium">
+                This chat request has been rejected
+              </p>
+            </motion.div>
+          )}
+
           {/* Message Input */}
           <motion.form
             onSubmit={(e) => handleSendMessage(e)}
-            className="flex-shrink-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-20"
+            className={`flex-shrink-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-20 ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
           >
+            {/* E2EE Status Bar */}
+            {isInitialized && (
+              <div className="mb-2 flex items-center justify-center">
+                <E2EEIndicator isActive={isInitialized} />
+              </div>
+            )}
             <div className="flex items-center gap-2 w-full">
               <motion.input
   type="text"

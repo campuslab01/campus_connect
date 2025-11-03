@@ -14,6 +14,8 @@ import api from '../config/axios';
 const LikesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'likes' | 'matches'>('likes');
   const [showPremium, setShowPremium] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly' | 'semiannual'>('monthly');
+  const [processingPayment, setProcessingPayment] = useState(false);
   const socket = useSocket();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -95,6 +97,92 @@ const LikesPage: React.FC = () => {
       // Cleanup handled by SocketContext
     };
   }, [socket, queryClient]);
+
+  // Handle Razorpay payment
+  const handlePayment = async () => {
+    if (processingPayment) return;
+    
+    setProcessingPayment(true);
+    
+    try {
+      // Create order
+      const orderResponse = await api.post('/payments/create-order', {
+        plan: selectedPlan,
+        currency: 'INR'
+      });
+
+      if (orderResponse.data.status !== 'success') {
+        throw new Error('Failed to create order');
+      }
+
+      const { orderId, amount, keyId } = orderResponse.data.data;
+
+      // Initialize Razorpay checkout
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: 'INR',
+        name: 'Campus Connection',
+        description: `Premium Subscription - ${selectedPlan}`,
+        order_id: orderId,
+        handler: async (response: any) => {
+          try {
+            // Verify payment
+            const verifyResponse = await api.post('/payments/verify', {
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              plan: selectedPlan
+            });
+
+            if (verifyResponse.data.status === 'success') {
+              showToast({
+                type: 'success',
+                message: 'Premium activated successfully!',
+                duration: 3000
+              });
+              setShowPremium(false);
+              queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+              queryClient.invalidateQueries({ queryKey: ['userLikes'] });
+            } else {
+              throw new Error('Payment verification failed');
+            }
+          } catch (error: any) {
+            console.error('Payment verification error:', error);
+            showToast({
+              type: 'error',
+              message: error.response?.data?.message || 'Payment verification failed',
+              duration: 5000
+            });
+          } finally {
+            setProcessingPayment(false);
+          }
+        },
+        prefill: {
+          email: '', // Will be filled from user profile if available
+        },
+        theme: {
+          color: '#EC4899'
+        },
+        modal: {
+          ondismiss: () => {
+            setProcessingPayment(false);
+          }
+        }
+      };
+
+      const razorpay = (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      showToast({
+        type: 'error',
+        message: error.response?.data?.message || 'Failed to initiate payment',
+        duration: 5000
+      });
+      setProcessingPayment(false);
+    }
+  };
 
   const handleAction = async (userId: number, action: 'like' | 'dislike' | 'dm') => {
     try {
@@ -405,14 +493,56 @@ const LikesPage: React.FC = () => {
               >
                 <X size={20} />
               </button>
-              <h3 className="text-white text-xl font-bold mb-2">Go Premium!</h3>
-              <p className="text-white/70 mb-4">Unlock all likes and see who really likes you.</p>
-              <button
-                onClick={() => alert('Premium Purchased!')}
-                className="w-full bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-medium px-4 py-2 rounded-xl shadow-lg shadow-yellow-500/20 hover:from-yellow-500 hover:to-orange-500 transition-all"
+              <h3 className="text-white text-xl font-bold mb-2 flex items-center gap-2">
+                <Crown size={24} className="text-yellow-400" />
+                Go Premium!
+              </h3>
+              <p className="text-white/70 mb-6">Unlock all likes and see who really likes you.</p>
+              
+              {/* Plan Selection */}
+              <div className="space-y-3 mb-6">
+                {[
+                  { id: 'monthly' as const, name: 'Monthly', price: '₹99', savings: '' },
+                  { id: 'quarterly' as const, name: 'Quarterly', price: '₹267', savings: 'Save ₹30' },
+                  { id: 'semiannual' as const, name: 'Semiannual', price: '₹474', savings: 'Save ₹120' }
+                ].map((plan) => (
+                  <motion.button
+                    key={plan.id}
+                    onClick={() => setSelectedPlan(plan.id)}
+                    className={`w-full p-3 rounded-xl border-2 transition-all ${
+                      selectedPlan === plan.id
+                        ? 'border-pink-500 bg-pink-500/20'
+                        : 'border-white/20 bg-white/5 hover:border-white/40'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex justify-between items-center text-white">
+                      <div className="text-left">
+                        <p className="font-medium">{plan.name}</p>
+                        {plan.savings && (
+                          <p className="text-xs text-green-400">{plan.savings}</p>
+                        )}
+                      </div>
+                      <p className="font-bold">{plan.price}</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <motion.button
+                onClick={handlePayment}
+                disabled={processingPayment}
+                className="w-full bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-medium px-4 py-3 rounded-xl shadow-lg shadow-yellow-500/20 hover:from-yellow-500 hover:to-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: processingPayment ? 1 : 1.02 }}
+                whileTap={{ scale: processingPayment ? 1 : 0.98 }}
               >
-                Upgrade Now
-              </button>
+                {processingPayment ? 'Processing...' : 'Upgrade Now'}
+              </motion.button>
+              
+              <p className="text-xs text-white/50 mt-4 text-center">
+                Secure payment powered by Razorpay
+              </p>
             </motion.div>
           </motion.div>
         )}
