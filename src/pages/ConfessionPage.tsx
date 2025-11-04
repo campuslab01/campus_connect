@@ -16,7 +16,7 @@ const ConfessionPage: React.FC = () => {
   const [showNewConfession, setShowNewConfession] = useState(false);
   const [confessionText, setConfessionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
-  const [likedConfessions, setLikedConfessions] = useState<Set<number>>(new Set());
+  const [likedConfessions, setLikedConfessions] = useState<Set<string>>(new Set());
   const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
   const navigate = useNavigate();
   const socket = useSocket();
@@ -61,6 +61,14 @@ const ConfessionPage: React.FC = () => {
     // Ensure comments is always an array
     const commentsArray = Array.isArray(confession.comments) ? confession.comments : [];
     
+    // Check if current user liked this confession
+    const userId = (user as any)?._id || (user as any)?.id;
+    const userIdStr = userId?.toString();
+    const isLiked = Array.isArray(confession.likes) && confession.likes.some((likeId: any) => {
+      const likeIdStr = (likeId._id || likeId)?.toString();
+      return likeIdStr === userIdStr;
+    });
+    
     return {
     id: confession._id || confession.id,
     author: confession.isAnonymous ? undefined : confession.author?.name,
@@ -78,6 +86,8 @@ const ConfessionPage: React.FC = () => {
     time: confession.createdAt ? formatTime(confession.createdAt) : 'Just now',
       likes: Array.isArray(confession.likes) ? confession.likes.length : (typeof confession.likes === 'number' ? confession.likes : 0),
       comments: commentsArray.length,
+      shares: 0, // Share count not implemented yet
+      isLiked: isLiked,
     isAnonymous: confession.isAnonymous !== false,
     college: confession.author?.college || confession.college || '',
       tags: Array.isArray(confession.tags) ? confession.tags : [],
@@ -188,13 +198,39 @@ const ConfessionPage: React.FC = () => {
     );
   };
 
-  const handleLike = (confessionId: number) => {
-    setLikedConfessions(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(confessionId)) newSet.delete(confessionId);
-      else newSet.add(confessionId);
-      return newSet;
-    });
+  const handleLike = async (confessionId: number | string) => {
+    try {
+      const confession = confessions.find((c: any) => c.id === confessionId);
+      if (!confession) return;
+
+      const isCurrentlyLiked = confession.isLiked;
+      
+      // Optimistic update
+      setLikedConfessions(prev => {
+        const newSet = new Set(prev);
+        const confessionIdStr = confessionId.toString();
+        if (isCurrentlyLiked) {
+          newSet.delete(confessionIdStr);
+        } else {
+          newSet.add(confessionIdStr);
+        }
+        return newSet;
+      });
+
+      // Call API
+      if (isCurrentlyLiked) {
+        await api.delete(`/confessions/${confessionId}/like`);
+      } else {
+        await api.post(`/confessions/${confessionId}/like`);
+      }
+
+      // Invalidate queries to refetch updated confession
+      queryClient.invalidateQueries({ queryKey: ['confessions'] });
+    } catch (err: any) {
+      console.error('Error toggling like:', err);
+      // Revert optimistic update on error
+      queryClient.invalidateQueries({ queryKey: ['confessions'] });
+    }
   };
 
   const handleAddComment = async (confessionId: number, text: string, isAnonymous: boolean) => {
@@ -520,30 +556,33 @@ const ConfessionPage: React.FC = () => {
                 <div className="flex justify-center h-auto items-center p-2 gap-5 mt-3 shadow-sm backdrop-blur-md border border-white/20 rounded-2xl">
                   <motion.button
                     onClick={() => handleLike(confession.id)}
-                    className={`flex items-center justify-center w-10 h-5 rounded-xl backdrop-blur-md border border-white/20 text-white shadow-lg transition-all ${
-                      likedConfessions.has(confession.id) ? 'bg-pink-500/30' : 'bg-white/10'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md border border-white/20 text-white shadow-lg transition-all ${
+                      (likedConfessions.has(confession.id.toString()) || confession.isLiked) ? 'bg-pink-500/30' : 'bg-white/10'
                     }`}
                     whileHover={{ scale: 1.15, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Heart size={14} className={likedConfessions.has(confession.id) ? 'fill-current' : ''} />
+                    <Heart size={14} className={(likedConfessions.has(confession.id.toString()) || confession.isLiked) ? 'fill-current' : ''} />
+                    <span className="text-xs font-medium">{confession.likes}</span>
                   </motion.button>
                   
                   <motion.button
                     onClick={() => setSelectedConfession(confession.id)}
-                    className="flex items-center justify-center w-10 h-5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
                     whileHover={{ scale: 1.15, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     <MessageCircle size={14} />
+                    <span className="text-xs font-medium">{confession.comments}</span>
                   </motion.button>
                   
                   <motion.button
-                    className="flex items-center justify-center w-10 h-5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
                     whileHover={{ scale: 1.15, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     <Share2 size={14} />
+                    <span className="text-xs font-medium">{confession.shares}</span>
                   </motion.button>
                 </div>
 

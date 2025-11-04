@@ -85,22 +85,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.2, delayChildren: 0.3 },
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
     },
- };
+  };
 
   const itemVariants = {
-    hidden: { y: 50, opacity: 0 },
+    hidden: { y: 30, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
-      transition: { type: "spring", stiffness: 100, damping: 12 },
+      transition: { type: "tween", duration: 0.4, ease: "easeOut" },
     },
 };
 
   const floatingVariants = {
     animate: {
-      y: [-10, 10, -10],
+      y: [-8, 8, -8],
       transition: { duration: 3, repeat: Infinity, ease: "easeInOut" },
  },
   };
@@ -149,23 +149,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     }, [activeIndex, scrollable, index]);
 
     return (
-      <div className="relative w-full min-h-screen flex flex-col">
+      <div className="relative w-full min-h-screen flex flex-col" style={{ willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${bg})` }}
+          style={{ 
+            backgroundImage: `url(${bg})`,
+            willChange: 'transform',
+            transform: 'translateZ(0)',
+            WebkitTransform: 'translateZ(0)'
+          }}
         />
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
         <div
           ref={scrollRef}
           className={`relative z-10 w-full flex flex-col ${
             scrollable ? "overflow-y-auto h-screen" : "h-screen"
           }`}
+          style={{ willChange: 'transform', transform: 'translateZ(0)' }}
         >
           {children}
         </div>
       </div>
     );
- };
+  };
 
   return (
     <motion.div
@@ -189,7 +195,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         ref={swiperRef}
         spaceBetween={0}
         slidesPerView={1}
-        speed={1200}
+        speed={800}
         pagination={{ clickable: true }}
         navigation={{
           nextEl: ".swiper-button-next",
@@ -200,6 +206,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         className="relative group"
         allowTouchMove={false}
         onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
+        watchOverflow={true}
+        resistance={true}
+        resistanceRatio={0}
       >
         {/* Navigation Buttons */}
         <div className="swiper-button-next absolute right-8 top-1/2 -translate-y-1/2 z-20 opacity-80 hover:opacity-100 transition-opacity duration-300">
@@ -323,7 +332,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                       key={index}
  className="relative bg-white/20 backdrop-blur-sm border border-white/20 
              rounded-2xl p-6 text-white shadow-2xl 
-             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"                      variants={itemVariants}
+             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
+                      variants={itemVariants}
+                      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
                     >
                       {/* Icon */}
                       <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
@@ -376,7 +387,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                       key={index}
                       className="relative bg-white/20 backdrop-blur-sm border border-white/20 
              rounded-2xl p-6 text-white shadow-2xl 
-             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"                      variants={itemVariants}
+             hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
+                      variants={itemVariants}
+                      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
                     >
                       {/* Icon */}
                       <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
@@ -429,6 +442,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
              rounded-2xl p-6 text-white shadow-2xl 
              hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
               variants={itemVariants}
+              style={{ willChange: 'transform', transform: 'translateZ(0)' }}
             >
               {/* Icon - now matches Screen 3 */}
               <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
