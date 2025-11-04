@@ -82,6 +82,19 @@ function AppContent() {
             <Route path="/" element={<Navigate to="/discover" replace />} />
             <Route path="*" element={<Navigate to="/discover" replace />} />
           </Route>
+          
+          {/* Catch-all route for unauthenticated users - check hasLaunchedBefore */}
+          <Route path="*" element={
+            !isAuthenticated ? (
+              localStorage.getItem('hasLaunchedBefore') === 'true' ? (
+                <Navigate to="/auth" replace />
+              ) : (
+                <Navigate to="/landing" replace />
+              )
+            ) : (
+              <Navigate to="/discover" replace />
+            )
+          } />
         </Routes>
       </main>
       <Toaster />

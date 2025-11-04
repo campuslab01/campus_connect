@@ -11,8 +11,15 @@ const ProtectedRoute = () => {
   }
 
   // If authenticated, render the child route content.
-  // If not, redirect to the landing page.
-  return isAuthenticated ? <Outlet /> : <Navigate to="/landing" replace />;
+  if (isAuthenticated) {
+    return <Outlet />;
+  }
+
+  // If not authenticated, check if user has launched before
+  // If they have, redirect to auth page (skip landing page)
+  // If they haven't, redirect to landing page (first time)
+  const hasLaunchedBefore = localStorage.getItem('hasLaunchedBefore') === 'true';
+  return <Navigate to={hasLaunchedBefore ? '/auth' : '/landing'} replace />;
 };
 
 export default ProtectedRoute;
