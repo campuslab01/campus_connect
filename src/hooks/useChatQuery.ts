@@ -76,11 +76,11 @@ export const useSendMessage = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ chatId, content }: { chatId: string | number; content: string }) => {
-      const response = await api.post(`/chat/${chatId}/messages`, { content });
+    mutationFn: async ({ chatId, content, type = 'text', confessionId = null }: { chatId: string | number; content: string; type?: string; confessionId?: string | null }) => {
+      const response = await api.post(`/chat/${chatId}/messages`, { content, type, confessionId });
       return response.data.data;
     },
-    onMutate: async ({ chatId, content }) => {
+    onMutate: async ({ chatId, content, type = 'text', confessionId = null }) => {
       // Get actual user ID for sender
       const userId = (user as any)?._id || (user as any)?.id;
       const userIdStr = userId?.toString();
@@ -92,6 +92,8 @@ export const useSendMessage = () => {
         id: messageId,
         chatId,
         content,
+        type,
+        confessionId,
         createdAt: now,
         timestamp: now,
         isOwn: true, // Explicitly set to true

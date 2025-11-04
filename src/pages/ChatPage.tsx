@@ -21,6 +21,7 @@ import { useChats, useInfiniteMessages, useSendMessage } from '../hooks/useChatQ
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { QuizConsentPopup } from '../components/QuizConsentPopup';
+import ConfessionMessageCard from '../components/ConfessionMessageCard';
 import { useToast } from '../contexts/ToastContext';
 import api from '../config/axios';
 
@@ -227,7 +228,10 @@ const handleEmojiSelect = (emoji: any) => {
         time: msg.timestamp ? formatTime(msg.timestamp) : (msg.createdAt ? formatTime(msg.createdAt) : 'Just now'),
         timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
         isOwn,
-        id: msgId
+        id: msgId,
+        type: msg.type || 'text',
+        confessionId: msg.confessionId ? (msg.confessionId._id || msg.confessionId) : null,
+        confession: msg.confessionId && typeof msg.confessionId === 'object' ? msg.confessionId : null // Populated confession data if available
       };
     })
     .sort((a: any, b: any) => {
@@ -810,10 +814,20 @@ const filteredChats = transformedChats.filter(
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   layout
                 >
-                  <motion.div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border ${msg.isOwn ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white border-pink-400/30 shadow-lg shadow-pink-500/20" : "bg-white/10 text-white border-white/10"}`} whileHover={{ scale: 1.02 }}>
-                    <p className="text-sm">{msg.text}</p>
-                    <p className={`text-xs mt-1 ${msg.isOwn ? "text-pink-100" : "text-white/50"}`}>{msg.time}</p>
-                  </motion.div>
+                  {msg.type === 'confession' && msg.confessionId ? (
+                    <ConfessionMessageCard 
+                      confessionId={msg.confessionId} 
+                      isOwn={msg.isOwn}
+                      time={msg.time}
+                      text={msg.text}
+                      confession={msg.confession}
+                    />
+                  ) : (
+                    <motion.div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-md border ${msg.isOwn ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white border-pink-400/30 shadow-lg shadow-pink-500/20" : "bg-white/10 text-white border-white/10"}`} whileHover={{ scale: 1.02 }}>
+                      <p className="text-sm">{msg.text}</p>
+                      <p className={`text-xs mt-1 ${msg.isOwn ? "text-pink-100" : "text-white/50"}`}>{msg.time}</p>
+                    </motion.div>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Eye, EyeOff, MessageCircle, Share2 } from 'lucide-react';
 import { Comment, Reply } from '../data/mockConfessions'; // Types kept for API integration
 import CommentSection from '../components/CommentSection';
+import ShareConfessionModal from '../components/ShareConfessionModal';
 import bgImage from '/images/login.jpeg';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,8 @@ const ConfessionPage: React.FC = () => {
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [likedConfessions, setLikedConfessions] = useState<Set<string>>(new Set());
   const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [confessionToShare, setConfessionToShare] = useState<{ id: string | number; content: string } | null>(null);
   const navigate = useNavigate();
   const socket = useSocket();
   const queryClient = useQueryClient();
@@ -577,6 +580,10 @@ const ConfessionPage: React.FC = () => {
                   </motion.button>
                   
                   <motion.button
+                    onClick={() => {
+                      setConfessionToShare({ id: confession.id, content: confession.text });
+                      setShareModalOpen(true);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
                     whileHover={{ scale: 1.15, y: -2 }}
                     whileTap={{ scale: 0.95 }}
@@ -646,6 +653,19 @@ const ConfessionPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Share Confession Modal */}
+      {confessionToShare && (
+        <ShareConfessionModal
+          isOpen={shareModalOpen}
+          onClose={() => {
+            setShareModalOpen(false);
+            setConfessionToShare(null);
+          }}
+          confessionId={confessionToShare.id}
+          confessionContent={confessionToShare.content}
+        />
+      )}
     </motion.div>
   );
 };
