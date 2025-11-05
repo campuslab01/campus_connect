@@ -512,89 +512,89 @@ const ConfessionPage: React.FC = () => {
             >
               <motion.div className="space-y-4" variants={containerVariants}>
                 {confessions.map((confession, index) => (
-              <motion.div 
-                key={index}
-                className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg flex flex-col space-y-2"
-                variants={itemVariants}
-                whileHover={{ y: -2, scale: 1.01 }}
-                layout
-              >
-                <div className="flex items-start gap-3">
-                  <motion.div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                  >
-                    {confession.isAnonymous 
-                      ? <EyeOff size={16} /> 
-                      : <img src={confession.avatar} alt="User" className="w-full h-full rounded-full object-cover" />}
-                  </motion.div>
+                  <div key={index} className="relative">
+                    {/* Confession Card */}
+                    <motion.div 
+                      className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg flex flex-col space-y-2"
+                      variants={itemVariants}
+                      whileHover={{ y: -2, scale: 1.01 }}
+                      layout
+                    >
+                      <div className="flex items-start gap-3">
+                        <motion.div 
+                          className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white"
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                        >
+                          {confession.isAnonymous 
+                            ? <EyeOff size={16} /> 
+                            : <img src={confession.avatar} alt="User" className="w-full h-full rounded-full object-cover" />}
+                        </motion.div>
 
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-white truncate">
-                        {confession.isAnonymous ? 'Anonymous' : confession.author}
-                      </h4>
-                      <span className="text-xs text-white/60 ml-2">{confession.time}</span>
-                    </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-medium text-white truncate">
+                              {confession.isAnonymous ? 'Anonymous' : confession.author}
+                            </h4>
+                            <span className="text-xs text-white/60 ml-2">{confession.time}</span>
+                          </div>
 
-                    <p className="text-white/80 leading-relaxed">{confession.text}</p>
+                          <p className="text-white/80 leading-relaxed">{confession.text}</p>
 
-                    {confession.tags && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {confession.tags.map((tag: string, idx: number) => (
-                          <motion.span
-                            key={idx}
-                            className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-pink-300 text-xs px-2 py-1 rounded-full"
-                            whileHover={{ scale: 1.05 }}
-                          >
-                            #{tag}
-                          </motion.span>
-                        ))}
+                          {confession.tags && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {confession.tags.map((tag: string, idx: number) => (
+                                <motion.span
+                                  key={idx}
+                                  className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-pink-300 text-xs px-2 py-1 rounded-full"
+                                  whileHover={{ scale: 1.05 }}
+                                >
+                                  #{tag}
+                                </motion.span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </motion.div>
+
+                    {/* Action buttons: Like, Comment, Share - Fixed below the card */}
+                    <div className="flex justify-center items-center p-2 gap-5 mt-2 shadow-sm backdrop-blur-md border border-white/20 rounded-2xl mx-4">
+                      <motion.button
+                        onClick={() => handleLike(confession.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md border border-white/20 text-white shadow-lg transition-all ${
+                          (likedConfessions.has(confession.id.toString()) || confession.isLiked) ? 'bg-pink-500/30' : 'bg-white/10'
+                        }`}
+                        whileHover={{ scale: 1.15, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Heart size={14} className={(likedConfessions.has(confession.id.toString()) || confession.isLiked) ? 'fill-current' : ''} />
+                        <span className="text-xs font-medium">{confession.likes}</span>
+                      </motion.button>
+                      
+                      <motion.button
+                        onClick={() => setSelectedConfession(confession.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
+                        whileHover={{ scale: 1.15, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <MessageCircle size={14} />
+                        <span className="text-xs font-medium">{confession.comments}</span>
+                      </motion.button>
+                      
+                      <motion.button
+                        onClick={() => {
+                          setConfessionToShare({ id: confession.id, content: confession.text });
+                          setShareModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
+                        whileHover={{ scale: 1.15, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Share2 size={14} />
+                        <span className="text-xs font-medium">{confession.shares}</span>
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Action buttons: Like, Comment, Share */}
-                <div className="flex justify-center h-auto items-center p-2 gap-5 mt-3 shadow-sm backdrop-blur-md border border-white/20 rounded-2xl">
-                  <motion.button
-                    onClick={() => handleLike(confession.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md border border-white/20 text-white shadow-lg transition-all ${
-                      (likedConfessions.has(confession.id.toString()) || confession.isLiked) ? 'bg-pink-500/30' : 'bg-white/10'
-                    }`}
-                    whileHover={{ scale: 1.15, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Heart size={14} className={(likedConfessions.has(confession.id.toString()) || confession.isLiked) ? 'fill-current' : ''} />
-                    <span className="text-xs font-medium">{confession.likes}</span>
-                  </motion.button>
-                  
-                  <motion.button
-                    onClick={() => setSelectedConfession(confession.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
-                    whileHover={{ scale: 1.15, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <MessageCircle size={14} />
-                    <span className="text-xs font-medium">{confession.comments}</span>
-                  </motion.button>
-                  
-                  <motion.button
-                    onClick={() => {
-                      setConfessionToShare({ id: confession.id, content: confession.text });
-                      setShareModalOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-lg transition-all"
-                    whileHover={{ scale: 1.15, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Share2 size={14} />
-                    <span className="text-xs font-medium">{confession.shares}</span>
-                  </motion.button>
-                </div>
-
-
-                </motion.div>
                 ))}
               </motion.div>
             </InfiniteScroll>
