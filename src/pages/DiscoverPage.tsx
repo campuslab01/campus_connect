@@ -493,8 +493,8 @@ const DiscoverPage: React.FC = () => {
                 </motion.div>
               </motion.div>
 
-              {/* Fullscreen photo */}
-              <div className="relative w-full h-[70vh]" style={{ borderRadius:'30%'}}>
+              {/* Profile Images Section - 55vh */}
+              <div className="relative w-full h-[55vh]" style={{ borderRadius:'30%'}}>
                 {(() => {
                   // Ensure we always have a photo to display
                   const photos = currentUser?.photos || [];
@@ -565,17 +565,14 @@ const DiscoverPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Info Overlay */}
+              {/* Profile Details Section - 45vh */}
               {!photoLoading && currentUser && (
                 <div
-                className="absolute inset-x-0 bottom-0 z-40 flex flex-col justify-end pb-[calc(3rem+env(safe-area-inset-bottom))]"
+                className="relative w-full h-[45vh] flex flex-col justify-end pb-[calc(3rem+env(safe-area-inset-bottom))]"
                 style={{
                   background:
                     "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 20%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)",
                   backdropFilter: "blur(12px)",
-                  borderTopLeftRadius: "2rem",
-                  borderTopRightRadius: "2rem",
-                  maxHeight: "45vh",
                 }}
               >
               
@@ -677,10 +674,10 @@ const DiscoverPage: React.FC = () => {
   <span className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-2xl"></span>
   <span className="text-white drop-shadow-lg z-10 text-[clamp(1rem,5vw,1.5rem)]">💬</span>
 
-  {/* Label outside and centered below */}
+  {/* Label outside and centered below
   <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-sm font-semibold text-white drop-shadow-lg">
     DM
-  </span>
+  </span> */}
 </motion.button>
 
 
