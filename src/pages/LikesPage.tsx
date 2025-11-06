@@ -15,6 +15,7 @@ const LikesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'likes' | 'matches'>('likes');
   const [showPremium, setShowPremium] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly' | 'semiannual'>('monthly');
+  const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const socket = useSocket();
   const queryClient = useQueryClient();
@@ -502,9 +503,7 @@ const LikesPage: React.FC = () => {
               {/* Plan Selection */}
               <div className="space-y-3 mb-6">
                 {[
-                  { id: 'monthly' as const, name: 'Monthly', price: '₹99', savings: '' },
-                  { id: 'quarterly' as const, name: 'Quarterly', price: '₹267', savings: 'Save ₹30' },
-                  { id: 'semiannual' as const, name: 'Semiannual', price: '₹474', savings: 'Save ₹120' }
+                  { id: 'monthly' as const, name: 'Monthly', price: '₹99', savings: 'Limited-time offer' }
                 ].map((plan) => (
                   <motion.button
                     key={plan.id}
@@ -517,14 +516,51 @@ const LikesPage: React.FC = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <div className="flex justify-between items-center text-white">
-                      <div className="text-left">
-                        <p className="font-medium">{plan.name}</p>
-                        {plan.savings && (
-                          <p className="text-xs text-green-400">{plan.savings}</p>
-                        )}
+                    <div className="relative text-white">
+                      <div className="flex justify-between items-center">
+                        <div className="text-left">
+                          <p className="font-medium">{plan.name}</p>
+                          {plan.savings && (
+                            <p className="text-xs text-green-400">{plan.savings}</p>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <span className="absolute -top-4 -right-3 text-white/70 text-xs line-through bg-white/10 px-2 py-0.5 rounded">
+                            ₹475
+                          </span>
+                          <p className="font-extrabold text-lg">{plan.price}</p>
+                        </div>
                       </div>
-                      <p className="font-bold">{plan.price}</p>
+
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setShowPriceDetails(prev => !prev); }}
+                          className="text-xs text-white/80 hover:text-white transition-colors"
+                        >
+                          View price details
+                        </button>
+                        <AnimatePresence>
+                          {showPriceDetails && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-2 bg-white/5 border border-white/10 rounded-lg p-2 text-xs"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-white/70">Original price</span>
+                                <span className="text-white/70 line-through">₹475</span>
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-white">Offer price</span>
+                                <span className="text-green-400 font-semibold">₹99</span>
+                              </div>
+                              <p className="mt-1 text-white/60">Limited-time introductory offer on Premium.</p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                   </motion.button>
                 ))}
