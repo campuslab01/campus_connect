@@ -568,7 +568,7 @@ const DiscoverPage: React.FC = () => {
               {/* Profile Details Section - 45vh */}
               {!photoLoading && currentUser && (
                 <div
-                  className="relative w-full h-[45vh] flex flex-col justify-start items-start pt-[calc(1rem+env(safe-area-inset-top))] pb-2"
+                  className="relative w-full h-[45vh] flex flex-col justify-start items-start pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(env(safe-area-inset-bottom)+5rem)]"
                   style={{
                     background:
                       "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 20%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)",
@@ -576,7 +576,7 @@ const DiscoverPage: React.FC = () => {
                   }}
                 >
                   
-                  <div className="px-6 pt-2 space-y-3 text-white text-left">
+                  <div className="w-full px-6 pt-2 space-y-3 text-white text-left">
                     {currentPhotoIndex === 0 && (
                       <>
                         <div className="flex justify-between items-center">
@@ -653,7 +653,7 @@ const DiscoverPage: React.FC = () => {
                     )}
 
                     {/* Action Buttons */}
-<div className="flex justify-start gap-6 mt-3 relative">
+<div className="absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-30">
   <motion.button
     onClick={() => handleAction("dislike")}
     className="relative flex items-center justify-center rounded-full w-[clamp(3rem,10vw,5rem)] h-[clamp(3rem,10vw,5rem)]"
