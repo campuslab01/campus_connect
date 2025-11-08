@@ -17,6 +17,7 @@ const LikesPage: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly' | 'semiannual'>('monthly');
   const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [isPremiumActive, setIsPremiumActive] = useState<boolean>(false);
   const socket = useSocket();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -25,8 +26,27 @@ const LikesPage: React.FC = () => {
   // Fetch likes and matches using React Query
   const { data: likesData, isLoading: loading, error: queryError } = useUserLikes();
 
-  // Transform likes (users who liked you)
-  const likes = (likesData?.likedBy || []).map((user: any) => ({
+  // Fetch premium status for current user (controls blur/lock on likes)
+  useEffect(() => {
+    let mounted = true;
+    const fetchPremiumStatus = async () => {
+      try {
+        const res = await api.get('/payments/premium-status');
+        const active = !!res?.data?.data?.isPremium || !!res?.data?.data?.isVerified;
+        if (mounted) setIsPremiumActive(active);
+      } catch (_) {
+        // Default to non-premium if endpoint unavailable
+        if (mounted) setIsPremiumActive(false);
+      }
+    };
+    fetchPremiumStatus();
+    return () => { mounted = false; };
+  }, []);
+
+  // Transform likes (users who liked you) — show only verified profiles
+  const likes = (likesData?.likedBy || [])
+    .filter((user: any) => user.verified === true)
+    .map((user: any) => ({
     id: user._id || user.id,
     name: user.name,
     age: user.age,
@@ -44,7 +64,7 @@ const LikesPage: React.FC = () => {
     })(),
     college: user.college,
     verified: user.verified || false,
-    isPremiumVisible: true, // TODO: Implement premium logic
+    isPremiumVisible: isPremiumActive,
     likedAt: 'Recently'
   }));
 
@@ -323,7 +343,7 @@ const LikesPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-white">See who likes you!</h3>
-                  <p className="text-sm text-white/70">Upgrade to Premium to see all your likes</p>
+                  <p className="text-sm text-white/70">{isPremiumActive ? 'Premium active — all likes unlocked' : 'Upgrade to Premium to see all your likes'}</p>
                 </div>
                 <button
                   onClick={() => setShowPremium(true)}
@@ -375,7 +395,7 @@ const LikesPage: React.FC = () => {
 
                   <div className="p-3">
                     <h4 className="font-medium text-white mb-1">
-                      {like.isPremiumVisible ? `${like.name}, ${like.age}` : 'Someone'}
+                      {like.isPremiumVisible ? `${like.name}, ${like.age}` : 'Verified user'}
                     </h4>
                     <p className="text-xs text-white/70 mb-2">
                       {like.isPremiumVisible ? like.college : 'Liked your profile'}

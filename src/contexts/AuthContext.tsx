@@ -8,12 +8,14 @@ interface User {
   college: string;
   department?: string;
   age?: number;
+  gender?: 'male' | 'female' | 'other';
   bio?: string;
   interests?: string[];
   lookingFor?: string[];
   relationshipStatus?: string;
   profileImage?: string;
   photos?: string[];
+  isVerified?: boolean;
   isActive: boolean;
   createdAt: string;
   lastSeen: string;

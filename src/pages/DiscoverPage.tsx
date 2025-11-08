@@ -21,6 +21,7 @@ import {
 import { User } from "../data/mockUsers"; // Type kept for API integration
 import bgImage from "/images/login.jpeg";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from '../contexts/AuthContext';
 import { useUserSuggestions } from '../hooks/useUsersQuery';
 import { InfiniteScroll } from '../components/InfiniteScroll';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -32,7 +33,7 @@ import { useQueryClient } from '@tanstack/react-query';
 const DiscoverPage: React.FC = () => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [, setSwipeCount] = useState(0); // swipeCount is used via setSwipeCount
+  const [swipeCount, setSwipeCount] = useState(0);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [exitDirection, setExitDirection] = useState<1 | -1 | 0>(0);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
@@ -43,6 +44,7 @@ const DiscoverPage: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | number | null>(null);
   const queryClient = useQueryClient();
+  const { user: viewer } = useAuth();
 
   // Fetch full profile when modal is opened
   const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
@@ -154,14 +156,29 @@ const DiscoverPage: React.FC = () => {
   const likeOpacity = useTransform(x, [0, 20, 100], [0, 0.5, 1]);
   const nopeOpacity = useTransform(x, [0, -20, -100], [0, 0.5, 1]);
 
-  const currentUser = users[currentUserIndex] || null;
+  // Gender-based filtering and exclude self
+  const viewerId = (viewer as any)?._id || (viewer as any)?.id;
+  const viewerGender = (viewer as any)?.gender as ('male' | 'female' | 'other' | undefined);
+  const oppositeGender = viewerGender === 'male' ? 'female' : viewerGender === 'female' ? 'male' : undefined;
+  const filteredUsers: User[] = useMemo(() => {
+    let list = users;
+    if (oppositeGender) {
+      list = list.filter(u => u.gender === oppositeGender);
+    }
+    if (viewerId) {
+      list = list.filter(u => String(u.id) !== String(viewerId));
+    }
+    return list;
+  }, [users, oppositeGender, viewerId]);
+
+  const currentUser = filteredUsers[currentUserIndex] || null;
   const nextUser = useMemo(
-    () => users[(currentUserIndex + 1) % users.length] || null,
-    [currentUserIndex, users]
+    () => filteredUsers[(currentUserIndex + 1) % (filteredUsers.length || 1)] || null,
+    [currentUserIndex, filteredUsers]
   );
   const upcomingUser = useMemo(
-    () => users[(currentUserIndex + 2) % users.length] || null,
-    [currentUserIndex, users]
+    () => filteredUsers[(currentUserIndex + 2) % (filteredUsers.length || 1)] || null,
+    [currentUserIndex, filteredUsers]
   );
 
   useEffect(() => {
@@ -218,13 +235,42 @@ const DiscoverPage: React.FC = () => {
     }
   }, [currentUser]);
 
+  // Initialize and persist daily swipe limit
+  useEffect(() => {
+    const storageKey = viewerId ? `swipes_${viewerId}` : null;
+    if (!storageKey) return;
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const now = Date.now();
+        if (parsed.resetAt && now > parsed.resetAt) {
+          setSwipeCount(0);
+          localStorage.setItem(storageKey, JSON.stringify({ count: 0, resetAt: now + 24 * 60 * 60 * 1000 }));
+        } else {
+          setSwipeCount(parsed.count || 0);
+        }
+      } catch {
+        // reset malformed state
+        const now = Date.now();
+        localStorage.setItem(storageKey, JSON.stringify({ count: 0, resetAt: now + 24 * 60 * 60 * 1000 }));
+        setSwipeCount(0);
+      }
+    } else {
+      const now = Date.now();
+      localStorage.setItem(storageKey, JSON.stringify({ count: 0, resetAt: now + 24 * 60 * 60 * 1000 }));
+      setSwipeCount(0);
+    }
+  }, [viewerId]);
+
   const handleAction = useCallback(async (action: "like" | "dislike", userId?: string | number) => {
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
 
     setSwipeCount((prev) => {
+      const dailyLimit = (viewer as any)?.isVerified ? 15 : 10;
       const newCount = prev + 1;
-      if (newCount > 15) {
+      if (newCount > dailyLimit) {
         setShowLimitModal(true);
         return prev;
       }
@@ -256,7 +302,19 @@ const DiscoverPage: React.FC = () => {
         // Optional: Unlike user if they want to undo
         // For now, we don't call unlike API on swipe left
       }
-
+      // Persist swipe count
+      const storageKey = viewerId ? `swipes_${viewerId}` : null;
+      if (storageKey) {
+        const raw = localStorage.getItem(storageKey);
+        let resetAt = Date.now() + 24 * 60 * 60 * 1000;
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.resetAt) resetAt = parsed.resetAt;
+          } catch {}
+        }
+        localStorage.setItem(storageKey, JSON.stringify({ count: newCount, resetAt }));
+      }
       return newCount;
     });
   }, [currentUser, setSwipeCount, setShowLimitModal, setExitDirection, setIsSwiping, setPhotoLoading, setCurrentPhotoIndex, setShowNextCard, queryClient]);
@@ -279,6 +337,13 @@ const DiscoverPage: React.FC = () => {
     },
     [handleAction, x, currentUser]
   );
+
+  // Proactively fetch next suggestions page when nearing end
+  useEffect(() => {
+    if (hasNextPage && filteredUsers.length && (filteredUsers.length - currentUserIndex) <= 3) {
+      fetchNextPage();
+    }
+  }, [filteredUsers.length, currentUserIndex, hasNextPage, fetchNextPage]);
 
   return (
     <>
@@ -334,7 +399,7 @@ const DiscoverPage: React.FC = () => {
               </button>
             </div>
           </div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <div className="flex items-center justify-center h-full text-white text-center">
             <div>
               <h3 className="text-xl font-semibold mb-2">No users found</h3>
@@ -350,8 +415,8 @@ const DiscoverPage: React.FC = () => {
             <AnimatePresence
               initial={false}
               onExitComplete={() => {
-                if (users.length > 0) {
-                  setCurrentUserIndex((prev) => (prev + 1) % users.length);
+                if (filteredUsers.length > 0) {
+                  setCurrentUserIndex((prev) => (prev + 1) % filteredUsers.length);
                 }
                 setExitDirection(0);
                 setCurrentPhotoIndex(0);
