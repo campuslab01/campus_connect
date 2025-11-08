@@ -198,8 +198,12 @@ const handleEmojiSelect = (emoji: any) => {
 
   // Get messages for selected chat with infinite scroll
   const selectedChatData = transformedChats.find((c: any) => c.id === selectedChat);
+  const otherParticipant = selectedChatData?.participants?.find((p: any) => p._id !== user?._id);
+  const theirPublicKey = otherParticipant?.publicKey || null;
+
   const { data: messagesData, fetchNextPage: fetchMoreMessages, hasNextPage: hasMoreMessages } = useInfiniteMessages(
-    selectedChatData?.chatId || null
+    selectedChatData?.chatId || null,
+    theirPublicKey
   );
 
   // Flatten paginated messages
@@ -571,13 +575,22 @@ const handleEmojiSelect = (emoji: any) => {
       return;
     }
 
+    // Ensure we have the recipient's public key for E2EE
+    if (!theirPublicKey) {
+      showToast({ 
+        type: 'error', 
+        message: 'Cannot send message: recipient public key is not available.' 
+      });
+      return;
+    }
+
     const messageContent = message.trim();
     setMessage(""); // Clear input immediately for better UX
 
     // Use mutation for API call (includes optimistic update and socket send)
-    // Send message as plain text (no client-side encryption)
+    // Pass recipient public key so client encrypts before sending
     sendMessageMutation.mutate(
-      { chatId: chat.chatId, content: messageContent },
+      { chatId: chat.chatId, content: messageContent, theirPublicKey },
       {
         onSuccess: () => {
           // Quiz consent will be triggered by backend via socket event

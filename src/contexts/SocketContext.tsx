@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { createSharedSecret, encryptMessage } from '../lib/e2ee';
 
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   joinChat: (chatId: string) => void;
   leaveChat: (chatId: string) => void;
-  sendMessage: (chatId: string, content: string, messageId?: string) => void;
+  sendMessage: (chatId: string, content: string, theirPublicKey: string, messageId?: string) => void;
   onMessage: (callback: (data: any) => void) => void;
   offMessage: (callback: (data: any) => void) => void;
   onTypingStart: (callback: (data: any) => void) => void;
@@ -49,6 +50,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       return;
     }
 
+    const keyPair = JSON.parse(localStorage.getItem('keyPair') || 'null');
+    if (!keyPair || !keyPair.publicKey) {
+      console.error('Could not find public key for socket connection');
+      return;
+    }
+
     // Get API base URL
     const apiUrl = import.meta.env.VITE_API_URL 
       || (import.meta.env.DEV 
@@ -60,7 +67,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     const newSocket = io(socketUrl, {
       auth: {
-        token: token
+        token: token,
+        publicKey: keyPair.publicKey
       },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -103,11 +111,20 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
-  const sendMessage = (chatId: string, content: string, messageId?: string) => {
+  const sendMessage = (chatId: string, content: string, theirPublicKey: string, messageId?: string) => {
     if (socket && isConnected) {
+      const keyPair = JSON.parse(localStorage.getItem('keyPair') || 'null');
+      if (!keyPair || !keyPair.secretKey) {
+        console.error('Could not find secret key to encrypt message');
+        return;
+      }
+
+      const sharedSecret = createSharedSecret(theirPublicKey, keyPair.secretKey);
+      const encryptedContent = encryptMessage(content, sharedSecret);
+
       socket.emit('message:send', {
         chatId,
-        content,
+        content: encryptedContent,
         messageId: messageId || `temp-${Date.now()}`
       });
     }

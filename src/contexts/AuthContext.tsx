@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import axios from 'axios';
+import { generateKeyPair } from '../lib/e2ee';
 
 interface User {
   _id: string;
@@ -19,6 +20,7 @@ interface User {
   isActive: boolean;
   createdAt: string;
   lastSeen: string;
+  publicKey?: string;
 }
 
 interface AuthResult {
@@ -159,13 +161,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.get('/auth/me');
 
       if (response.data.status === 'success') {
-        setUser(response.data.data.user);
+        handleAuthSuccess(response.data.data.user, token);
       }
     } catch (error) {
       // Token is invalid, remove it
       localStorage.removeItem('token');
       setUser(null);
     }
+  };
+
+  const handleAuthSuccess = (userData: User, token: string) => {
+    let keyPair = JSON.parse(localStorage.getItem('keyPair') || 'null');
+    if (!keyPair) {
+      keyPair = generateKeyPair();
+      localStorage.setItem('keyPair', JSON.stringify(keyPair));
+    }
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('tokenTimestamp', Date.now().toString());
+
+    setUser({ ...userData, publicKey: keyPair.publicKey });
   };
 
   const login = async (email: string, password: string): Promise<AuthResult> => {
@@ -201,10 +216,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.data.status === 'success') {
         const { user: userData, token } = response.data.data;
 
-        localStorage.setItem('token', token);
-        localStorage.setItem('tokenTimestamp', Date.now().toString());
-
-        setUser(userData);
+        handleAuthSuccess(userData, token);
 
         return { success: true, message: 'Login successful', user: userData };
       } else {
@@ -236,10 +248,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.data.status === 'success') {
         const { user: newUser, token } = response.data.data;
 
-        localStorage.setItem('token', token);
-        localStorage.setItem('tokenTimestamp', Date.now().toString());
-
-        setUser(newUser);
+        handleAuthSuccess(newUser, token);
 
         return { success: true, message: 'Registration successful', user: newUser };
       } else {
@@ -272,6 +281,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear local state regardless of API call success
       localStorage.removeItem('token');
       localStorage.removeItem('tokenTimestamp');
+      localStorage.removeItem('keyPair');
       setUser(null);
     }
   };

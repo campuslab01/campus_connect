@@ -2,6 +2,7 @@ import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tansta
 import api from '../config/axios';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import { createSharedSecret, decryptMessage } from '../lib/e2ee';
 
 // Chat queries
 export const useChats = (page = 1, limit = 20) => {
@@ -50,7 +51,7 @@ export const useChatMessages = (chatId: string | number | null, page = 1, limit 
   });
 };
 
-export const useInfiniteMessages = (chatId: string | number | null) => {
+export const useInfiniteMessages = (chatId: string | number | null, theirPublicKey: string | null) => {
   return useInfiniteQuery({
     queryKey: ['chatMessages', chatId, 'infinite'],
     queryFn: async ({ pageParam = 1 }) => {
@@ -58,14 +59,35 @@ export const useInfiniteMessages = (chatId: string | number | null) => {
       const response = await api.get(`/chat/${chatId}/messages`, {
         params: { page: pageParam, limit: 50 }
       });
+
+      const keyPair = JSON.parse(localStorage.getItem('keyPair') || 'null');
+      if (!keyPair || !keyPair.secretKey || !theirPublicKey) {
+        return {
+          messages: response.data.data.messages || [],
+          pagination: response.data.data.pagination || {},
+          nextPage: response.data.data.pagination?.hasNext ? pageParam + 1 : undefined,
+        };
+      }
+
+      const sharedSecret = createSharedSecret(theirPublicKey, keyPair.secretKey);
+      const decryptedMessages = (response.data.data.messages || []).map((msg: any) => {
+        try {
+          const decryptedContent = decryptMessage(msg.content, sharedSecret);
+          return { ...msg, content: decryptedContent };
+        } catch (error) {
+          console.error('Failed to decrypt message:', error);
+          return { ...msg, content: 'Failed to decrypt message' };
+        }
+      });
+
       return {
-        messages: response.data.data.messages || [],
+        messages: decryptedMessages,
         pagination: response.data.data.pagination || {},
         nextPage: response.data.data.pagination?.hasNext ? pageParam + 1 : undefined,
       };
     },
     getNextPageParam: (lastPage) => lastPage?.nextPage,
-    enabled: !!chatId,
+    enabled: !!chatId && !!theirPublicKey,
     initialPageParam: 1,
   });
 };
@@ -76,11 +98,11 @@ export const useSendMessage = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ chatId, content, type = 'text', confessionId = null }: { chatId: string | number; content: string; type?: string; confessionId?: string | null }) => {
+    mutationFn: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }: { chatId: string | number; content: string; theirPublicKey: string; type?: string; confessionId?: string | null }) => {
       const response = await api.post(`/chat/${chatId}/messages`, { content, type, confessionId });
       return response.data.data;
     },
-    onMutate: async ({ chatId, content, type = 'text', confessionId = null }) => {
+    onMutate: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }) => {
       // Get actual user ID for sender
       const userId = (user as any)?._id || (user as any)?.id;
       const userIdStr = userId?.toString();
@@ -136,7 +158,7 @@ export const useSendMessage = () => {
       // Send via Socket.io immediately if connected
       if (socket.isConnected && socket.sendMessage) {
         try {
-          socket.sendMessage(String(chatId), content, messageId);
+          socket.sendMessage(String(chatId), content, theirPublicKey, messageId);
         } catch (error) {
           console.error('Error sending message via socket:', error);
         }
