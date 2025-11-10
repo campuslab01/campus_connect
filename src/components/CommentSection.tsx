@@ -261,24 +261,24 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                           className="flex-1 bg-white/10 border border-white/20 rounded-full px-3 py-2 text-white text-sm placeholder-white/50 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                         />
                         <button
-                          type="button"
-                          onClick={() => setReplyAnonymous(!replyAnonymous)}
-                          className={`p-2 rounded-full transition-colors ${
-                            replyAnonymous 
-                              ? 'bg-pink-500/20 text-pink-400' 
-                              : 'bg-white/10 text-white'
-                          }`}
-                          title={replyAnonymous ? 'Anonymous Reply' : 'Show Identity'}
-                        >
-                          {replyAnonymous ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
+  type="button"
+  onClick={() => setReplyAnonymous(!replyAnonymous)}
+  className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+    replyAnonymous
+      ? 'bg-pink-500/20 text-pink-400'
+      : 'bg-white/10 text-white'
+  }`}
+  title={replyAnonymous ? 'Anonymous Reply' : 'Show Identity'}
+>
+  {replyAnonymous ? <EyeOff size={14} /> : <Eye size={14} />}
+</button>
                         <button
-                          type="submit"
-                          disabled={!replyText.trim()}
-                          className="p-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <Send size={14} />
-                        </button>
+  type="submit"
+  disabled={!replyText.trim()}
+  className="w-9 h-9 flex items-center justify-center bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
+>
+  <Send size={14} className="transform rotate-45" />
+</button>
                       </div>
                     </motion.form>
                   )}
