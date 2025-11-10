@@ -301,25 +301,25 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-white placeholder-white/50 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
             />
             <button
-              type="button"
-              onClick={() => setIsAnonymous(!isAnonymous)}
-              className={`p-2 rounded-full transition-colors ${
-                isAnonymous 
-                  ? 'bg-pink-500/20 text-pink-400' 
-                  : 'bg-white/10 text-white'
-              }`}
-              title={isAnonymous ? 'Comment Anonymously' : 'Show Your Identity'}
-            >
-              {isAnonymous ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+  type="button"
+  onClick={() => setIsAnonymous(!isAnonymous)}
+  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+    isAnonymous
+      ? 'bg-pink-500/20 text-pink-400'
+      : 'bg-white/10 text-white'
+  }`}
+  title={isAnonymous ? 'Comment Anonymously' : 'Show Your Identity'}
+>
+  {isAnonymous ? <EyeOff size={18} /> : <Eye size={18} />}
+</button>
           </div>
           <button
-            type="submit"
-            disabled={!newComment.trim()}
-            className="p-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send size={16} />
-          </button>
+  type="submit"
+  disabled={!newComment.trim()}
+  className="w-10 h-10 flex items-center justify-center bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
+>
+  <Send size={18} className="transform rotate-45" />
+</button>
         </form>
         
         {/* Anonymous Toggle Info */}

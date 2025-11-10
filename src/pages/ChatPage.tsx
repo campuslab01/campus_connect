@@ -1003,7 +1003,7 @@ const filteredChats = transformedChats.filter(
           </motion.button>
 
               <motion.button type="submit" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white rounded-full p-3 transition-all shadow-lg shadow-pink-500/30" whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
-                <Send size={20} />
+                <Send size={20} className="transform rotate-45" />
               </motion.button>
               {/* Emoji Picker */}
           {showEmojiPicker && (

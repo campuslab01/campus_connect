@@ -86,7 +86,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           } catch {}
           onAuth();
           showToast({ type: 'success', title: 'Welcome back', message: 'Login successful!' });
-          navigate("/discover");
+          // Show permissions popup on first login if not completed
+          try {
+            const completed = localStorage.getItem('permissionsCompleted') === 'true';
+            const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+            if (!completed || !notifGranted) {
+              setIsNewRegistration(false);
+              setShowPermissionPopup(true);
+            } else {
+              navigate("/discover");
+            }
+          } catch {
+            navigate("/discover");
+          }
         } else {
           setError(result.message);
           showToast({ type: 'error', title: 'Login failed', message: result.message || 'Please try again.' });
@@ -239,7 +251,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
 
   return (
     <>
-      {showPermissionPopup && isNewRegistration && (
+      {showPermissionPopup && (
         <PermissionPopup onComplete={handlePermissionComplete} />
       )}
     <div

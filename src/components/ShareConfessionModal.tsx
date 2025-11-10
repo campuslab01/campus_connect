@@ -6,6 +6,8 @@ import { useSendMessage } from '../hooks/useChatQuery';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import api from '../config/axios';
+import { useNavigate } from 'react-router-dom';
+import { useE2EE } from '../hooks/useE2EE';
 
 interface ShareConfessionModalProps {
   isOpen: boolean;
@@ -26,6 +28,8 @@ const ShareConfessionModal: React.FC<ShareConfessionModalProps> = ({
   const { user } = useAuth();
   const { showToast } = useToast();
   const sendMessageMutation = useSendMessage();
+  const navigate = useNavigate();
+  const { getPublicKeyForUser } = useE2EE();
 
   const chats = (chatsData as any)?.chats || [];
 
@@ -52,17 +56,29 @@ const ShareConfessionModal: React.FC<ShareConfessionModalProps> = ({
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleShare = async (chatId: string) => {
+  const handleShare = async (chatId: string, otherUserId?: string | null) => {
     if (!chatId) return;
 
     setSelectedChatId(chatId);
     
     try {
+      // Resolve recipient user ID and their public key for encryption/socket
+      let targetUserId: string | null = null;
+      if (otherUserId) {
+        targetUserId = otherUserId?.toString() || null;
+      } else {
+        const chat = transformedChats.find((c: any) => (c.chatId || c.id)?.toString() === chatId?.toString());
+        targetUserId = chat?.otherParticipantId ? chat.otherParticipantId.toString() : null;
+      }
+
+      const theirPublicKey = targetUserId ? await getPublicKeyForUser(targetUserId) : null;
+
       await sendMessageMutation.mutateAsync({
         chatId,
         content: `Shared a confession: "${confessionContent.substring(0, 50)}${confessionContent.length > 50 ? '...' : ''}"`,
         type: 'confession',
-        confessionId: confessionId.toString()
+        confessionId: confessionId.toString(),
+        theirPublicKey: theirPublicKey || ''
       });
 
       showToast({
@@ -70,6 +86,13 @@ const ShareConfessionModal: React.FC<ShareConfessionModalProps> = ({
         message: 'Confession shared successfully!',
         duration: 3000
       });
+
+      // Navigate to chat with the selected user for immediate context
+      if (otherUserId) {
+        navigate('/chat', { state: { userId: otherUserId } });
+      } else {
+        navigate('/chat');
+      }
 
       onClose();
     } catch (error: any) {
@@ -156,7 +179,7 @@ const ShareConfessionModal: React.FC<ShareConfessionModalProps> = ({
               filteredChats.map((chat: any) => (
                 <motion.button
                   key={chat.id}
-                  onClick={() => handleShare(chat.chatId)}
+                  onClick={() => handleShare(chat.chatId, chat.otherParticipantId)}
                   disabled={sendMessageMutation.isPending}
                   className="w-full flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 hover:border-pink-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: 1.02 }}

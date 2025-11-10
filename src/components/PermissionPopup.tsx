@@ -91,6 +91,7 @@ export const PermissionPopup: React.FC<PermissionPopupProps> = ({ onComplete }) 
       if (storageAllowed) {
         localStorage.setItem('notificationsEnabled', String(notificationsAllowed === true));
         localStorage.setItem('localStorageEnabled', String(storageAllowed === true));
+        localStorage.setItem('permissionsCompleted', 'true');
       }
       
       showToast({
@@ -118,9 +119,11 @@ export const PermissionPopup: React.FC<PermissionPopupProps> = ({ onComplete }) 
       await api.put('/auth/profile', {
         permissionsSet: false
       });
+      try { localStorage.setItem('permissionsCompleted', 'true'); } catch {}
       onComplete();
     } catch (error) {
       console.error('Error saving skip:', error);
+      try { localStorage.setItem('permissionsCompleted', 'true'); } catch {}
       onComplete(); // Continue anyway
     }
   };

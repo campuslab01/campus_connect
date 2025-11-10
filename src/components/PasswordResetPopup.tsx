@@ -290,7 +290,7 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
                 <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
                 <p className="text-green-300 text-sm">
                   {mode === 'forgot'
-                    ? 'Reset link sent! Check your email.'
+                    ? 'Password reset successfully!'
                     : 'Password reset successfully!'}
                 </p>
               </motion.div>
