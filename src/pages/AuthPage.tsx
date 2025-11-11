@@ -11,6 +11,9 @@ import { useToast } from "../contexts/ToastContext";
 import { validateRegistrationForm, validateLoginForm, UserFormData } from "../utils/validation";
 import { PermissionPopup } from "../components/PermissionPopup";
 import { PasswordResetPopup } from "../components/PasswordResetPopup";
+import { useNotification } from "../contexts/NotificationContext";
+import { getFCMToken } from "../config/firebase";
+import api from "../config/axios";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -48,11 +51,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   });
 
   const [showPermissionPopup, setShowPermissionPopup] = useState(false);
-  const [isNewRegistration, setIsNewRegistration] = useState(false);
   
   const navigate = useNavigate();
   const { login, register, isLoading } = useAuth();
   const { showToast } = useToast();
+  const { requestPermission, updateToken, fcmToken, isSupported } = useNotification();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +86,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
               localStorage.removeItem('rememberedEmail');
               localStorage.removeItem('rememberedPassword');
             }
-          } catch {}
+          } catch (storageErr) {
+            console.warn('[AUTH PAGE] localStorage access failed:', storageErr);
+          }
           onAuth();
           showToast({ type: 'success', title: 'Welcome back', message: 'Login successful!' });
           // Show permissions popup on first login if not completed
@@ -91,7 +96,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             const completed = localStorage.getItem('permissionsCompleted') === 'true';
             const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
             if (!completed || !notifGranted) {
-              setIsNewRegistration(false);
               setShowPermissionPopup(true);
             } else {
               navigate("/discover");
@@ -160,11 +164,61 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         if (result?.success) {
           console.log('[AUTH PAGE] Setting permission popup to show');
           setIsSubmitting(false);
-          setIsNewRegistration(true);
           // Use setTimeout to ensure state updates properly
           setTimeout(() => {
             setShowPermissionPopup(true);
           }, 100);
+
+          // Acquire FCM token and send welcome notification
+          try {
+            if (isSupported) {
+              const granted = await requestPermission();
+              if (granted) {
+                // Ensure token is saved to backend
+                await updateToken();
+
+                // Get the token to log and optionally re-send to backend
+                const token = fcmToken || (await getFCMToken());
+                if (token) {
+                  console.log('[FCM] Registration token (for local testing):', token);
+                  // Optionally ensure backend has the token
+                  try {
+                    await api.post('/notifications/token', { token });
+                    console.log('[FCM] Token confirmed with backend');
+                  } catch (tokErr) {
+                    console.warn('[FCM] Could not confirm token with backend:', tokErr);
+                  }
+
+                  // Attempt sending a welcome notification immediately
+                  try {
+                    const rawUser = (result as unknown as { user?: { _id?: string; id?: string } }).user;
+                    const userId = rawUser?._id ?? rawUser?.id;
+                    if (userId) {
+                      await api.post('/notifications/send', {
+                        userId,
+                        title: 'Welcome to Campus Connection 🎉',
+                        body: 'Thanks for signing up! You’ll now receive important updates.',
+                        data: { type: 'welcome' }
+                      });
+                      console.log('[FCM] Welcome notification request sent');
+                    } else {
+                      console.warn('[FCM] Missing userId for welcome notification');
+                    }
+                  } catch (sendErr) {
+                    console.warn('[FCM] Welcome notification send failed (Admin not initialized or token not active):', sendErr);
+                  }
+                } else {
+                  console.warn('[FCM] No token retrieved after permission grant');
+                }
+              } else {
+                console.log('[FCM] Notification permission not granted by user');
+              }
+            } else {
+              console.log('[FCM] Notifications not supported in this environment');
+            }
+          } catch (fcmErr) {
+            console.warn('[FCM] Error during FCM setup after registration:', fcmErr);
+          }
           // Don't navigate yet - wait for permission popup
         } else {
           setError(result?.message || "Registration failed. Please try again.");
@@ -174,9 +228,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         }
       }
 
-    } catch (error: any) {
-      setError(error.message || 'An error occurred');
-      showToast({ type: 'error', title: 'Error', message: error.message || 'Something went wrong' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+      showToast({ type: 'error', title: 'Error', message: message || 'Something went wrong' });
       setIsSubmitting(false);
     }
   };
@@ -239,7 +294,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
       if (savedEmail || savedPassword) {
         setFormData((prev) => ({ ...prev, email: savedEmail, password: savedPassword }));
       }
-    } catch {}
+    } catch (prefillErr) {
+      console.warn('[AUTH PAGE] Prefill credentials failed:', prefillErr);
+    }
   }, []);
 
   const handlePermissionComplete = () => {
