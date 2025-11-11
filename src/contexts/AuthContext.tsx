@@ -181,6 +181,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('tokenTimestamp', Date.now().toString());
 
     setUser({ ...userData, publicKey: keyPair.publicKey });
+
+    // Persist user's public key to backend for E2EE peer discovery
+    // Best-effort; failures should not block authentication flow
+    (async () => {
+      try {
+        await api.put('/e2ee/public-key', { publicKey: keyPair.publicKey });
+      } catch (err) {
+        // Silently ignore; public key can be retried later
+        console.warn('Failed to save E2EE public key:', err);
+      }
+    })();
   };
 
   const login = async (email: string, password: string): Promise<AuthResult> => {

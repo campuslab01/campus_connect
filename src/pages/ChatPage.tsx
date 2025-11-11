@@ -199,11 +199,20 @@ const handleEmojiSelect = (emoji: any) => {
   // Get messages for selected chat with infinite scroll
   const selectedChatData = transformedChats.find((c: any) => c.id === selectedChat);
   const otherParticipant = selectedChatData?.participants?.find((p: any) => p._id !== user?._id);
-  const theirPublicKey = otherParticipant?.publicKey || null;
+  // Use publicKey if present, otherwise fall back to e2eePublicKey
+  const theirPublicKey = otherParticipant?.publicKey || otherParticipant?.e2eePublicKey || null;
+
+  // Maintain a local recipient public key to enable fetching when missing
+  const [recipientPublicKey, setRecipientPublicKey] = useState<string | null>(theirPublicKey);
+
+  // Sync local state when chat selection changes or participant key becomes available
+  useEffect(() => {
+    setRecipientPublicKey(theirPublicKey || null);
+  }, [selectedChat, theirPublicKey]);
 
   const { data: messagesData, fetchNextPage: fetchMoreMessages, hasNextPage: hasMoreMessages } = useInfiniteMessages(
     selectedChatData?.chatId || null,
-    theirPublicKey
+    recipientPublicKey
   );
 
   // Flatten paginated messages
@@ -575,8 +584,24 @@ const handleEmojiSelect = (emoji: any) => {
       return;
     }
 
-    // Ensure we have the recipient's public key for E2EE
-    if (!theirPublicKey) {
+    // Ensure we have the recipient's public key for E2EE; if missing, try to fetch
+    let targetPublicKey = recipientPublicKey;
+    if (!targetPublicKey) {
+      const recipientId = chat.otherParticipantId;
+      if (recipientId) {
+        try {
+          const res = await api.get(`/e2ee/public-key/${recipientId}`);
+          targetPublicKey = res.data?.data?.publicKey || null;
+          if (targetPublicKey) {
+            setRecipientPublicKey(targetPublicKey);
+          }
+        } catch (err: any) {
+          console.error('Failed to fetch recipient public key:', err);
+        }
+      }
+    }
+
+    if (!targetPublicKey) {
       showToast({ 
         type: 'error', 
         message: 'Cannot send message: recipient public key is not available.' 
@@ -590,7 +615,7 @@ const handleEmojiSelect = (emoji: any) => {
     // Use mutation for API call (includes optimistic update and socket send)
     // Pass recipient public key so client encrypts before sending
     sendMessageMutation.mutate(
-      { chatId: chat.chatId, content: messageContent, theirPublicKey },
+      { chatId: chat.chatId, content: messageContent, theirPublicKey: targetPublicKey },
       {
         onSuccess: () => {
           // Quiz consent will be triggered by backend via socket event

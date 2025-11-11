@@ -49,19 +49,31 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  // Register service worker
+  // Register service worker (wait for window load to avoid invalid state)
   useEffect(() => {
     if (!isSupported) return;
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered:', registration);
-        })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error);
-        });
+    const registerSW = () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+          .register('/firebase-messaging-sw.js')
+          .then((registration) => {
+            console.log('Service Worker registered:', registration);
+          })
+          .catch((error) => {
+            console.error('Service Worker registration failed:', error);
+          });
+      }
+    };
+
+    if (document.readyState === 'complete') {
+      registerSW();
+    } else {
+      const onLoad = () => {
+        registerSW();
+        window.removeEventListener('load', onLoad);
+      };
+      window.addEventListener('load', onLoad);
     }
   }, [isSupported]);
 
@@ -77,15 +89,17 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           // Show notification manually in foreground
           if ('Notification' in window && Notification.permission === 'granted') {
             const notificationTitle = payload.notification?.title || 'Campus Connection';
-            const notificationOptions: NotificationOptions = {
+            const baseOptions: NotificationOptions = {
               body: payload.notification?.body || '',
-              icon: payload.notification?.icon || '/images/login.jpeg',
+              icon: '/images/login.jpeg',
               badge: '/images/login.jpeg',
-              image: payload.notification?.image,
               data: payload.data || {},
               tag: payload.data?.type || 'notification',
-              vibrate: [200, 100, 200]
             };
+
+            const notificationOptions = payload.notification?.image
+              ? ({ ...baseOptions, image: payload.notification.image } as unknown as NotificationOptions)
+              : baseOptions;
 
             new Notification(notificationTitle, notificationOptions);
           }
@@ -94,24 +108,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       .catch((error) => {
         console.error('Error receiving message:', error);
       });
-  }, [isSupported]);
-
-  // Request notification permission
-  const requestPermission = useCallback(async (): Promise<boolean> => {
-    if (!isSupported) {
-      console.warn('Notifications not supported');
-      return false;
-    }
-
-    const granted = await requestNotificationPermission();
-    setNotificationPermission(Notification.permission);
-    
-    if (granted) {
-      await updateToken();
-    }
-    
-    return granted;
-  }, [isSupported]);
+  }, [isSupported, checkNotificationPermission, onMessageListener]);
 
   // Get and update FCM token
   const updateToken = useCallback(async () => {
@@ -143,12 +140,30 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [isSupported, isAuthenticated, user]);
 
+  // Request notification permission
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    if (!isSupported) {
+      console.warn('Notifications not supported');
+      return false;
+    }
+
+    const granted = await requestNotificationPermission();
+    setNotificationPermission(Notification.permission);
+    
+    if (granted) {
+      await updateToken();
+    }
+    
+    return granted;
+  }, [isSupported, updateToken]);
+
+
   // Initialize token when user is authenticated
   useEffect(() => {
     if (isAuthenticated && user && checkNotificationPermission()) {
       updateToken();
     }
-  }, [isAuthenticated, user, updateToken]);
+  }, [isAuthenticated, user, updateToken, checkNotificationPermission]);
 
   // Update token periodically (every hour)
   useEffect(() => {
@@ -159,7 +174,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }, 60 * 60 * 1000); // 1 hour
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, updateToken]);
+  }, [isAuthenticated, updateToken, checkNotificationPermission]);
 
   const value: NotificationContextType = {
     notificationPermission,

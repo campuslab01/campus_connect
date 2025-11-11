@@ -201,11 +201,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                         data: { type: 'welcome' }
                       });
                       console.log('[FCM] Welcome notification request sent');
+                      // Local fallback: show a native notification if push doesn’t appear
+                      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                        try {
+                          new Notification('Welcome to Campus Connection 🎉', {
+                            body: 'Thanks for signing up! You’ll now receive important updates.'
+                          });
+                          console.log('[FCM] Local welcome notification displayed');
+                        } catch (notifErr) {
+                          console.warn('[FCM] Local notification failed:', notifErr);
+                        }
+                      }
                     } else {
                       console.warn('[FCM] Missing userId for welcome notification');
                     }
                   } catch (sendErr) {
                     console.warn('[FCM] Welcome notification send failed (Admin not initialized or token not active):', sendErr);
+                    // Local fallback even when server-side send fails
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                      try {
+                        new Notification('Welcome to Campus Connection 🎉', {
+                          body: 'Thanks for signing up! You’ll now receive important updates.'
+                        });
+                        console.log('[FCM] Local welcome notification displayed (fallback)');
+                      } catch (notifErr) {
+                        console.warn('[FCM] Local notification failed (fallback):', notifErr);
+                      }
+                    }
                   }
                 } else {
                   console.warn('[FCM] No token retrieved after permission grant');

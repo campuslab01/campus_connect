@@ -45,9 +45,10 @@ const LikesPage: React.FC = () => {
 
   // Transform likes (users who liked you) — show only verified profiles
   const likes = (likesData?.likedBy || [])
-    .filter((user: any) => user.verified === true)
+    // Accept either isVerified or verified for backward compatibility
+    .filter((user: any) => ((user?.isVerified ?? user?.verified) === true))
     .map((user: any) => ({
-    id: user._id || user.id,
+    id: String(user._id || user.id),
     name: user.name,
     age: user.age,
     photo: (() => {
@@ -63,14 +64,14 @@ const LikesPage: React.FC = () => {
       return getImageUrl(user.profileImage || user.photos?.[0]);
     })(),
     college: user.college,
-    verified: user.verified || false,
+    verified: Boolean(user.isVerified ?? user.verified),
     isPremiumVisible: isPremiumActive,
     likedAt: 'Recently'
   }));
 
   // Transform matches
   const matches = (likesData?.matches || []).map((user: any) => ({
-    id: user._id || user.id,
+    id: String(user._id || user.id),
     name: user.name,
     age: user.age,
     photo: (() => {
@@ -205,7 +206,7 @@ const LikesPage: React.FC = () => {
     }
   };
 
-  const handleAction = async (userId: number, action: 'like' | 'dislike' | 'dm') => {
+  const handleAction = async (userId: string, action: 'like' | 'dislike' | 'dm') => {
     try {
       if (action === 'dm') {
         // Navigate to chat page with user ID

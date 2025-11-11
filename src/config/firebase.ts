@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage, Messaging } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, Messaging, MessagePayload } from 'firebase/messaging';
 
 // Firebase configuration
 // TODO: Replace with your Firebase project config from Firebase Console
@@ -87,16 +87,17 @@ export const checkNotificationPermission = (): boolean => {
 };
 
 // Listen for foreground messages (when app is open)
-export const onMessageListener = (): Promise<any> => {
+export const onMessageListener = (): Promise<MessagePayload | null> => {
   if (!messaging || !isSupported) {
     return Promise.resolve(null);
   }
 
-  return new Promise((resolve) => {
-    onMessage(messaging, (payload) => {
+  return new Promise<MessagePayload>((resolve) => {
+    if (messaging) {
+      onMessage(messaging, (payload) => {
       console.log('Message received in foreground:', payload);
       resolve(payload);
-    });
+    });}
   });
 };
 
