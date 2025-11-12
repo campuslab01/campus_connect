@@ -53,6 +53,8 @@ self.addEventListener('notificationclick', (event) => {
 
   if (data?.type === 'message') {
     url = data.chatId ? `/chat?chatId=${data.chatId}` : '/chat';
+  } else if (data?.type === 'chat_request') {
+    url = data.chatId ? `/chat?chatId=${data.chatId}` : '/chat';
   } else if (data?.type === 'match') {
     url = '/likes';
   } else if (data?.type === 'like') {
