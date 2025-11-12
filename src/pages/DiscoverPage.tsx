@@ -28,6 +28,7 @@ import ProfileIncompletePopup from '../components/ProfileIncompletePopup';
 import { useUserProfile } from '../hooks/useUserProfile';
 import api from '../config/axios';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../contexts/ToastContext';
 
 
 
@@ -43,6 +44,7 @@ const DiscoverPage: React.FC = () => {
   const [isSwiping, setIsSwiping] = useState(false);
   const [showNextCard, setShowNextCard] = useState(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | number | null>(null);
   const queryClient = useQueryClient();
@@ -53,6 +55,11 @@ const DiscoverPage: React.FC = () => {
   const modalUser = profileData?.user || null;
 
   const openChat = (userId: number) => {
+    if (!(viewer as any)?.isVerified) {
+      showToast({ type: 'error', message: 'Verify your profile to start chatting.' });
+      navigate('/profile');
+      return;
+    }
     navigate("/chat", { state: { userId } });
   };
   
@@ -280,6 +287,13 @@ const DiscoverPage: React.FC = () => {
   const handleAction = useCallback(async (action: "like" | "dislike", userId?: string | number) => {
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
+
+    // Gate swiping behind verification
+    if (!(viewer as any)?.isVerified) {
+      showToast({ type: 'error', message: 'Verify your profile to swipe.' });
+      navigate('/profile');
+      return;
+    }
 
     // Gate swiping behind profile completeness
     if (!isProfileComplete()) {

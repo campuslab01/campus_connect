@@ -11,6 +11,7 @@ import { useToast } from "../contexts/ToastContext";
 import { validateRegistrationForm, validateLoginForm, UserFormData } from "../utils/validation";
 import { PermissionPopup } from "../components/PermissionPopup";
 import { PasswordResetPopup } from "../components/PasswordResetPopup";
+import VerifyProfileModal from "../components/VerifyProfileModal";
 import { useNotification } from "../contexts/NotificationContext";
 import { getFCMToken } from "../config/firebase";
 import api from "../config/axios";
@@ -53,9 +54,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [showPermissionPopup, setShowPermissionPopup] = useState(false);
   
   const navigate = useNavigate();
-  const { login, register, isLoading } = useAuth();
+  const { login, register, isLoading, updateUser, user } = useAuth();
   const { showToast } = useToast();
   const { requestPermission, updateToken, fcmToken, isSupported } = useNotification();
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyProfileImageUrl, setVerifyProfileImageUrl] = useState<string | undefined>(undefined);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +101,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             if (!completed || !notifGranted) {
               setShowPermissionPopup(true);
             } else {
-              navigate("/discover");
+              // If not verified, show verification modal immediately
+              const u = result.user;
+              const isVerified = Boolean(u?.isVerified);
+              if (!isVerified) {
+                const pUrl = (u?.profileImage && u.profileImage.length > 0) ? u.profileImage : (u?.photos?.[0] || undefined);
+                setVerifyProfileImageUrl(pUrl);
+                setShowVerifyModal(true);
+              } else {
+                navigate("/discover");
+              }
             }
           } catch {
             navigate("/discover");
@@ -242,6 +254,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
             console.warn('[FCM] Error during FCM setup after registration:', fcmErr);
           }
           // Don't navigate yet - wait for permission popup
+          // Prepare verify modal if unverified
+          const u = result.user;
+          const isVerified = Boolean(u?.isVerified);
+          if (!isVerified) {
+            const pUrl = (u?.profileImage && u.profileImage.length > 0) ? u.profileImage : (u?.photos?.[0] || undefined);
+            setVerifyProfileImageUrl(pUrl);
+          }
         } else {
           setError(result?.message || "Registration failed. Please try again.");
           showToast({ type: 'error', title: 'Registration failed', message: result?.message || 'Please try again.' });
@@ -325,13 +344,34 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     setShowPermissionPopup(false);
     onAuth();
     showToast({ type: 'success', title: 'Welcome!', message: 'Registration successful' });
-    navigate("/discover");
+    // After permissions, if user is not verified, show verification modal
+    const isVerified = Boolean(user?.isVerified);
+    if (!isVerified) {
+      const pUrl = (user?.profileImage && user.profileImage.length > 0) ? user.profileImage : (user?.photos?.[0] || undefined);
+      setVerifyProfileImageUrl(pUrl);
+      setShowVerifyModal(true);
+    } else {
+      navigate("/discover");
+    }
   };
 
   return (
     <>
       {showPermissionPopup && (
         <PermissionPopup onComplete={handlePermissionComplete} />
+      )}
+      {showVerifyModal && (
+        <VerifyProfileModal
+          isOpen={showVerifyModal}
+          onClose={() => setShowVerifyModal(false)}
+          profileImageUrl={verifyProfileImageUrl}
+          onVerifiedSuccess={() => {
+            updateUser({ isVerified: true });
+            showToast({ type: 'success', message: 'You are now verified!' });
+            setShowVerifyModal(false);
+            navigate('/discover');
+          }}
+        />
       )}
     <div
       className="min-h-screen flex items-center justify-center p-5 bg-cover bg-center relative"

@@ -104,17 +104,17 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <NotificationProvider>
-          <ChatProvider>
-            <ToastProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <SocketProvider>
+          <NotificationProvider>
+            <ChatProvider>
               <AppContent />
-            </ToastProvider>
-          </ChatProvider>
-        </NotificationProvider>
-      </SocketProvider>
-    </AuthProvider>
+            </ChatProvider>
+          </NotificationProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 import { 
   getFCMToken, 
   requestNotificationPermission, 
@@ -32,16 +33,19 @@ interface NotificationProviderProps {
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
 
   // Check browser support
   useEffect(() => {
-    const supported = typeof window !== 'undefined' && 
-                     'serviceWorker' in navigator && 
+    const supported = typeof window !== 'undefined' &&
+                     'serviceWorker' in navigator &&
                      'Notification' in window &&
-                     'PushManager' in window;
+                     'PushManager' in window &&
+                     // Service workers require secure context; localhost is secure
+                     (window.isSecureContext === true);
     setIsSupported(supported);
     
     if (supported) {
@@ -49,11 +53,17 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  // Register service worker (wait for window load to avoid invalid state)
+  // Register service worker (wait for window load and ensure top-level, secure context)
   useEffect(() => {
     if (!isSupported) return;
 
     const registerSW = () => {
+      // Avoid registering inside sandboxed iframe or non-top window
+      const isTopLevel = window.top === window;
+      if (!isTopLevel || !window.isSecureContext) {
+        console.warn('Skipping service worker registration (not top-level or insecure context).');
+        return;
+      }
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker
           .register('/firebase-messaging-sw.js')
@@ -77,20 +87,22 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [isSupported]);
 
-  // Listen for foreground messages
+  // Listen for foreground messages and show fallback toast if notifications denied
   useEffect(() => {
-    if (!isSupported || !checkNotificationPermission()) return;
+    if (!isSupported) return;
 
     onMessageListener()
       .then((payload) => {
         if (payload) {
           console.log('Foreground notification:', payload);
-          
-          // Show notification manually in foreground
+
+          const title = payload.notification?.title || 'Campus Connection';
+          const body = payload.notification?.body || '';
+
+          // Show browser notification if granted
           if ('Notification' in window && Notification.permission === 'granted') {
-            const notificationTitle = payload.notification?.title || 'Campus Connection';
             const baseOptions: NotificationOptions = {
-              body: payload.notification?.body || '',
+              body,
               icon: '/images/login.jpeg',
               badge: '/images/login.jpeg',
               data: payload.data || {},
@@ -101,14 +113,17 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
               ? ({ ...baseOptions, image: payload.notification.image } as unknown as NotificationOptions)
               : baseOptions;
 
-            new Notification(notificationTitle, notificationOptions);
+            new Notification(title, notificationOptions);
+          } else {
+            // Fallback toast when permission is denied/not granted
+            showToast({ type: 'info', title, message: body || 'You have a new update.' });
           }
         }
       })
       .catch((error) => {
         console.error('Error receiving message:', error);
       });
-  }, [isSupported, checkNotificationPermission, onMessageListener]);
+  }, [isSupported, onMessageListener, showToast]);
 
   // Get and update FCM token
   const updateToken = useCallback(async () => {
@@ -118,6 +133,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     if (!checkNotificationPermission()) {
       console.warn('Notification permission not granted');
+      // Provide a gentle reminder toast once per attempt
+      showToast({ type: 'info', message: 'Enable notifications in browser settings to receive alerts.' });
       return;
     }
 
@@ -152,10 +169,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     if (granted) {
       await updateToken();
+      showToast({ type: 'success', message: 'Notifications enabled!' });
+    } else {
+      showToast({ type: 'error', message: 'Notifications denied. You can enable them later in settings.' });
     }
     
     return granted;
-  }, [isSupported, updateToken]);
+  }, [isSupported, updateToken, showToast]);
 
 
   // Initialize token when user is authenticated
@@ -163,18 +183,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (isAuthenticated && user && checkNotificationPermission()) {
       updateToken();
     }
-  }, [isAuthenticated, user, updateToken, checkNotificationPermission]);
+  }, [isAuthenticated, user, updateToken]);
 
   // Update token periodically (every hour)
   useEffect(() => {
-    if (!isAuthenticated || !checkNotificationPermission()) return;
+    if (!isAuthenticated) return;
 
     const interval = setInterval(() => {
       updateToken();
     }, 60 * 60 * 1000); // 1 hour
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, updateToken, checkNotificationPermission]);
+  }, [isAuthenticated, updateToken]);
 
   const value: NotificationContextType = {
     notificationPermission,

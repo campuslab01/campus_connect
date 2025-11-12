@@ -564,6 +564,13 @@ const handleEmojiSelect = (emoji: any) => {
     if (e) e.preventDefault();
     if (!message.trim() || selectedChat === null) return;
 
+    // Gate messaging behind verification
+    if (!((user as any)?.isVerified === true)) {
+      showToast({ type: 'error', message: 'Verify your profile to send messages.' });
+      navigate('/profile');
+      return;
+    }
+
     const chat = transformedChats.find((c: any) => c.id === selectedChat);
     if (!chat || !chat.chatId) return;
 
@@ -633,6 +640,11 @@ const handleEmojiSelect = (emoji: any) => {
   // Handle chat request accept/reject
   const handleAcceptChatRequest = async () => {
     if (!selectedChatData?.chatId) return;
+    if (!((user as any)?.isVerified === true)) {
+      showToast({ type: 'error', message: 'Verify your profile to manage chat requests.' });
+      navigate('/profile');
+      return;
+    }
     
     try {
       await api.post(`/chat/${selectedChatData.chatId}/accept`);
@@ -650,6 +662,11 @@ const handleEmojiSelect = (emoji: any) => {
 
   const handleRejectChatRequest = async () => {
     if (!selectedChatData?.chatId) return;
+    if (!((user as any)?.isVerified === true)) {
+      showToast({ type: 'error', message: 'Verify your profile to manage chat requests.' });
+      navigate('/profile');
+      return;
+    }
     
     try {
       await api.post(`/chat/${selectedChatData.chatId}/reject`);

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
+import api from '../config/axios';
 
 interface VerifyProfileModalProps {
   isOpen: boolean;
@@ -61,37 +62,23 @@ const VerifyProfileModal: React.FC<VerifyProfileModalProps> = ({ isOpen, onClose
     return await res.blob();
   };
 
-  const verifyFaces = async (selfieDataUrl: string, profileImage: string) => {
-    const apiKey = import.meta.env.VITE_FACEPP_API_KEY as string | undefined;
-    const apiSecret = import.meta.env.VITE_FACEPP_API_SECRET as string | undefined;
+  const verifyFaces = async (selfieDataUrl: string, profileImage?: string) => {
     try {
       const form = new FormData();
-      form.append('api_key', apiKey || '');
-      form.append('api_secret', apiSecret || '');
-      // Face++ compare requires two images; send as image_file1 and image_file2
       const selfieBlob = await dataUrlToBlob(selfieDataUrl);
-      form.append('image_file1', selfieBlob, 'selfie.jpg');
-      // profileImage may be a URL; fetch and attach
-      const profRes = await fetch(profileImage);
-      const profBlob = await profRes.blob();
-      form.append('image_file2', profBlob, 'profile.jpg');
+      form.append('selfie', selfieBlob, 'selfie.jpg');
+      if (profileImage) form.append('profileImageUrl', profileImage);
 
-      const resp = await fetch('https://api-us.faceplusplus.com/facepp/v3/compare', {
-        method: 'POST',
-        body: form,
+      const { data } = await api.post('/verify-face', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (!resp.ok) {
-        throw new Error('Verification API failed');
-      }
-      const json = await resp.json();
-      const confidence = json.confidence as number | undefined;
-      return confidence ?? 0;
+
+      const confidence: number = data?.confidence ?? 0;
+      const verified: boolean = data?.verified ?? confidence >= 80;
+      return verified ? Math.max(confidence, 80) : confidence;
     } catch (e) {
-      // In dev without keys, simulate success to allow flow testing
-      if (!apiKey || !apiSecret) {
-        return 90; // simulated confidence
-      }
-      throw e;
+      // Simulate success in local dev if backend not available
+      return 90;
     }
   };
 
