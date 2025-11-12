@@ -17,11 +17,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
+import VerifyProfileModal from '../components/VerifyProfileModal';
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState<string | null>(null);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
   const { user, logout, updateUser } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -314,6 +316,16 @@ const ProfilePage: React.FC = () => {
           Profile
         </h2>
         <div className="flex z-50 space-x-3">
+          {Boolean(user?.isVerified) ? (
+            <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">✓ Verified</span>
+          ) : (
+            <motion.button
+              className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition shadow"
+              onClick={() => setShowVerifyModal(true)}
+            >
+              Verify My Profile
+            </motion.button>
+          )}
           
         <motion.button
   className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-pink-300 shadow-inner transition-all"
@@ -704,6 +716,21 @@ const ProfilePage: React.FC = () => {
               </motion.div>
             </motion.div>
           )}
+        {/* Verification Modal */}
+        <VerifyProfileModal
+          isOpen={showVerifyModal}
+          onClose={() => setShowVerifyModal(false)}
+          profileImageUrl={(user as any)?.profileImage || (Array.isArray((user as any)?.photos) ? (user as any).photos[0] : undefined)}
+          onVerifiedSuccess={async () => {
+            try {
+              const resp = await api.put('/auth/profile', { isVerified: true });
+              const updated = resp?.data?.data?.user || { isVerified: true };
+              updateUser && updateUser(updated);
+            } catch {
+              updateUser && updateUser({ ...(user as any), isVerified: true });
+            }
+          }}
+        />
         </AnimatePresence>
 
         {/* Modals */}

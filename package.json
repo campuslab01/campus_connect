@@ -39,7 +39,7 @@
     "framer-motion": "^11.2.10",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.553.0",
     "m": "^1.9.6",
     "mongoose": "^8.19.0",
     "phosphor-react": "^1.4.1",

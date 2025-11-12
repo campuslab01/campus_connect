@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import { useUserSuggestions } from '../hooks/useUsersQuery';
 import { InfiniteScroll } from '../components/InfiniteScroll';
+import ProfileIncompletePopup from '../components/ProfileIncompletePopup';
 import { useUserProfile } from '../hooks/useUserProfile';
 import api from '../config/axios';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,6 +36,7 @@ const DiscoverPage: React.FC = () => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [swipeCount, setSwipeCount] = useState(0);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showProfileIncomplete, setShowProfileIncomplete] = useState(false);
   const [exitDirection, setExitDirection] = useState<1 | -1 | 0>(0);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -263,9 +265,27 @@ const DiscoverPage: React.FC = () => {
     }
   }, [viewerId]);
 
+  const isProfileComplete = useCallback(() => {
+    const me: any = viewer;
+    if (!me) return false;
+    const hasBio = !!(me.bio && String(me.bio).trim().length > 0);
+    const photosArr = Array.isArray(me.photos) ? me.photos : [];
+    const hasPhoto = (photosArr.length > 0) || !!me.profileImage;
+    const hasAge = typeof me.age === 'number' && me.age > 0;
+    const interestsArr = Array.isArray(me.interests) ? me.interests : [];
+    const hasInterests = interestsArr.length > 0;
+    return hasBio && hasPhoto && hasAge && hasInterests;
+  }, [viewer]);
+
   const handleAction = useCallback(async (action: "like" | "dislike", userId?: string | number) => {
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
+
+    // Gate swiping behind profile completeness
+    if (!isProfileComplete()) {
+      setShowProfileIncomplete(true);
+      return;
+    }
 
     setSwipeCount((prev) => {
       const dailyLimit = (viewer as any)?.isVerified ? 15 : 10;
@@ -325,8 +345,13 @@ const DiscoverPage: React.FC = () => {
       const threshold = 100;
 
       if (Math.abs(offset) > threshold || Math.abs(velocity) > 500) {
-        if (offset > 0) {
-          // Like action - pass current user ID
+        if (!isProfileComplete()) {
+          setShowProfileIncomplete(true);
+          x.set(0);
+          return;
+        }
+        // Mapping per requirement: left = accept (like), right = reject (dislike)
+        if (offset < 0) {
           handleAction("like", currentUser?.id);
         } else {
           handleAction("dislike", currentUser?.id);
@@ -335,7 +360,7 @@ const DiscoverPage: React.FC = () => {
         x.set(0);
       }
     },
-    [handleAction, x, currentUser]
+    [handleAction, x, currentUser, isProfileComplete]
   );
 
   // Proactively fetch next suggestions page when nearing end
@@ -814,8 +839,18 @@ const DiscoverPage: React.FC = () => {
   </motion.div>
 )}
             </AnimatePresence>
-          </InfiniteScroll>
+          </InfiniteScroll> 
         )}
+
+        {/* Profile Incomplete Popup */}
+        <ProfileIncompletePopup
+          isOpen={showProfileIncomplete}
+          onClose={() => setShowProfileIncomplete(false)}
+          onCompleteProfile={() => {
+            setShowProfileIncomplete(false);
+            navigate('/profile');
+          }}
+        />
       </div>
 
       {/* New */}
