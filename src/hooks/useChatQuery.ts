@@ -87,7 +87,7 @@ export const useInfiniteMessages = (chatId: string | number | null, theirPublicK
       };
     },
     getNextPageParam: (lastPage) => lastPage?.nextPage,
-    enabled: !!chatId && !!theirPublicKey,
+    enabled: !!chatId,
     initialPageParam: 1,
   });
 };
@@ -98,7 +98,7 @@ export const useSendMessage = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }: { chatId: string | number; content: string; theirPublicKey: string; type?: string; confessionId?: string | null }) => {
+    mutationFn: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }: { chatId: string | number; content: string; theirPublicKey?: string | null; type?: string; confessionId?: string | null }) => {
       const response = await api.post(`/chat/${chatId}/messages`, { content, type, confessionId });
       return response.data.data;
     },
@@ -155,8 +155,8 @@ export const useSendMessage = () => {
         };
       });
 
-      // Send via Socket.io immediately if connected
-      if (socket.isConnected && socket.sendMessage) {
+      // Send via Socket.io immediately if connected and we have a recipient public key
+      if (socket.isConnected && socket.sendMessage && theirPublicKey) {
         try {
           socket.sendMessage(String(chatId), content, theirPublicKey, messageId);
         } catch (error) {

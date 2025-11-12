@@ -603,19 +603,18 @@ const handleEmojiSelect = (emoji: any) => {
 
     if (!targetPublicKey) {
       showToast({ 
-        type: 'error', 
-        message: 'Cannot send message: recipient public key is not available.' 
+        type: 'info', 
+        message: 'Sending without end-to-end encryption. Message will be plaintext.' 
       });
-      return;
     }
 
     const messageContent = message.trim();
     setMessage(""); // Clear input immediately for better UX
 
-    // Use mutation for API call (includes optimistic update and socket send)
-    // Pass recipient public key so client encrypts before sending
+    // Use mutation for API call (includes optimistic update and conditional socket send)
+    // Pass recipient public key if available so client encrypts before sending
     sendMessageMutation.mutate(
-      { chatId: chat.chatId, content: messageContent, theirPublicKey: targetPublicKey },
+      { chatId: chat.chatId, content: messageContent, theirPublicKey: targetPublicKey ?? undefined },
       {
         onSuccess: () => {
           // Quiz consent will be triggered by backend via socket event
