@@ -16,6 +16,19 @@ const firebaseConfig = {
   appId: '{{VITE_FIREBASE_APP_ID}}'
 };
 
+// Diagnostic: warn if placeholders are not replaced (dev builds won't inject values)
+try {
+  const values = Object.values(firebaseConfig || {});
+  const invalid = values.some(v => !v || (typeof v === 'string' && v.includes('{{')));
+  if (invalid) {
+    console.warn('[firebase-messaging-sw.js] Firebase config placeholders not injected. Background notifications may not work in dev. Build for production to inject values.');
+  } else {
+    console.log('[firebase-messaging-sw.js] Firebase SW initialized for project:', firebaseConfig.projectId);
+  }
+} catch (e) {
+  // noop
+}
+
 firebase.initializeApp(firebaseConfig);
 
 // Retrieve an instance of Firebase Messaging so that it can handle background messages
