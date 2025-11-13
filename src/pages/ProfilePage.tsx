@@ -18,6 +18,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
 import VerifyProfileModal from '../components/VerifyProfileModal';
+import NotificationBell from '../components/NotificationBell';
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
@@ -316,10 +317,7 @@ const ProfilePage: React.FC = () => {
           Profile
         </h2>
         <div className="flex z-50 space-x-3 items-center">
-          {(() => {
-            const BellComp = require('../components/NotificationBell').default as React.ComponentType;
-            return <BellComp />;
-          })()}
+          <NotificationBell />
           {Boolean(user?.isVerified) ? (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">✓ Verified</span>
           ) : (
