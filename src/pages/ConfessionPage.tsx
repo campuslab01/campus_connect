@@ -378,8 +378,12 @@ const ConfessionPage: React.FC = () => {
     </motion.h2>
   </div>
 
-  {/* Right section: New Confession + Profile */}
+  {/* Right section: Notifications + New Confession + Profile */}
   <div className="flex items-center gap-3">
+    {(() => {
+      const BellComp = require('../components/NotificationBell').default as React.ComponentType;
+      return <BellComp />;
+    })()}
     {/* New Confession button */}
     <motion.button
       onClick={() => setShowNewConfession(true)}

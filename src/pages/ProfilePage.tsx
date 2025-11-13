@@ -315,7 +315,11 @@ const ProfilePage: React.FC = () => {
         bg-clip-text text-transparent drop-shadow-md">
           Profile
         </h2>
-        <div className="flex z-50 space-x-3">
+        <div className="flex z-50 space-x-3 items-center">
+          {(() => {
+            const BellComp = require('../components/NotificationBell').default as React.ComponentType;
+            return <BellComp />;
+          })()}
           {Boolean(user?.isVerified) ? (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">✓ Verified</span>
           ) : (

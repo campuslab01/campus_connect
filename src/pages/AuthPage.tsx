@@ -56,7 +56,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const navigate = useNavigate();
   const { login, register, isLoading, updateUser, user } = useAuth();
   const { showToast } = useToast();
-  const { requestPermission, updateToken, fcmToken, isSupported } = useNotification();
+  const { requestPermission, updateToken, fcmToken, isSupported, addNotification } = useNotification();
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifyProfileImageUrl, setVerifyProfileImageUrl] = useState<string | undefined>(undefined);
 
@@ -94,6 +94,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           }
           onAuth();
           showToast({ type: 'success', title: 'Welcome back', message: 'Login successful!' });
+          try {
+            const u = result.user as any;
+            const name = u?.name || 'Friend';
+            const title = `Welcome back, ${name}!`;
+            const body = 'Great to see you again. Stay tuned for updates.';
+            addNotification(title, body, { type: 'welcome_login' });
+            if (isSupported) {
+              try {
+                await updateToken();
+                const userId = u?._id ?? u?.id;
+                if (userId) {
+                  await api.post('/notifications/send', {
+                    userId,
+                    title,
+                    body,
+                    data: { type: 'welcome_login' }
+                  });
+                }
+              } catch {}
+            }
+          } catch {}
           // Show permissions popup on first login if not completed
           try {
             const completed = localStorage.getItem('permissionsCompleted') === 'true';

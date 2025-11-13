@@ -25,6 +25,7 @@ interface NotificationContextType {
   updateToken: () => Promise<void>;
   isSupported: boolean;
   notifications: NotificationItem[];
+  addNotification: (title: string, body: string, data?: Record<string, string>) => void;
   markAllRead: () => void;
   clearNotifications: () => void;
   removeNotification: (id: string) => void;
@@ -224,6 +225,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
+  const addNotification = useCallback((title: string, body: string, data: Record<string, string> = {}) => {
+    const item: NotificationItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      body,
+      data,
+      receivedAt: new Date().toISOString(),
+      read: false
+    };
+    setNotifications((prev) => [item, ...prev].slice(0, 100));
+  }, []);
+
 
   // Initialize token when user is authenticated
   useEffect(() => {
@@ -250,6 +263,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     updateToken,
     isSupported,
     notifications,
+    addNotification,
     markAllRead,
     clearNotifications,
     removeNotification

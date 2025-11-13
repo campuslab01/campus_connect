@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // import { Link } from 'react-router-dom';
 import { User } from '../data/mockUsers'; // Type kept for API integration
 import bgImage from "/images/login.jpeg";
+import NotificationBell from '../components/NotificationBell';
 import { Sliders } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSearchUsers } from '../hooks/useUsersQuery';
@@ -188,7 +189,9 @@ const SearchPage: React.FC = () => {
       </h2>
     </div>
 
-    {/* Right: Profile Button */}
+    {/* Right: Notifications + Profile */}
+    <div className="flex items-center gap-3">
+    <NotificationBell />
     <button
       onClick={() => navigate('/profile')}
       className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md cursor-pointer"
@@ -202,6 +205,7 @@ const SearchPage: React.FC = () => {
         }}
       />
     </button>
+    </div>
   </div>
 
   {/* Search Input */}

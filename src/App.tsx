@@ -20,7 +20,6 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { useLenis } from './hooks/useLenis';
 import { ToastProvider } from './contexts/ToastContext';
 import Toaster from './components/Toaster';
-import NotificationCenterModal from './components/NotificationCenterModal';
 import { useGlobalSocketUpdates } from './hooks/useGlobalSocketUpdates';
 
 function AppContent() {
@@ -99,7 +98,6 @@ function AppContent() {
         </Routes>
       </main>
       <Toaster />
-      <NotificationCenterModal />
     </div>
   );
 }

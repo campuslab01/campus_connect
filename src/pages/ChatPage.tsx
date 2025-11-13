@@ -24,6 +24,7 @@ import { QuizConsentPopup } from '../components/QuizConsentPopup';
 import ConfessionMessageCard from '../components/ConfessionMessageCard';
 import { useToast } from '../contexts/ToastContext';
 import api from '../config/axios';
+import NotificationBell from '../components/NotificationBell';
 
 
 const ChatPage: React.FC = () => {
@@ -1253,19 +1254,22 @@ const filteredChats = transformedChats.filter(
     </div>
 
    
-    <button 
-      onClick={() => navigate('/profile')}
-      className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md cursor-pointer"
-    >
-      <img
-        src={user?.profileImage || user?.photos?.[0] || '/images/login.jpeg'}
-        alt="Profile"
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = '/images/login.jpeg';
-        }}
-      />
-    </button>
+    <div className="flex items-center gap-3">
+      <NotificationBell />
+      <button 
+        onClick={() => navigate('/profile')}
+        className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-500/30 shadow-md cursor-pointer"
+      >
+        <img
+          src={user?.profileImage || user?.photos?.[0] || '/images/login.jpeg'}
+          alt="Profile"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/images/login.jpeg';
+          }}
+        />
+      </button>
+    </div>
   </div>
 
   {/* Search Input */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, Star, Crown } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 // Mock data removed - data will be fetched from MongoDB
 import bgImage from '/images/login.jpeg';
 import { useQueryClient } from '@tanstack/react-query';
@@ -285,14 +286,17 @@ const LikesPage: React.FC = () => {
             {/* Header */}
             <div className="flex justify-between items-center mb-2 p-4">
               <h2 className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
- bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Matches</h2>
-              <button
-                onClick={() => setShowPremium(true)}
-                className="flex items-center space-x-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-medium px-3 py-2 rounded-xl hover:shadow-lg transition-all"
-              >
-                <Crown size={16} />
-                <span className="text-sm">Premium</span>
-              </button>
+bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Matches</h2>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                <button
+                  onClick={() => setShowPremium(true)}
+                  className="flex items-center space-x-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-medium px-3 py-2 rounded-xl hover:shadow-lg transition-all"
+                >
+                  <Crown size={16} />
+                  <span className="text-sm">Premium</span>
+                </button>
+              </div>
             </div>
 
             {/* Tabs */}
