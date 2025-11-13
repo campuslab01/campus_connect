@@ -40,12 +40,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Check browser support
   useEffect(() => {
-    const supported = typeof window !== 'undefined' &&
-                     'serviceWorker' in navigator &&
+    const supported = typeof window !== 'undefined' && 
+                     'serviceWorker' in navigator && 
                      'Notification' in window &&
-                     'PushManager' in window &&
-                     // Service workers require secure context; localhost is secure
-                     (window.isSecureContext === true);
+                     'PushManager' in window;
     setIsSupported(supported);
     
     if (supported) {
@@ -53,17 +51,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  // Register service worker (wait for window load and ensure top-level, secure context)
+  // Register service worker (wait for window load to avoid invalid state)
   useEffect(() => {
     if (!isSupported) return;
 
     const registerSW = () => {
-      // Avoid registering inside sandboxed iframe or non-top window
-      const isTopLevel = window.top === window;
-      if (!isTopLevel || !window.isSecureContext) {
-        console.warn('Skipping service worker registration (not top-level or insecure context).');
-        return;
-      }
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker
           .register('/firebase-messaging-sw.js')
@@ -113,7 +105,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
               ? ({ ...baseOptions, image: payload.notification.image } as unknown as NotificationOptions)
               : baseOptions;
 
-            new Notification(title, notificationOptions);
+            navigator.serviceWorker.ready
+              .then((registration) => {
+                registration.showNotification(title, notificationOptions);
+              })
+              .catch(() => {
+                showToast({ type: 'info', title, message: body || 'You have a new update.' });
+              });
           } else {
             // Fallback toast when permission is denied/not granted
             showToast({ type: 'info', title, message: body || 'You have a new update.' });

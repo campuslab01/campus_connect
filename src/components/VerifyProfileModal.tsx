@@ -77,8 +77,7 @@ const VerifyProfileModal: React.FC<VerifyProfileModalProps> = ({ isOpen, onClose
       const verified: boolean = data?.verified ?? confidence >= 80;
       return verified ? Math.max(confidence, 80) : confidence;
     } catch (e) {
-      // Simulate success in local dev if backend not available
-      return 90;
+      throw e;
     }
   };
 

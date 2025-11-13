@@ -7,7 +7,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 // Initialize Firebase in the service worker
 // Config is injected at build time - check vite.config.ts
 // The config below uses a placeholder that gets replaced during build
-const firebaseConfig = {
+let firebaseConfig = {
   apiKey: '{{VITE_FIREBASE_API_KEY}}',
   authDomain: '{{VITE_FIREBASE_AUTH_DOMAIN}}',
   projectId: '{{VITE_FIREBASE_PROJECT_ID}}',
@@ -16,18 +16,13 @@ const firebaseConfig = {
   appId: '{{VITE_FIREBASE_APP_ID}}'
 };
 
-// Diagnostic: warn if placeholders are not replaced (dev builds won't inject values)
 try {
   const values = Object.values(firebaseConfig || {});
   const invalid = values.some(v => !v || (typeof v === 'string' && v.includes('{{')));
-  if (invalid) {
-    console.warn('[firebase-messaging-sw.js] Firebase config placeholders not injected. Background notifications may not work in dev. Build for production to inject values.');
-  } else {
-    console.log('[firebase-messaging-sw.js] Firebase SW initialized for project:', firebaseConfig.projectId);
+  if (invalid && self.__FIREBASE_CONFIG__) {
+    firebaseConfig = self.__FIREBASE_CONFIG__;
   }
-} catch (e) {
-  // noop
-}
+} catch (e) {}
 
 firebase.initializeApp(firebaseConfig);
 
