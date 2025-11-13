@@ -321,12 +321,26 @@ const ProfilePage: React.FC = () => {
           {Boolean(user?.isVerified) ? (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">✓ Verified</span>
           ) : (
-            <motion.button
-              className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition shadow"
-              onClick={() => setShowVerifyModal(true)}
-            >
-              Verify My Profile
-            </motion.button>
+            <div className="flex items-center gap-2">
+              <motion.button
+                className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition shadow"
+                onClick={() => setShowVerifyModal(true)}
+              >
+                Verify My Profile
+              </motion.button>
+              <motion.button
+                className="px-3 py-1 rounded-xl bg-white/10 text-white hover:bg-white/20 transition shadow"
+                onClick={() => {
+                  try {
+                    localStorage.setItem('verificationSkipped', 'true');
+                    setShowVerifyModal(false);
+                    showToast({ type: 'info', message: 'You can verify later. Complete your profile to unlock features.' });
+                  } catch {}
+                }}
+              >
+                Skip for now
+              </motion.button>
+            </div>
           )}
           
         <motion.button

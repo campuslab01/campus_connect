@@ -123,14 +123,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
               setShowPermissionPopup(true);
             } else {
               // If not verified, show verification modal immediately
-              const u = result.user;
+              const u = result.user as any;
               const isVerified = Boolean(u?.isVerified);
-              if (!isVerified) {
-                const pUrl = (u?.profileImage && u.profileImage.length > 0) ? u.profileImage : (u?.photos?.[0] || undefined);
-                setVerifyProfileImageUrl(pUrl);
-                setShowVerifyModal(true);
-              } else {
+              const skipped = localStorage.getItem('verificationSkipped') === 'true';
+              const hasBio = !!(u?.bio && String(u.bio).trim().length > 0);
+              const photosArr = Array.isArray(u?.photos) ? u.photos : [];
+              const hasPhoto = (photosArr.length > 0) || !!u?.profileImage;
+              const interestsArr = Array.isArray(u?.interests) ? u.interests : [];
+              const hasInterests = interestsArr.length > 0;
+              const complete = hasBio && hasPhoto && hasInterests;
+              if (isVerified || skipped || complete) {
                 navigate("/discover");
+              } else {
+                showToast({ type: 'info', message: 'Complete your profile to unlock swiping and chat.' });
+                navigate('/profile');
               }
             }
           } catch {
@@ -276,9 +282,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           }
           // Don't navigate yet - wait for permission popup
           // Prepare verify modal if unverified
-          const u = result.user;
-          const isVerified = Boolean(u?.isVerified);
-          if (!isVerified) {
+          const u = result.user as any;
+          const skipped = localStorage.getItem('verificationSkipped') === 'true';
+          const hasBio = !!(u?.bio && String(u.bio).trim().length > 0);
+          const photosArr = Array.isArray(u?.photos) ? u.photos : [];
+          const hasPhoto = (photosArr.length > 0) || !!u?.profileImage;
+          const interestsArr = Array.isArray(u?.interests) ? u.interests : [];
+          const hasInterests = interestsArr.length > 0;
+          const complete = hasBio && hasPhoto && hasInterests;
+          if (!(skipped || complete)) {
             const pUrl = (u?.profileImage && u.profileImage.length > 0) ? u.profileImage : (u?.photos?.[0] || undefined);
             setVerifyProfileImageUrl(pUrl);
           }
@@ -365,14 +377,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
     setShowPermissionPopup(false);
     onAuth();
     showToast({ type: 'success', title: 'Welcome!', message: 'Registration successful' });
-    // After permissions, if user is not verified, show verification modal
-    const isVerified = Boolean(user?.isVerified);
-    if (!isVerified) {
-      const pUrl = (user?.profileImage && user.profileImage.length > 0) ? user.profileImage : (user?.photos?.[0] || undefined);
-      setVerifyProfileImageUrl(pUrl);
-      setShowVerifyModal(true);
-    } else {
+    const me: any = user;
+    const skipped = localStorage.getItem('verificationSkipped') === 'true';
+    const hasBio = !!(me?.bio && String(me.bio).trim().length > 0);
+    const photosArr = Array.isArray(me?.photos) ? me.photos : [];
+    const hasPhoto = (photosArr.length > 0) || !!me?.profileImage;
+    const interestsArr = Array.isArray(me?.interests) ? me.interests : [];
+    const hasInterests = interestsArr.length > 0;
+    const complete = hasBio && hasPhoto && hasInterests;
+    if (skipped || complete) {
       navigate("/discover");
+    } else {
+      showToast({ type: 'info', message: 'Complete your profile to unlock swiping and chat.' });
+      navigate('/profile');
     }
   };
 

@@ -55,8 +55,14 @@ const DiscoverPage: React.FC = () => {
   const modalUser = profileData?.user || null;
 
   const openChat = (userId: number) => {
-    if (!(viewer as any)?.isVerified) {
-      showToast({ type: 'error', message: 'Verify your profile to start chatting.' });
+    const me: any = viewer;
+    const hasBio = !!(me?.bio && String(me.bio).trim().length > 0);
+    const photosArr = Array.isArray(me?.photos) ? me.photos : [];
+    const hasPhoto = (photosArr.length > 0) || !!me?.profileImage;
+    const interestsArr = Array.isArray(me?.interests) ? me.interests : [];
+    const hasInterests = interestsArr.length > 0;
+    if (!(hasBio && hasPhoto && hasInterests)) {
+      showToast({ type: 'error', message: 'Complete your profile to start chatting.' });
       navigate('/profile');
       return;
     }
@@ -287,13 +293,6 @@ const DiscoverPage: React.FC = () => {
   const handleAction = useCallback(async (action: "like" | "dislike", userId?: string | number) => {
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
-
-    // Gate swiping behind verification
-    if (!(viewer as any)?.isVerified) {
-      showToast({ type: 'error', message: 'Verify your profile to swipe.' });
-      navigate('/profile');
-      return;
-    }
 
     // Gate swiping behind profile completeness
     if (!isProfileComplete()) {

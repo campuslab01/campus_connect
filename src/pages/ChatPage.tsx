@@ -565,9 +565,14 @@ const handleEmojiSelect = (emoji: any) => {
     if (e) e.preventDefault();
     if (!message.trim() || selectedChat === null) return;
 
-    // Gate messaging behind verification
-    if (!((user as any)?.isVerified === true)) {
-      showToast({ type: 'error', message: 'Verify your profile to send messages.' });
+    const me: any = user;
+    const hasBio = !!(me?.bio && String(me.bio).trim().length > 0);
+    const photosArr = Array.isArray(me?.photos) ? me.photos : [];
+    const hasPhoto = (photosArr.length > 0) || !!me?.profileImage;
+    const interestsArr = Array.isArray(me?.interests) ? me.interests : [];
+    const hasInterests = interestsArr.length > 0;
+    if (!(hasBio && hasPhoto && hasInterests)) {
+      showToast({ type: 'error', message: 'Complete your profile to send messages.' });
       navigate('/profile');
       return;
     }
@@ -641,10 +646,18 @@ const handleEmojiSelect = (emoji: any) => {
   // Handle chat request accept/reject
   const handleAcceptChatRequest = async () => {
     if (!selectedChatData?.chatId) return;
-    if (!((user as any)?.isVerified === true)) {
-      showToast({ type: 'error', message: 'Verify your profile to manage chat requests.' });
-      navigate('/profile');
-      return;
+    {
+      const me: any = user;
+      const hasBio = !!(me?.bio && String(me.bio).trim().length > 0);
+      const photosArr = Array.isArray(me?.photos) ? me.photos : [];
+      const hasPhoto = (photosArr.length > 0) || !!me?.profileImage;
+      const interestsArr = Array.isArray(me?.interests) ? me.interests : [];
+      const hasInterests = interestsArr.length > 0;
+      if (!(hasBio && hasPhoto && hasInterests)) {
+        showToast({ type: 'error', message: 'Complete your profile to manage chat requests.' });
+        navigate('/profile');
+        return;
+      }
     }
     
     try {
@@ -663,10 +676,18 @@ const handleEmojiSelect = (emoji: any) => {
 
   const handleRejectChatRequest = async () => {
     if (!selectedChatData?.chatId) return;
-    if (!((user as any)?.isVerified === true)) {
-      showToast({ type: 'error', message: 'Verify your profile to manage chat requests.' });
-      navigate('/profile');
-      return;
+    {
+      const me: any = user;
+      const hasBio = !!(me?.bio && String(me.bio).trim().length > 0);
+      const photosArr = Array.isArray(me?.photos) ? me.photos : [];
+      const hasPhoto = (photosArr.length > 0) || !!me?.profileImage;
+      const interestsArr = Array.isArray(me?.interests) ? me.interests : [];
+      const hasInterests = interestsArr.length > 0;
+      if (!(hasBio && hasPhoto && hasInterests)) {
+        showToast({ type: 'error', message: 'Complete your profile to manage chat requests.' });
+        navigate('/profile');
+        return;
+      }
     }
     
     try {
