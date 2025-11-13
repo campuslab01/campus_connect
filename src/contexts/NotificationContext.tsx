@@ -9,12 +9,25 @@ import {
 } from '../config/firebase';
 import api from '../config/axios';
 
+interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+  receivedAt: string;
+  read: boolean;
+}
+
 interface NotificationContextType {
   notificationPermission: NotificationPermission;
   fcmToken: string | null;
   requestPermission: () => Promise<boolean>;
   updateToken: () => Promise<void>;
   isSupported: boolean;
+  notifications: NotificationItem[];
+  markAllRead: () => void;
+  clearNotifications: () => void;
+  removeNotification: (id: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -37,6 +50,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const raw = localStorage.getItem('notifications');
+      return raw ? (JSON.parse(raw) as NotificationItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Check browser support
   useEffect(() => {
@@ -79,6 +100,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [isSupported]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('notifications', JSON.stringify(notifications));
+    } catch {}
+  }, [notifications]);
+
   // Listen for foreground messages and show fallback toast if notifications denied
   useEffect(() => {
     if (!isSupported) return;
@@ -90,6 +117,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
           const title = payload.notification?.title || 'Campus Connection';
           const body = payload.notification?.body || '';
+          const data: Record<string, string> = payload.data ? (payload.data as Record<string, string>) : {};
+          const item: NotificationItem = {
+            id: payload.messageId || `${Date.now()}`,
+            title,
+            body,
+            data,
+            receivedAt: new Date().toISOString(),
+            read: false
+          };
+          setNotifications((prev) => [item, ...prev].slice(0, 100));
 
           // Show browser notification if granted
           if ('Notification' in window && Notification.permission === 'granted') {
@@ -97,7 +134,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
               body,
               icon: '/images/login.jpeg',
               badge: '/images/login.jpeg',
-              data: payload.data || {},
+              data,
               tag: payload.data?.type || 'notification',
             };
 
@@ -175,6 +212,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return granted;
   }, [isSupported, updateToken, showToast]);
 
+  const markAllRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
 
   // Initialize token when user is authenticated
   useEffect(() => {
@@ -199,7 +248,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     fcmToken,
     requestPermission,
     updateToken,
-    isSupported
+    isSupported,
+    notifications,
+    markAllRead,
+    clearNotifications,
+    removeNotification
   };
 
   return (
