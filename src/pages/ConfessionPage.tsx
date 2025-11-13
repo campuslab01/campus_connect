@@ -12,7 +12,6 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { InfiniteScroll } from '../components/InfiniteScroll';
 import api from '../config/axios';
-import NotificationBell from '../components/NotificationBell';
 
 const ConfessionPage: React.FC = () => {
   const [showNewConfession, setShowNewConfession] = useState(false);
@@ -379,9 +378,8 @@ const ConfessionPage: React.FC = () => {
     </motion.h2>
   </div>
 
-  {/* Right section: Notifications + New Confession + Profile */}
+  {/* Right section: New Confession + Profile */}
   <div className="flex items-center gap-3">
-    <NotificationBell />
     {/* New Confession button */}
     <motion.button
       onClick={() => setShowNewConfession(true)}
