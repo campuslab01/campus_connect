@@ -159,6 +159,18 @@ const VerifyProfileModal: React.FC<VerifyProfileModalProps> = ({ isOpen, onClose
                 >
                   Cancel
                 </button>
+                <button
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('verificationSkipped', 'true');
+                    } catch {}
+                    showToast({ type: 'info', message: 'You can verify later. Complete your profile to unlock features.' });
+                    onClose();
+                  }}
+                  className="mt-2 w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20"
+                >
+                  Skip for now
+                </button>
               </div>
             </div>
           </motion.div>

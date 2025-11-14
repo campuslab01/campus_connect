@@ -99,7 +99,9 @@ export const useSendMessage = () => {
 
   return useMutation({
     mutationFn: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }: { chatId: string | number; content: string; theirPublicKey?: string | null; type?: string; confessionId?: string | null }) => {
-      const response = await api.post(`/chat/${chatId}/messages`, { content, type, confessionId });
+      const payload: any = { content, type };
+      if (confessionId) payload.confessionId = confessionId;
+      const response = await api.post(`/chat/${chatId}/messages`, payload);
       return response.data.data;
     },
     onMutate: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }) => {
