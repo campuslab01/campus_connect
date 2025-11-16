@@ -596,8 +596,8 @@ const DiscoverPage: React.FC = () => {
                 </motion.div>
               </motion.div>
 
-              {/* Profile Images Section - 55vh */}
-              <div className="relative w-full h-[55vh]" style={{ borderRadius:'30%'}}>
+              {/* Profile Images Section - adjusted to reduce vertical pressure */}
+              <div className="relative w-full h-[52vh]" style={{ borderRadius:'30%'}}>
                 {(() => {
                   // Ensure we always have a photo to display
                   const photos = currentUser?.photos || [];
@@ -668,11 +668,12 @@ const DiscoverPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Profile Details Section - 45vh */}
+              {/* Profile Details Section - sized to avoid vertical scrolling and nav occlusion */}
               {!photoLoading && currentUser && (
                 <div
-                  className="relative w-full h-[45vh] flex flex-col justify-start items-start pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(env(safe-area-inset-bottom)+5rem)]"
+                  className="relative w-full flex flex-col justify-start items-start pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(env(safe-area-inset-bottom)+2.5rem)] overflow-hidden"
                   style={{
+                    height: 'calc(100% - 52vh)',
                     background:
                       "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 20%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)",
                     backdropFilter: "blur(12px)",
@@ -755,8 +756,9 @@ const DiscoverPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Action Buttons */}
-<div className="absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-30">
+                    {/* Action Buttons - keep above bottom navigation */}
+<div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-30"
+     style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}>
   <motion.button
     onClick={() => handleAction("dislike")}
     className="relative flex items-center justify-center rounded-full w-[clamp(3rem,10vw,5rem)] h-[clamp(3rem,10vw,5rem)]"
