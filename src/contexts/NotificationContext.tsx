@@ -127,7 +127,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             receivedAt: new Date().toISOString(),
             read: false
           };
-          setNotifications((prev) => [item, ...prev].slice(0, 100));
+          setNotifications((prev) => {
+            const isDuplicate = prev.some((n) => {
+              if (payload.messageId && n.id === payload.messageId) return true;
+              const sameContent = n.title === title && n.body === body;
+              const sameType = (n.data?.type || '') === (data?.type || '');
+              return sameContent && sameType;
+            });
+            if (isDuplicate) return prev;
+            return [item, ...prev].slice(0, 100);
+          });
 
           // Show browser notification if granted
           if ('Notification' in window && Notification.permission === 'granted') {
@@ -234,7 +243,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       receivedAt: new Date().toISOString(),
       read: false
     };
-    setNotifications((prev) => [item, ...prev].slice(0, 100));
+    setNotifications((prev) => {
+      const isDuplicate = prev.some((n) => {
+        const sameContent = n.title === title && n.body === body;
+        const sameType = (n.data?.type || '') === (data?.type || '');
+        return sameContent && sameType;
+      });
+      if (isDuplicate) return prev;
+      return [item, ...prev].slice(0, 100);
+    });
   }, []);
 
 
