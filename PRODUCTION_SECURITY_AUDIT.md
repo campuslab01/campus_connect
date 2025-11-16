@@ -60,23 +60,19 @@
 - ✅ **Message Blocking** - Messages blocked until request accepted
 - ✅ **Socket.io Events** - Real-time notifications for requests
 
-### 5. Razorpay Payment Integration
-- ✅ **Package Installation** - Added `razorpay` to package.json
-- ✅ **Payment Controller** - Complete implementation:
-  - `POST /api/payments/create-order` - Create Razorpay order
-  - `POST /api/payments/verify` - Verify payment signature
-  - `GET /api/payments/premium-status` - Get premium status
-  - `POST /api/payments/webhook` - Handle Razorpay webhooks
+### 5. Instamojo Payment Integration
+- ✅ **HTTP Client** - Use `axios` to call Instamojo API
+- ✅ **Payment Controller**:
+  - `POST /api/payment/create-payment` - Create Instamojo Payment Request
+  - `POST /api/payment/webhook` - Handle Instamojo webhooks
+  - `GET /api/payment/premium-status` - Get premium status
 - ✅ **Premium Plans**:
-  - Monthly: ₹99 (9900 paise)
-  - Quarterly: ₹89/month (3 months)
-  - Semiannual: ₹79/month (6 months)
-- ✅ **User Model** - Added premium fields:
+  - Monthly: ₹99
+  - Quarterly: ₹267 total
+  - Semiannual: ₹474 total
+- ✅ **User Model** - Premium fields:
   - `isPremium` - Boolean
   - `premiumExpiresAt` - Date
-  - `razorpaySubscriptionId` - String
-  - `razorpayCustomerId` - String
-- ✅ **Webhook Security** - Signature verification
 - ✅ **Auto-Expiry** - Premium status checked and updated
 
 ## 🔧 Implementation Details
@@ -101,10 +97,10 @@ FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 # OR
 FIREBASE_SERVICE_ACCOUNT_PATH=./config/firebase-service-account.json
 
-# Razorpay
-RAZORPAY_KEY_ID=rzp_test_...
-RAZORPAY_KEY_SECRET=...
-RAZORPAY_WEBHOOK_SECRET=...
+# Instamojo
+IM_API_KEY=...
+IM_AUTH_TOKEN=...
+IM_ENDPOINT=https://test.instamojo.com/api/1.1/
 
 # Email
 SMTP_HOST=smtp.gmail.com
@@ -141,9 +137,9 @@ SERVER_PUBLIC_URL=https://...
 - Block message input until accepted
 - Toast notifications
 
-### 2. Razorpay Payment UI (LikesPage.tsx)
+### 2. Instamojo Payment UI (LikesPage.tsx)
 - Premium upgrade button
-- Payment modal with Razorpay Checkout
+- Redirect to Instamojo Payment Request `longurl`
 - Plan selection (Monthly/Quarterly/Semiannual)
 - Payment success/error handling
 - Premium badge display

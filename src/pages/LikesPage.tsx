@@ -32,8 +32,8 @@ const LikesPage: React.FC = () => {
     let mounted = true;
     const fetchPremiumStatus = async () => {
       try {
-        const res = await api.get('/payments/premium-status');
-        const active = !!res?.data?.data?.isPremium || !!res?.data?.data?.isVerified;
+        const res = await api.get('/payment/premium-status');
+        const active = !!res?.data?.active;
         if (mounted) setIsPremiumActive(active);
       } catch (_) {
         // Default to non-premium if endpoint unavailable
@@ -121,86 +121,30 @@ const LikesPage: React.FC = () => {
     };
   }, [socket, queryClient]);
 
-  // Handle Razorpay payment
+  // Handle Instamojo payment
   const handlePayment = async () => {
     if (processingPayment) return;
     
     setProcessingPayment(true);
     
     try {
-      // Create order
-      const orderResponse = await api.post('/payments/create-order', {
+      const response = await api.post('/payment/create-payment', {
         plan: selectedPlan,
-        currency: 'INR'
+        amount: selectedPlan === 'monthly' ? 99 : selectedPlan === 'quarterly' ? 267 : 474,
+        redirect_url: window.location.origin + '/payment/callback'
       });
 
-      if (orderResponse.data.status !== 'success') {
-        throw new Error('Failed to create order');
+      if (response.data.status !== 'success') {
+        throw new Error(response.data.message || 'Failed to create payment');
       }
 
-      const { orderId, amount, keyId } = orderResponse.data.data;
-
-      // Initialize Razorpay checkout
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: 'INR',
-        name: 'Campus Connection',
-        description: `Premium Subscription - ${selectedPlan}`,
-        order_id: orderId,
-        handler: async (response: any) => {
-          try {
-            // Verify payment
-            const verifyResponse = await api.post('/payments/verify', {
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              plan: selectedPlan
-            });
-
-            if (verifyResponse.data.status === 'success') {
-              showToast({
-                type: 'success',
-                message: 'Premium activated successfully!',
-                duration: 3000
-              });
-              setShowPremium(false);
-              queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-              queryClient.invalidateQueries({ queryKey: ['userLikes'] });
-            } else {
-              throw new Error('Payment verification failed');
-            }
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            showToast({
-              type: 'error',
-              message: error.response?.data?.message || 'Payment verification failed',
-              duration: 5000
-            });
-          } finally {
-            setProcessingPayment(false);
-          }
-        },
-        prefill: {
-          email: '', // Will be filled from user profile if available
-        },
-        theme: {
-          color: '#EC4899'
-        },
-        modal: {
-          ondismiss: () => {
-            setProcessingPayment(false);
-          }
-        }
-      };
-
-      const razorpay = (window as any).Razorpay(options);
-      razorpay.open();
+      const { longurl } = response.data.data;
+      window.location.href = longurl;
     } catch (error: any) {
       console.error('Payment error:', error);
       showToast({
         type: 'error',
-        message: error.response?.data?.message || 'Failed to initiate payment',
+        message: error.response?.data?.message || error.message || 'Failed to initiate payment',
         duration: 5000
       });
       setProcessingPayment(false);

@@ -292,7 +292,7 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const fetchPremiumStatus = async () => {
       try {
-        const { data } = await api.get('/payments/premium-status');
+        const { data } = await api.get('/payment/premium-status');
         setIsPremiumActive(Boolean(data?.active));
       } catch (e) {
         // ignore
