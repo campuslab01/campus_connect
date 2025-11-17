@@ -330,7 +330,7 @@ const ProfilePage: React.FC = () => {
           Profile
         </h2>
         <div className="flex z-50 space-x-3 items-center">
-          {/* Verified Profile label only when Razorpay upgrade is active */}
+          {/* Verified Profile label only when premium upgrade is active */}
           {isPremiumActive && (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">Verified Profile</span>
           )}

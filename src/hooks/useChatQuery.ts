@@ -76,7 +76,8 @@ export const useInfiniteMessages = (chatId: string | number | null, theirPublicK
           return { ...msg, content: decryptedContent };
         } catch (error) {
           console.error('Failed to decrypt message:', error);
-          return { ...msg, content: 'Failed to decrypt message' };
+          // Fallback to original content instead of error placeholder
+          return { ...msg, content: msg.content || msg.text || '' };
         }
       });
 
@@ -89,6 +90,9 @@ export const useInfiniteMessages = (chatId: string | number | null, theirPublicK
     getNextPageParam: (lastPage) => lastPage?.nextPage,
     enabled: !!chatId,
     initialPageParam: 1,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+    staleTime: 15000,
   });
 };
 

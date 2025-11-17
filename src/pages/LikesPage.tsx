@@ -44,15 +44,10 @@ const LikesPage: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  // Transform likes (users who liked you) — show only verified profiles
+  // Transform likes (users who liked you)
+  // Rule: If current user is NOT premium and liker IS premium, show as locked; otherwise visible
   const likes = (likesData?.likedBy || [])
-    // Accept either isVerified or verified for backward compatibility
-    .filter((user: any) => ((user?.isVerified ?? user?.verified) === true))
-    .map((user: any) => ({
-    id: String(user._id || user.id),
-    name: user.name,
-    age: user.age,
-    photo: (() => {
+    .map((liker: any) => {
       const getImageUrl = (url: string | undefined) => {
         if (!url) return '/images/login.jpeg';
         if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -62,13 +57,20 @@ const LikesPage: React.FC = () => {
         }
         return url;
       };
-      return getImageUrl(user.profileImage || user.photos?.[0]);
-    })(),
-    college: user.college,
-    verified: Boolean(user.isVerified ?? user.verified),
-    isPremiumVisible: isPremiumActive,
-    likedAt: 'Recently'
-  }));
+      const photo = getImageUrl(liker.profileImage || liker.photos?.[0]);
+      const likerIsPremium = Boolean(liker?.isPremium);
+      const isLocked = !isPremiumActive && likerIsPremium;
+      return {
+        id: String(liker._id || liker.id),
+        name: liker.name,
+        age: liker.age,
+        photo,
+        college: liker.college,
+        verified: Boolean(liker.isVerified ?? liker.verified),
+        isLocked,
+        likedAt: 'Recently'
+      };
+    });
 
   // Transform matches
   const matches = (likesData?.matches || []).map((user: any) => ({
@@ -292,7 +294,7 @@ bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Match
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-white">See who likes you!</h3>
-                  <p className="text-sm text-white/70">{isPremiumActive ? 'Premium active — all likes unlocked' : 'Upgrade to Premium to see all your likes'}</p>
+                  <p className="text-sm text-white/70">{isPremiumActive ? 'Premium active — all likes unlocked' : 'Upgrade to unlock premium likes'}</p>
                 </div>
                 <button
                   onClick={() => setShowPremium(true)}
@@ -316,9 +318,7 @@ bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Match
                     <img
                       src={like.photo}
                       alt={like.name}
-                      className={`w-full h-48 object-cover ${
-                        !like.isPremiumVisible ? 'blur-sm' : ''
-                      }`}
+                      className={`w-full h-48 object-cover ${like.isLocked ? 'blur-sm' : ''}`}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         const fallback = '/images/login.jpeg';
@@ -327,7 +327,7 @@ bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Match
                         }
                       }}
                     />
-                    {!like.isPremiumVisible && (
+                    {like.isLocked && (
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
                         <div className="text-center text-white">
                           <Heart className="h-8 w-8 mx-auto mb-2" />
@@ -344,13 +344,13 @@ bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Match
 
                   <div className="p-3">
                     <h4 className="font-medium text-white mb-1">
-                      {like.isPremiumVisible ? `${like.name}, ${like.age}` : 'Verified user'}
+                      {like.isLocked ? 'Premium user' : `${like.name}, ${like.age}`}
                     </h4>
                     <p className="text-xs text-white/70 mb-2">
-                      {like.isPremiumVisible ? like.college : 'Liked your profile'}
+                      {like.isLocked ? 'Liked your profile' : like.college}
                     </p>
 
-                    {like.isPremiumVisible ? (
+                    {!like.isLocked ? (
                       <div className="flex justify-center space-x-2">
                         <button
                           onClick={() => handleAction(like.id, 'like')}
@@ -546,7 +546,7 @@ bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Match
               </motion.button>
               
               <p className="text-xs text-white/50 mt-4 text-center">
-                Secure payment powered by Razorpay
+                Secure payment powered by Instamojo
               </p>
             </motion.div>
           </motion.div>

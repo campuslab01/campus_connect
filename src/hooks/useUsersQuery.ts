@@ -17,6 +17,9 @@ export const useUserSuggestions = (limit = 50) => {
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,
+    refetchInterval: 35000,
+    refetchIntervalInBackground: false,
+    staleTime: 20000,
   });
 };
 

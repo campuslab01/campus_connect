@@ -758,7 +758,7 @@ const DiscoverPage: React.FC = () => {
 
                     {/* Action Buttons - keep above bottom navigation */}
 <div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-30"
-     style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}>
+     style={{ bottom: 'calc(env(safe-area-inset-bottom) + 3.5rem)' }}>
   <motion.button
     onClick={() => handleAction("dislike")}
     className="relative flex items-center justify-center rounded-full w-[clamp(3rem,10vw,5rem)] h-[clamp(3rem,10vw,5rem)]"
