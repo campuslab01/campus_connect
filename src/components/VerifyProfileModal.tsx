@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
 import FaceVerification from './FaceVerification';
+import api from '../config/axios';
 
 interface VerifyProfileModalProps {
   isOpen: boolean;
