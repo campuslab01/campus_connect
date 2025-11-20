@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
-import api from '../config/axios';
+import FaceVerification from './FaceVerification';
 
 interface VerifyProfileModalProps {
   isOpen: boolean;
@@ -126,50 +126,14 @@ const VerifyProfileModal: React.FC<VerifyProfileModalProps> = ({ isOpen, onClose
               <h3 className="text-white text-lg font-bold">Verify Your Profile</h3>
               <p className="text-white/80 text-sm mt-1">Take a quick selfie to verify you’re a real person.</p>
             </div>
-            <div className="px-6 py-5 grid md:grid-cols-2 gap-4">
-              <div>
-                <div className="rounded-xl overflow-hidden border border-white/20 bg-black/30">
-                  <video ref={videoRef} className="w-full h-48 object-cover" muted playsInline />
-                </div>
-                <button
-                  onClick={captureFrame}
-                  className="mt-3 w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20"
-                >
-                  Capture Selfie
-                </button>
-              </div>
-              <div>
-                <div className="rounded-xl overflow-hidden border border-white/20 bg-black/30 flex items-center justify-center h-48">
-                  {capturedDataUrl ? (
-                    <img src={capturedDataUrl} alt="Captured" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-white/60 text-sm">Selfie preview will appear here</span>
-                  )}
-                </div>
-                <button
-                  onClick={handleVerify}
-                  disabled={isCapturing}
-                  className="mt-3 w-full px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition shadow-lg disabled:opacity-50"
-                >
-                  {isCapturing ? 'Verifying...' : 'Verify Now'}
-                </button>
+            <div className="px-6 py-5">
+              <FaceVerification onSuccess={onVerifiedSuccess} />
+              <div className="mt-3">
                 <button
                   onClick={onClose}
-                  className="mt-2 w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20"
+                  className="w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    try {
-                      localStorage.setItem('verificationSkipped', 'true');
-                    } catch {}
-                    showToast({ type: 'info', message: 'You can verify later. Complete your profile to unlock features.' });
-                    onClose();
-                  }}
-                  className="mt-2 w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20"
-                >
-                  Skip for now
+                  Close
                 </button>
               </div>
             </div>
