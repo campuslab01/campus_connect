@@ -737,14 +737,16 @@ const ProfilePage: React.FC = () => {
         <VerifyProfileModal
           isOpen={showVerifyModal}
           onClose={() => setShowVerifyModal(false)}
-          profileImageUrl={(user as any)?.profileImage || (Array.isArray((user as any)?.photos) ? (user as any).photos[0] : undefined)}
           onVerifiedSuccess={async () => {
             try {
               const resp = await api.put('/auth/profile', { isVerified: true });
               const updated = resp?.data?.data?.user || { isVerified: true };
               updateUser && updateUser(updated);
             } catch {
-              updateUser && updateUser({ ...(user as any), isVerified: true });
+              if (user) {
+                
+                updateUser && updateUser({ ...user, isVerified: true });
+              }
             }
           }}
         />

@@ -1,113 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast } from '../contexts/ToastContext';
 import FaceVerification from './FaceVerification';
-import api from '../config/axios';
 
 interface VerifyProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  profileImageUrl?: string;
   onVerifiedSuccess: () => void;
 }
 
-const VerifyProfileModal: React.FC<VerifyProfileModalProps> = ({ isOpen, onClose, profileImageUrl, onVerifiedSuccess }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
-  const { showToast } = useToast();
-
-  useEffect(() => {
-    const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-      } catch (err) {
-        showToast({ type: 'error', message: 'Unable to access camera. Check permissions.' });
-      }
-    };
-    if (isOpen) {
-      startCamera();
-    }
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-        streamRef.current = null;
-      }
-    };
-  }, [isOpen, showToast]);
-
-  const captureFrame = () => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current || document.createElement('canvas');
-    canvasRef.current = canvas;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedDataUrl(dataUrl);
-    showToast({ type: 'info', message: 'Selfie captured. Ready to verify.' });
-  };
-
-  const dataUrlToBlob = async (dataUrl: string) => {
-    const res = await fetch(dataUrl);
-    return await res.blob();
-  };
-
-  const verifyFaces = async (selfieDataUrl: string, profileImage?: string) => {
-    try {
-      const form = new FormData();
-      const selfieBlob = await dataUrlToBlob(selfieDataUrl);
-      form.append('selfie', selfieBlob, 'selfie.jpg');
-      if (profileImage) form.append('profileImageUrl', profileImage);
-
-      const { data } = await api.post('/verify-face', form, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      const confidence: number = data?.confidence ?? 0;
-      const verified: boolean = data?.verified ?? confidence >= 80;
-      return verified ? Math.max(confidence, 80) : confidence;
-    } catch (e) {
-      throw e;
-    }
-  };
-
-  const handleVerify = async () => {
-    if (!capturedDataUrl) {
-      showToast({ type: 'info', message: 'Please capture a selfie first.' });
-      return;
-    }
-    if (!profileImageUrl) {
-      showToast({ type: 'error', message: 'Profile image not found.' });
-      return;
-    }
-    setIsCapturing(true);
-    try {
-      const confidence = await verifyFaces(capturedDataUrl, profileImageUrl);
-      if (confidence >= 80) {
-        onVerifiedSuccess();
-        showToast({ type: 'success', message: 'Profile verified successfully!' });
-        onClose();
-      } else {
-        showToast({ type: 'error', message: 'Face mismatch. Try again.' });
-      }
-    } catch (err: any) {
-      showToast({ type: 'error', message: err?.message || 'Verification failed.' });
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
+const VerifyProfileModal: React.FC<VerifyProfileModalProps> = ({ isOpen, onClose, onVerifiedSuccess }) => {
   return (
     <AnimatePresence>
       {isOpen && (

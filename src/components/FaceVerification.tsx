@@ -25,7 +25,7 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
           await videoRef.current.play();
           setStreaming(true);
         }
-      } catch (e) {
+      } catch (_err) {
         showToast({ type: 'error', message: 'Camera access denied. Please allow camera to verify.', duration: 4000 });
       }
     })();
@@ -65,8 +65,9 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
       setResult({ verified, score, liveness: live });
       if (verified && onSuccess) onSuccess();
       showToast({ type: verified ? 'success' : 'error', message: verified ? 'Profile verified!' : 'Verification failed. Try again.', duration: 4000 });
-    } catch (e: any) {
-      showToast({ type: 'error', message: e?.response?.data?.message || 'Verification failed', duration: 4000 });
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Verification failed';
+      showToast({ type: 'error', message: msg, duration: 4000 });
     } finally {
       setLoading(false);
     }
