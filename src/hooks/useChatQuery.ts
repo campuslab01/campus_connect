@@ -4,6 +4,22 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createSharedSecret, decryptMessage } from '../lib/e2ee';
 
+const isLikelyBase64 = (s: string): boolean => {
+  if (typeof s !== 'string') return false;
+  const trimmed = s.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('{')) return false;
+  if (trimmed.length % 4 !== 0) return false;
+  const base64Regex = /^[A-Za-z0-9+/=]+$/;
+  if (!base64Regex.test(trimmed)) return false;
+  try {
+    atob(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Chat queries
 export const useChats = (page = 1, limit = 20) => {
   return useQuery({
@@ -72,7 +88,12 @@ export const useInfiniteMessages = (chatId: string | number | null, theirPublicK
       const sharedSecret = createSharedSecret(theirPublicKey, keyPair.secretKey);
       const decryptedMessages = (response.data.data.messages || []).map((msg: any) => {
         try {
-          const decryptedContent = decryptMessage(msg.content, sharedSecret);
+          const content = msg.content || msg.text || '';
+          const looksJson = typeof content === 'string' && content.trim().startsWith('{');
+          if (looksJson || !isLikelyBase64(content)) {
+            return { ...msg, content };
+          }
+          const decryptedContent = decryptMessage(content, sharedSecret);
           return { ...msg, content: decryptedContent };
         } catch (error) {
           console.error('Failed to decrypt message:', error);
