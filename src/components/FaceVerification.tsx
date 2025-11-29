@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, CheckCircle2, XCircle } from 'lucide-react';
 import faceService from '../services/faceService';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 interface Props {
@@ -15,6 +16,7 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ verified: boolean; score: number; liveness: boolean } | null>(null);
   const { showToast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     (async () => {
@@ -57,7 +59,8 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
     setLoading(true);
     try {
       const file = new File([captured], 'selfie.jpg', { type: 'image/jpeg' });
-      const res = await faceService.uploadSelfie(file);
+      const profileImageUrl = (user as any)?.profileImage || ((user as any)?.photos?.[0]) || undefined;
+      const res = await faceService.uploadSelfie(file, profileImageUrl);
       const data = res?.status === 'success' ? res : res;
       const verified = Boolean(data?.verified);
       const score = Number(data?.score || 0);

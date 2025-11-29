@@ -1,9 +1,12 @@
 import api from '../config/axios';
 
 export const faceService = {
-  async uploadSelfie(file: File) {
+  async uploadSelfie(file: File, profileImageUrl?: string) {
     const form = new FormData();
     form.append('selfie', file);
+    if (profileImageUrl) {
+      form.append('profileImageUrl', profileImageUrl);
+    }
     const res = await api.post('/face/verify-user', form, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
