@@ -47,19 +47,38 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
+    try {
+      const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Capture failed'))), 'image/jpeg', 0.9);
+      });
       setCaptured(blob);
-    }, 'image/jpeg', 0.9);
+      showToast({ type: 'success', message: 'Selfie captured', duration: 1500 });
+    } catch {
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const byteString = atob(dataUrl.split(',')[1] || '');
+      const mimeString = dataUrl.split(',')[0]?.match(/:(.*?);/)?.[1] || 'image/jpeg';
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const fallbackBlob = new Blob([ab], { type: mimeString });
+      setCaptured(fallbackBlob);
+      showToast({ type: 'success', message: 'Selfie captured', duration: 1500 });
+    }
   };
 
   const submit = async () => {
     if (!captured) {
       return showToast({ type: 'error', message: 'Please capture a selfie first', duration: 2500 });
     }
+    const profileImageUrl = (user as any)?.profileImage || ((user as any)?.photos?.[0]) || undefined;
+    if (!profileImageUrl) {
+      return showToast({ type: 'error', message: 'Add a public profile photo before verifying', duration: 3500 });
+    }
     setLoading(true);
     try {
       const file = new File([captured], 'selfie.jpg', { type: 'image/jpeg' });
-      const profileImageUrl = (user as any)?.profileImage || ((user as any)?.photos?.[0]) || undefined;
       const res = await faceService.uploadSelfie(file, profileImageUrl);
       const data = res?.status === 'success' ? res : res;
       const verified = Boolean(data?.verified);
