@@ -79,11 +79,11 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
     setLoading(true);
     try {
       const file = new File([captured], 'selfie.jpg', { type: 'image/jpeg' });
-      const res = await faceService.uploadSelfie(file, profileImageUrl);
+      const res = await faceService.verifySelfie(file, profileImageUrl);
       const data = res?.status === 'success' ? res : res;
       const verified = Boolean(data?.verified);
       const score = Number(data?.score || 0);
-      const live = Boolean(data?.liveness);
+      const live = data?.liveness !== undefined ? Boolean(data?.liveness) : verified;
       setResult({ verified, score, liveness: live });
       if (verified && onSuccess) onSuccess();
       showToast({ type: verified ? 'success' : 'error', message: verified ? 'Profile verified!' : 'Verification failed. Try again.', duration: 4000 });

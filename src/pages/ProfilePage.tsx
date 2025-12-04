@@ -213,6 +213,68 @@ const ProfilePage: React.FC = () => {
     confirmPassword: ''
   });
 
+  const suggestedInterests = [
+    'Music', 'Movies', 'Reading', 'Photography', 'Travel', 'Coding', 'Gaming', 'Sports', 'Fitness', 'Art', 'Cooking', 'Dance', 'Meditation', 'Startups', 'Tech', 'AI', 'Design', 'Writing', 'Volunteering', 'Entrepreneurship'
+  ];
+
+  const initialProfile = useRef<any | null>(null);
+  useEffect(() => {
+    if (!initialProfile.current && user) {
+      initialProfile.current = {
+        name: profile.name,
+        age: profile.age,
+        bio: profile.bio || '',
+        interests: profile.interests || [],
+        relationshipStatus: profile.relationshipStatus || '',
+        lookingFor: profile.lookingFor || [],
+        college: profile.college || '',
+        department: profile.department || '',
+        year: profile.year || ''
+      };
+    }
+  }, [user]);
+
+  const isProfileDirty = () => {
+    const init = initialProfile.current;
+    if (!init) return false;
+    const curr = {
+      name: profile.name,
+      age: profile.age,
+      bio: profile.bio || '',
+      interests: profile.interests || [],
+      relationshipStatus: profile.relationshipStatus || '',
+      lookingFor: profile.lookingFor || [],
+      college: profile.college || '',
+      department: profile.department || '',
+      year: profile.year || ''
+    };
+    const sameArrays = (a: any[], b: any[]) => {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
+    };
+    if (init.name !== curr.name) return true;
+    if (init.age !== curr.age) return true;
+    if (init.bio !== curr.bio) return true;
+    if (!sameArrays(init.interests, curr.interests)) return true;
+    if (init.relationshipStatus !== curr.relationshipStatus) return true;
+    if (!sameArrays(init.lookingFor, curr.lookingFor)) return true;
+    if (init.college !== curr.college) return true;
+    if (init.department !== curr.department) return true;
+    if (init.year !== curr.year) return true;
+    return false;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (isEditing && isProfileDirty()) {
+        handleSaveProfile();
+      }
+    };
+  }, [isEditing]);
+
   // Handlers
   const handleSaveProfile = async () => {
     try {
@@ -641,6 +703,23 @@ const ProfilePage: React.FC = () => {
                         />
                       )}
                     </div>
+                    {isEditing && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {suggestedInterests.map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={() => {
+                              if (!profile.interests.includes(tag)) {
+                                setProfile(prev => ({ ...prev, interests: [...prev.interests, tag] }));
+                              }
+                            }}
+                            className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white text-xs px-3 py-1 rounded-full border border-white/20 hover:scale-105 transition-transform"
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 </motion.div>
               </motion.div>
