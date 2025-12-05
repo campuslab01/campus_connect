@@ -12,7 +12,8 @@ export const useConfessions = () => {
       return {
         confessions: response.data.data.confessions || [],
         pagination: response.data.data.pagination || {},
-        nextPage: response.data.data.pagination?.hasNext ? pageParam + 1 : undefined,
+        meta: response.data.data.meta || {},
+        nextPage: (response.data.data.meta?.locked ? undefined : (response.data.data.pagination?.hasNext ? pageParam + 1 : undefined)),
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,

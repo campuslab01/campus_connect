@@ -25,6 +25,7 @@ const ConfessionPage: React.FC = () => {
   const socket = useSocket();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [membership, setMembership] = useState<{ active: boolean; membershipLevel?: string; meta?: any } | null>(null);
 
   // Helper function to format time - MUST be defined before it's used
   const formatTime = (dateString: string) => {
@@ -53,11 +54,25 @@ const ConfessionPage: React.FC = () => {
     error: queryError 
   } = useConfessions();
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await api.get('/payment/premium-status');
+        if (mounted) setMembership(res.data);
+      } catch (_) {
+        if (mounted) setMembership(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // Create confession mutation
   const createConfessionMutation = useCreateConfession();
 
   // Flatten paginated confessions
   const confessionsData = data?.pages.flatMap(page => page.confessions) || [];
+  const locked = Boolean(data?.pages?.some((p: any) => p?.meta?.locked));
 
   // Transform API response to match Confession structure
   const confessions = confessionsData.map((confession: any) => {
@@ -140,6 +155,8 @@ const ConfessionPage: React.FC = () => {
   });
 
   const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load confessions') : null;
+  const confLimit = Number(membership?.meta?.confessionLimit) || 30;
+  const isPrimeActive = Boolean(membership?.active || membership?.membershipLevel === 'prime');
 
   // Real-time confession updates
   useEffect(() => {
@@ -493,6 +510,16 @@ const ConfessionPage: React.FC = () => {
 
         {/* Confessions List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex items-center justify-end gap-2 mb-2">
+            <span className={`px-3 py-1 rounded-full text-xs ${isPrimeActive ? 'bg-yellow-400 text-black' : 'bg-white/10 text-white'}`}>
+              {isPrimeActive ? 'Prime' : 'Free'}
+            </span>
+            {!isPrimeActive && (
+              <span className="px-3 py-1 rounded-full text-xs bg-white/10 text-white">
+                {`Confessions ${confessionsData.length}/${confLimit}`}
+              </span>
+            )}
+          </div>
           {loading && !data && (
             <div className="text-center py-8 text-white/70">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
@@ -507,7 +534,7 @@ const ConfessionPage: React.FC = () => {
           {!loading && !error && (
             <InfiniteScroll 
               fetchNext={fetchNextPage} 
-              hasMore={hasNextPage || false} 
+              hasMore={(hasNextPage && !locked) || false} 
               isLoading={isFetchingNextPage}
             >
               <motion.div className="space-y-4" variants={containerVariants}>
@@ -629,6 +656,21 @@ const ConfessionPage: React.FC = () => {
                 ))}
               </motion.div>
             </InfiniteScroll>
+          )}
+          {locked && (
+            <div className="mt-2 p-6 text-center bg-gradient-to-br from-white/20 via-white/10 to-white/5 backdrop-blur-xl border-2 border-white/30 rounded-3xl">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-3 shadow-lg">
+                <Heart size={28} className="text-white" />
+              </div>
+              <h3 className="text-white font-bold mb-2">Confession Limit Reached</h3>
+              <p className="text-white/80 mb-4">Unlock unlimited confessions with Prime.</p>
+              <button
+                onClick={() => navigate('/likes')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium px-4 py-2 rounded-xl shadow-lg shadow-pink-500/30 hover:from-purple-600 hover:to-pink-600 transition-all"
+              >
+                Upgrade
+              </button>
+            </div>
           )}
         </div>
 

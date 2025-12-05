@@ -49,6 +49,7 @@ const DiscoverPage: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | number | null>(null);
   const queryClient = useQueryClient();
   const { user: viewer } = useAuth();
+  const [membership, setMembership] = useState<{ active: boolean; membershipLevel?: string; meta?: any } | null>(null);
 
   // Fetch full profile when modal is opened
   const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
@@ -165,6 +166,19 @@ const DiscoverPage: React.FC = () => {
   }));
 
   const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load users') : null;
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await api.get('/payment/premium-status');
+        if (mounted) setMembership(res.data);
+      } catch (_) {
+        if (mounted) setMembership(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 0, 220], [-10, 0, 10]);
@@ -300,8 +314,18 @@ const DiscoverPage: React.FC = () => {
       return;
     }
 
+    // Enforce backend swipe limit first
+    try {
+      await api.post('/users/swipe');
+    } catch (err: any) {
+      if (err?.response?.status === 429) {
+        setShowLimitModal(true);
+        return;
+      }
+    }
+
     setSwipeCount((prev) => {
-      const dailyLimit = (viewer as any)?.isVerified ? 15 : 10;
+      const dailyLimit = Number(membership?.meta?.swipeLimit) || 15;
       const newCount = prev + 1;
       if (newCount > dailyLimit) {
         setShowLimitModal(true);
@@ -329,7 +353,9 @@ const DiscoverPage: React.FC = () => {
           })
           .catch((err) => {
             console.error('Error liking user:', err);
-            // Still move to next card even if API fails
+            if (err?.response?.status === 429) {
+              setShowLimitModal(true);
+            }
           });
       } else if (action === "dislike") {
         // Optional: Unlike user if they want to undo
@@ -388,7 +414,7 @@ const DiscoverPage: React.FC = () => {
     
     {/* Header Section */}
     <header className="fixed top-0 left-0 w-full z-50 bg-black/30 backdrop-blur-xl border-b border-white/10 py-3 px-5">
-  <div className="flex items-center justify-left">
+  <div className="flex items-center justify-between">
     <motion.h1
       className="text-3xl font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
       bg-clip-text text-transparent drop-shadow-md"
@@ -402,6 +428,14 @@ const DiscoverPage: React.FC = () => {
     >
       Campus Connection
     </motion.h1>
+    <div className="flex items-center gap-3">
+      <span className={`px-3 py-1 rounded-full text-xs ${membership?.active || membership?.membershipLevel === 'prime' ? 'bg-yellow-400 text-black' : 'bg-white/10 text-white'}`}>
+        {(membership?.active || membership?.membershipLevel === 'prime') ? 'Prime' : 'Free'}
+      </span>
+      <span className="px-3 py-1 rounded-full text-xs bg-white/10 text-white">
+        {`Swipes ${swipeCount}/${Number(membership?.meta?.swipeLimit) || 15}`}
+      </span>
+    </div>
   </div>
 </header>
 
@@ -1091,15 +1125,22 @@ const DiscoverPage: React.FC = () => {
               Daily Limit Reached
             </h3>
             <p className="text-white/80 mb-8">
-              You've swiped through 15 profiles today! Come back tomorrow to
-              discover more amazing people. ✨
+              {`You've swiped through ${(Number(membership?.meta?.swipeLimit) || 15)} profiles today. Upgrade to increase limits or come back tomorrow.`}
             </p>
-            <button
-              onClick={() => setShowLimitModal(false)}
-              className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:scale-105 active:scale-95"
-            >
-              Got it!
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="w-full bg-white/10 text-white py-3 rounded-2xl font-bold text-lg shadow-xl hover:bg-white/20"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => { setShowLimitModal(false); navigate('/likes'); }}
+                className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white py-3 rounded-2xl font-bold text-lg shadow-xl hover:scale-105 active:scale-95"
+              >
+                Upgrade
+              </button>
+            </div>
           </div>
         </div>
       )}
