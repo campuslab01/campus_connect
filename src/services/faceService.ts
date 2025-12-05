@@ -6,7 +6,7 @@ const faceService = {
     form.append('selfie', selfie);
     if (profileImageUrl) form.append('profileImageUrl', profileImageUrl);
     if (profileFile) form.append('profile', profileFile);
-    const res = await api.post('/verify-face/verify', form, {
+    const res = await api.post('/verify-selfie', form, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return res.data;
