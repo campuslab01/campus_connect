@@ -98,6 +98,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     },
 };
 
+  const itemNoTranslateVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.3, ease: "linear" }, // NO y movement, NO easeOut
+  },
+};
+
+
   const floatingVariants = {
     animate: {
       y: [-8, 8, -8],
@@ -333,8 +342,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
  className="relative bg-white/20 backdrop-blur-sm border border-white/20 
              rounded-2xl p-6 text-white shadow-2xl 
              hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
-                      variants={itemVariants}
-                      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+                      variants={itemNoTranslateVariants}
+                      style={{ transform: 'none', willChange: 'auto' }}
                     >
                       {/* Icon */}
                       <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
@@ -356,7 +365,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         className="text-xl font-extrabold mb-3 text-center
              bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400
              bg-clip-text text-transparent tracking-wide drop-shadow-sm"
-                        variants={itemVariants}
+                        variants={itemNoTranslateVariants}
                         whileHover={{ scale: 1.05 }}
                       >
                         {feature.title}
@@ -388,8 +397,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                       className="relative bg-white/20 backdrop-blur-sm border border-white/20 
              rounded-2xl p-6 text-white shadow-2xl 
              hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
-                      variants={itemVariants}
-                      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+                      variants={itemNoTranslateVariants}
+                       style={{ transform: 'none', willChange: 'auto' }}
                     >
                       {/* Icon */}
                       <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
@@ -411,7 +420,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         className="text-xl font-extrabold mb-3 text-center
                            bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400
                            bg-clip-text text-transparent tracking-wide drop-shadow-sm"
-                        variants={itemVariants}
+                        variants={itemNoTranslateVariants}
                         whileHover={{ scale: 1.05 }}
                       >
                         {feature.title}
@@ -441,8 +450,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               className="relative bg-white/20 backdrop-blur-sm border border-white/20 
              rounded-2xl p-6 text-white shadow-2xl 
              hover:scale-105 transition-transform duration-300 cursor-pointer w-full max-w-xs"
-              variants={itemVariants}
-              style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+              variants={itemNoTranslateVariants}
+              style={{ transform: 'none', willChange: 'auto' }}
             >
               {/* Icon - now matches Screen 3 */}
               <div className="bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full p-4 w-fit mx-auto mb-4 shadow-lg">
@@ -459,7 +468,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 className="text-xl font-extrabold mb-3 text-center
                            bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400
                            bg-clip-text text-transparent tracking-wide drop-shadow-sm"
-                variants={itemVariants}
+                variants={itemNoTranslateVariants}
                 whileHover={{ scale: 1.05 }}
               >
                 {feature.title}

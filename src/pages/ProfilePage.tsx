@@ -397,8 +397,7 @@ const ProfilePage: React.FC = () => {
           Profile
         </h2>
         <div className="flex z-50 space-x-3 items-center">
-          {/* Verified Profile label only when premium upgrade is active */}
-          {isPremiumActive && (
+          {Boolean(user?.isVerified || (user as any)?.verified) && (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">Verified Profile</span>
           )}
           {/* Show Verify button until Face++ verification completes */}
@@ -729,22 +728,41 @@ const ProfilePage: React.FC = () => {
                 </motion.div>
               </motion.div>
 
-              {/* Verification */}
               <motion.div className="bg-gradient-to-r from-purple-900/30 via-pink-900/30 to-purple-900/30 backdrop-blur-lg rounded-xl p-4 border border-pink-400/30 shadow-lg" variants={itemVariants}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-full">
-                      <Shield className="h-5 w-5 text-white" />
+                {Boolean(user?.isVerified || (user as any)?.verified) ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-full">
+                        <Shield className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">Verified Profile</h4>
+                        <p className="text-sm text-white/70">Your profile is verified</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-white">Verified Profile</h4>
-                      <p className="text-sm text-white/70">Your profile is verified</p>
+                    <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-1 rounded-full">
+                      <Star size={16} className="text-white" />
                     </div>
                   </div>
-                  <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-1 rounded-full">
-                    <Star size={16} className="text-white" />
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-full">
+                        <Shield className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">Profile Verification</h4>
+                        <p className="text-sm text-white/70">Not verified</p>
+                      </div>
+                    </div>
+                    <motion.button
+                      className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                      onClick={() => setShowVerifyModal(true)}
+                    >
+                      Verify
+                    </motion.button>
                   </div>
-                </div>
+                )}
               </motion.div>
             </motion.div>
           )}
