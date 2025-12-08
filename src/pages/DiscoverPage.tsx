@@ -797,45 +797,36 @@ const DiscoverPage: React.FC = () => {
                     )}
 
                     {/* Action Buttons - keep above bottom navigation */}
-<div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-[60]"
-     style={{ bottom: 'calc(env(safe-area-inset-bottom) + 3.5rem)' }}>
+<div className="fixed left-1/2 -translate-x-1/2 z-[70] pointer-events-auto flex items-center justify-center gap-10"
+     style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}>
   <motion.button
     onClick={() => handleAction("dislike")}
-    className="relative flex items-center justify-center rounded-full w-[clamp(3rem,10vw,5rem)] h-[clamp(3rem,10vw,5rem)]"
+    className="relative translate-y-[10px] flex items-center justify-center rounded-full w-[clamp(3.5rem,11vw,6rem)] h-[clamp(3.5rem,11vw,6rem)]"
   >
     <span className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-2xl"></span>
     <X
-      size={40}
       className="text-red-500 drop-shadow-lg z-10"
-      style={{ width: "clamp(1.5rem,6vw,2.5rem)", height: "clamp(1.5rem,6vw,2.5rem)" }}
+      style={{ width: "clamp(1.8rem,6.5vw,3rem)", height: "clamp(1.8rem,6.5vw,3rem)" }}
     />
   </motion.button>
 
-  {/* Chat button */}
   <motion.button
-  onClick={() => openChat(currentUser.id)}
-  className="relative flex items-center justify-center rounded-full w-[clamp(2.5rem,8vw,4rem)] h-[clamp(2.5rem,8vw,4rem)]"
->
-  <span className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-2xl"></span>
-  <span className="text-white drop-shadow-lg z-10 text-[clamp(1rem,5vw,1.5rem)]">💬</span>
-
-  {/* Label outside and centered below
-  <span className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-sm font-semibold text-white drop-shadow-lg">
-    DM
-  </span> */}
-</motion.button>
-
+    onClick={() => openChat(currentUser.id)}
+    className="relative -translate-y-[12px] flex items-center justify-center rounded-full w-[clamp(3rem,10vw,5rem)] h-[clamp(3rem,10vw,5rem)]"
+  >
+    <span className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-2xl"></span>
+    <span className="text-white drop-shadow-lg z-10 text-[clamp(1.2rem,5vw,1.8rem)]">💬</span>
+  </motion.button>
 
   <motion.button
     onClick={() => handleAction("like")}
-    className="relative flex items-center justify-center rounded-full w-[clamp(3rem,10vw,5rem)] h-[clamp(3rem,10vw,5rem)]"
+    className="relative translate-y-[10px] flex items-center justify-center rounded-full w-[clamp(3.5rem,11vw,6rem)] h-[clamp(3.5rem,11vw,6rem)]"
   >
     <span className="absolute inset-0 rounded-full bg-white/10 backdrop-blur-2xl"></span>
     <Heart
-      size={40}
       className="text-green-400 drop-shadow-lg z-10"
       fill="currentColor"
-      style={{ width: "clamp(1.5rem,6vw,2.5rem)", height: "clamp(1.5rem,6vw,2.5rem)" }}
+      style={{ width: "clamp(1.8rem,6.5vw,3rem)", height: "clamp(1.8rem,6.5vw,3rem)" }}
     />
   </motion.button>
 </div>
