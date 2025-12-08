@@ -266,14 +266,7 @@ const ProfilePage: React.FC = () => {
     if (init.year !== curr.year) return true;
     return false;
   };
-
-  useEffect(() => {
-    return () => {
-      if (isEditing && isProfileDirty()) {
-        handleSaveProfile();
-      }
-    };
-  }, [isEditing]);
+  
 
   // Handlers
   const handleSaveProfile = async () => {
@@ -309,6 +302,18 @@ const ProfilePage: React.FC = () => {
           if (updateUser) {
             updateUser(updatedUser);
           }
+
+          initialProfile.current = {
+            name: updatedUser.name ?? profile.name,
+            age: (updatedUser as any).age ?? profile.age,
+            bio: (updatedUser as any).bio ?? (profile.bio || ''),
+            interests: Array.isArray((updatedUser as any).interests) ? (updatedUser as any).interests : (profile.interests || []),
+            relationshipStatus: (updatedUser as any).relationshipStatus ?? (profile.relationshipStatus || ''),
+            lookingFor: Array.isArray((updatedUser as any).lookingFor) ? (updatedUser as any).lookingFor : (profile.lookingFor || []),
+            college: (updatedUser as any).college ?? (profile.college || ''),
+            department: (updatedUser as any).department ?? (profile.department || ''),
+            year: (updatedUser as any).year ?? (profile.year || '')
+          };
         }
         
         // Show success toast
