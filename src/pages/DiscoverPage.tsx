@@ -50,6 +50,7 @@ const DiscoverPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { user: viewer } = useAuth();
   const [membership, setMembership] = useState<{ active: boolean; membershipLevel?: string; meta?: any } | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   // Fetch full profile when modal is opened
   const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
@@ -314,14 +315,10 @@ const DiscoverPage: React.FC = () => {
       return;
     }
 
-    // Enforce backend swipe limit first
-    try {
-      await api.post('/users/swipe');
-    } catch (err: any) {
-      if (err?.response?.status === 429) {
-        setShowLimitModal(true);
-        return;
-      }
+    // If limit already reached, block further actions immediately
+    if (limitReached) {
+      setShowLimitModal(true);
+      return;
     }
 
     setSwipeCount((prev) => {
@@ -329,6 +326,7 @@ const DiscoverPage: React.FC = () => {
       const newCount = prev + 1;
       if (newCount > dailyLimit) {
         setShowLimitModal(true);
+        setLimitReached(true);
         return prev;
       }
 
@@ -339,7 +337,7 @@ const DiscoverPage: React.FC = () => {
 
       // Delay showing next card until exit animation completes (0.4s)
       setShowNextCard(false);
-      setTimeout(() => setShowNextCard(true), 400);
+      setTimeout(() => setShowNextCard(true), 180);
 
       // Call backend API for like/dislike
       if (action === "like") {
@@ -355,6 +353,7 @@ const DiscoverPage: React.FC = () => {
             console.error('Error liking user:', err);
             if (err?.response?.status === 429) {
               setShowLimitModal(true);
+              setLimitReached(true);
             }
           });
       } else if (action === "dislike") {
@@ -374,6 +373,13 @@ const DiscoverPage: React.FC = () => {
         }
         localStorage.setItem(storageKey, JSON.stringify({ count: newCount, resetAt }));
       }
+      // Register swipe in background without blocking UI
+      api.post('/users/swipe').catch((err: any) => {
+        if (err?.response?.status === 429) {
+          setShowLimitModal(true);
+          setLimitReached(true);
+        }
+      });
       return newCount;
     });
   }, [currentUser, setSwipeCount, setShowLimitModal, setExitDirection, setIsSwiping, setPhotoLoading, setCurrentPhotoIndex, setShowNextCard, queryClient]);
@@ -791,7 +797,7 @@ const DiscoverPage: React.FC = () => {
                     )}
 
                     {/* Action Buttons - keep above bottom navigation */}
-<div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-30"
+<div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-8 z-[60]"
      style={{ bottom: 'calc(env(safe-area-inset-bottom) + 3.5rem)' }}>
   <motion.button
     onClick={() => handleAction("dislike")}
@@ -1070,8 +1076,9 @@ const DiscoverPage: React.FC = () => {
                 >
                 <motion.button
                   onClick={() => {
-                    if (modalUser?.id || modalUser?._id) {
-                      openChat((modalUser.id || modalUser._id) as number);
+                    const id = (modalUser?.id || modalUser?._id);
+                    if (id) {
+                      toggleLike(String(id));
                     }
                     setShowProfileModal(false);
                     setSelectedUserId(null);
@@ -1085,6 +1092,10 @@ const DiscoverPage: React.FC = () => {
                 </motion.button>
                 <motion.button
                   onClick={() => {
+                    const id = (modalUser?.id || modalUser?._id);
+                    if (id) {
+                      openChat(id as any);
+                    }
                     setShowProfileModal(false);
                     setSelectedUserId(null);
                   }}
