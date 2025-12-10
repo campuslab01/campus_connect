@@ -117,10 +117,9 @@ const ChatPage: React.FC = () => {
           
           // Handle 403 errors - might be authentication or permission issue
           if (err.response?.status === 403) {
-            console.error('403 Forbidden - checking authentication');
-            const token = localStorage.getItem('token');
-            console.log('Token exists:', !!token);
-            alert(`Access denied (403). Please check if you're properly authenticated. Error: ${errorMsg}`);
+            setAccessMessage(errorMsg || 'Account verification required');
+            setPendingAction(() => findOrCreateChat);
+            setShowAccessModal(true);
           } else {
             // TODO: Re-enable matching requirement check after testing phase
             // During testing phase, allow chatting without matching
@@ -131,7 +130,9 @@ const ChatPage: React.FC = () => {
             // }
             // For now, only show alert for non-matching errors during testing
             if (!errorMsg.includes('matched')) {
-            alert(errorMsg);
+            setAccessMessage(errorMsg);
+            setPendingAction(null);
+            setShowAccessModal(true);
             }
           }
         }
@@ -157,6 +158,9 @@ const handleEmojiSelect = (emoji: any) => {
   
   // Fetch chats using React Query
   const { data: chatsData, isLoading: loading, error: chatsError } = useChats(1, 50);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [accessMessage, setAccessMessage] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
   const chats = (chatsData as any)?.chats || (chatsData as any)?.data?.chats || [];
   
   // Transform chats to match UI structure
@@ -1676,6 +1680,30 @@ const filteredChats = transformedChats.filter(
   Submit Quiz
 </button>
 
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAccessModal && (
+          <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="bg-white/10 border border-white/20 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" initial={{ scale: 0.95, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }}>
+              <div className="px-6 py-5 bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-b border-white/20">
+                <h3 className="text-white text-lg font-bold">Email Verification Required</h3>
+                <p className="text-white/80 text-sm mt-1">{accessMessage || 'Please verify your email to continue. Check your inbox for the verification link.'}</p>
+              </div>
+              <div className="px-6 py-5 space-y-3">
+                <button className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:opacity-90 transition" onClick={async () => { if (pendingAction) { setShowAccessModal(false); await pendingAction(); } }}>
+                  I Verified, Retry Now
+                </button>
+                <button className="w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20" onClick={() => { setShowAccessModal(false); navigate('/auth'); }}>
+                  Open Login
+                </button>
+                <button className="w-full px-4 py-2 rounded-xl bg-white/5 text-white hover:bg-white/10 transition border border-white/10" onClick={() => setShowAccessModal(false)}>
+                  Close
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

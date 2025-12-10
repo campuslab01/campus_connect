@@ -397,16 +397,16 @@ const ProfilePage: React.FC = () => {
           Profile
         </h2>
         <div className="flex z-50 space-x-3 items-center">
-          {Boolean(user?.isVerified || (user as any)?.verified) && (
+          {Boolean((user as any)?.emailVerified || user?.isVerified || (user as any)?.verified) && (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">Verified Profile</span>
           )}
           {/* Show Verify button until Face++ verification completes */}
-          {!Boolean(user?.isVerified) && (
+          {!Boolean((user as any)?.emailVerified) && (
             <motion.button
               className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition shadow"
-              onClick={() => setShowVerifyModal(true)}
+              onClick={() => navigate('/auth')}
             >
-              Verify My Profile
+              Verify Email
             </motion.button>
           )}
           

@@ -162,7 +162,7 @@ const DiscoverPage: React.FC = () => {
       
       return availablePhotos.slice(0, 3); // Ensure max 3
     })(),
-    verified: Boolean(user.isVerified || user.verified),
+    verified: Boolean((user as any).emailVerified || user.isVerified || user.verified),
     lookingFor: user.lookingFor || []
   }));
 

@@ -26,6 +26,9 @@ const LikesPage: React.FC = () => {
   
   // Fetch likes and matches using React Query
   const { data: likesData, isLoading: loading, error: queryError } = useUserLikes();
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [accessMessage, setAccessMessage] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
 
   // Fetch premium status for current user (controls blur/lock on likes)
   useEffect(() => {
@@ -188,11 +191,13 @@ const LikesPage: React.FC = () => {
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || `Failed to ${action} user`;
-      showToast({
-        type: 'error',
-        message: errorMessage,
-        duration: 3000
-      });
+      if (error.response?.status === 403) {
+        setAccessMessage(errorMessage || 'Account verification required');
+        setPendingAction(() => async () => { await handleAction(userId, action); });
+        setShowAccessModal(true);
+      } else {
+        showToast({ type: 'error', message: errorMessage, duration: 3000 });
+      }
     }
   };
 
@@ -548,6 +553,30 @@ bg-clip-text text-transparent text-xl font-semibold tracking-wide">Likes & Match
               <p className="text-xs text-white/50 mt-4 text-center">
                 Secure payment powered by Instamojo
               </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAccessModal && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="bg-white/10 border border-white/20 rounded-2xl shadow-xl max-w-md w-full overflow-hidden" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
+              <div className="px-6 py-5 bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-b border-white/20">
+                <h3 className="text-white text-lg font-bold">Email Verification Required</h3>
+                <p className="text-white/80 text-sm mt-1">{accessMessage || 'Please verify your email to continue. Check your inbox for the verification link.'}</p>
+              </div>
+              <div className="px-6 py-5 space-y-3">
+                <button className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:opacity-90 transition" onClick={async () => { if (pendingAction) { setShowAccessModal(false); await pendingAction(); } }}>
+                  I Verified, Retry Now
+                </button>
+                <button className="w-full px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition border border-white/20" onClick={() => { setShowAccessModal(false); navigate('/auth'); }}>
+                  Open Login
+                </button>
+                <button className="w-full px-4 py-2 rounded-xl bg-white/5 text-white hover:bg-white/10 transition border border-white/10" onClick={() => setShowAccessModal(false)}>
+                  Close
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
