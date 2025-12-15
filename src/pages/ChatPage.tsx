@@ -152,39 +152,11 @@ const handleEmojiSelect = (emoji: any) => {
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"primary" | "requests">("primary");
   const [showDeleteMenu, setShowDeleteMenu] = useState(false);
   const socket = useSocket();
-  const inputRef = useRef<HTMLFormElement | null>(null);
-  const [inputHeight, setInputHeight] = useState<number>(72);
-
-  useEffect(() => {
-    const updateInputHeight = () => {
-      setInputHeight(inputRef.current?.offsetHeight || 72);
-    };
-    updateInputHeight();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateInputHeight) : null;
-    if (ro && inputRef.current) ro.observe(inputRef.current);
-    window.addEventListener('resize', updateInputHeight);
-    return () => {
-      if (ro && inputRef.current) ro.disconnect();
-      window.removeEventListener('resize', updateInputHeight);
-    };
-  }, []);
-
-  useEffect(() => {
-    const setVh = () => {
-      const vh = (window.visualViewport?.height || window.innerHeight) * 0.01;
-      document.documentElement.style.setProperty('--app-vh', `${vh}px`);
-    };
-    setVh();
-    window.visualViewport?.addEventListener('resize', setVh);
-    window.addEventListener('resize', setVh);
-    return () => {
-      window.visualViewport?.removeEventListener('resize', setVh);
-      window.removeEventListener('resize', setVh);
-    };
-  }, []);
   
   // Fetch chats using React Query
   const { data: chatsData, isLoading: loading, error: chatsError } = useChats(1, 50);
@@ -588,12 +560,41 @@ const handleEmojiSelect = (emoji: any) => {
   }, [showQuiz, quizTimeLeft]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const behavior = isKeyboardOpen ? "auto" : "smooth";
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [transformedMessages, selectedChat]);
+
+  useEffect(() => {
+    const vv: any = (window as any).visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      const delta = window.innerHeight - vv.height;
+      setIsKeyboardOpen(delta > 120);
+    };
+    vv.addEventListener("resize", handler);
+    vv.addEventListener("scroll", handler);
+    handler();
+    return () => {
+      vv.removeEventListener("resize", handler);
+      vv.removeEventListener("scroll", handler);
+    };
+  }, []);
+
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: "auto",
+        });
+      }
+      scrollToBottom();
+    }, 0);
+  };
 
   const handleSendMessage = async (e: React.FormEvent | null = null) => {
     if (e) e.preventDefault();
@@ -816,15 +817,15 @@ const filteredChats = transformedChats.filter(
 // message box UI
     return (
       <motion.div
-        className="bg-cover bg-center relative flex flex-col"
-        style={{ backgroundImage: `url(${bgImage})`, minHeight: 'calc(var(--app-vh, 1vh) * 100)' }}
+        className="min-h-screen bg-cover bg-center relative flex flex-col"
+        style={{ backgroundImage: `url(${bgImage})` }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <div className="absolute inset-0 bg-black/50 backdrop-blur-[1.3px]"></div>
 
-        <div className="absolute inset-0 z-10 max-w-3xl mx-auto flex flex-col">
+        <div className="fixed inset-x-0 top-0 bottom-16 z-10 max-w-3xl mx-auto flex flex-col">
         {/* Chat Header */}
           <motion.div className="bg-black/40 backdrop-blur-md border-b border-white/10 p-4 z-20 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -903,9 +904,7 @@ const filteredChats = transformedChats.filter(
           </motion.div>
 
           {/* Messages */}
-          <motion.div className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain"
-            style={{ paddingBottom: inputHeight + 24 }}
-          >
+          <motion.div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Load more button */}
             {hasMoreMessages && (
               <button
@@ -1077,16 +1076,15 @@ const filteredChats = transformedChats.filter(
 
           {/* Message Input */}
           <motion.form
-            ref={inputRef}
             onSubmit={(e) => handleSendMessage(e)}
-            className={`fixed inset-x-0 bottom-0 z-[60] p-4 bg-black/40 backdrop-blur-md border-t border-white/10 max-w-3xl mx-auto ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
-            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            className={`flex-shrink-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-20 ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
           >
             <div className="flex items-center gap-2 w-full">
               <motion.input
   type="text"
   value={message}
   onChange={(e) => setMessage(e.target.value)}
+  onFocus={handleInputFocus}
   placeholder="Type your message..."
   className="flex-1 px-4 py-2 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-pink-400/60 backdrop-blur-sm"
 />
