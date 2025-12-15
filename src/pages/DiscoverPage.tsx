@@ -369,7 +369,7 @@ const DiscoverPage: React.FC = () => {
           try {
             const parsed = JSON.parse(raw);
             if (parsed.resetAt) resetAt = parsed.resetAt;
-          } catch {}
+          } catch (e) { void e; }
         }
         localStorage.setItem(storageKey, JSON.stringify({ count: newCount, resetAt }));
       }

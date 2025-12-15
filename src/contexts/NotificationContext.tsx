@@ -104,7 +104,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   useEffect(() => {
     try {
       localStorage.setItem('notifications', JSON.stringify(notifications));
-    } catch {}
+    } catch (e) { void e; }
   }, [notifications]);
 
   // Listen for foreground messages and show fallback toast if notifications denied

@@ -18,6 +18,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
 import VerifyProfileModal from '../components/VerifyProfileModal';
+import { useNavigate } from 'react-router-dom';
 // Notification bell removed per requirement
 
 const ProfilePage: React.FC = () => {
@@ -28,6 +29,7 @@ const ProfilePage: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   type Profile = {
     name: string;
     age: number;
@@ -397,11 +399,11 @@ const ProfilePage: React.FC = () => {
           Profile
         </h2>
         <div className="flex z-50 space-x-3 items-center">
-          {Boolean((user as any)?.emailVerified || user?.isVerified || (user as any)?.verified) && (
+          {((user as any)?.emailVerified || user?.isVerified || (user as any)?.verified) && (
             <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 text-sm inline-flex items-center gap-1">Verified Profile</span>
           )}
           {/* Show Verify button until Face++ verification completes */}
-          {!Boolean((user as any)?.emailVerified) && (
+          {!(user as any)?.emailVerified && (
             <motion.button
               className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition shadow"
               onClick={() => navigate('/auth')}
@@ -729,7 +731,7 @@ const ProfilePage: React.FC = () => {
               </motion.div>
 
               <motion.div className="bg-gradient-to-r from-purple-900/30 via-pink-900/30 to-purple-900/30 backdrop-blur-lg rounded-xl p-4 border border-pink-400/30 shadow-lg" variants={itemVariants}>
-                {Boolean(user?.isVerified || (user as any)?.verified) ? (
+                {(user?.isVerified || (user as any)?.verified) ? (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-full">

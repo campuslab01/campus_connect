@@ -23,3 +23,19 @@ export const resendPasswordOtp = async (email: string) => {
   const res = await api.post('/auth/resend-password-otp', { email });
   return res.data;
 };
+
+// Signup OTP services
+export const registerInit = async (payload: Record<string, unknown>) => {
+  const res = await api.post('/auth/register', payload);
+  return res.data;
+};
+
+export const verifySignupOtp = async (email: string, otp: string): Promise<{ status: string; message?: string; data?: unknown }> => {
+  const res = await api.post('/auth/verify-signup-otp', { email, otp });
+  return res.data;
+};
+
+export const resendSignupOtp = async (email: string): Promise<{ status: string; message?: string }> => {
+  const res = await api.post('/auth/resend-signup-otp', { email });
+  return res.data;
+};

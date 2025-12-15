@@ -15,6 +15,7 @@ import VerifyProfileModal from "../components/VerifyProfileModal";
 import { useNotification } from "../contexts/NotificationContext";
 import { getFCMToken } from "../config/firebase";
 import api from "../config/axios";
+import { registerInit } from "../services/passwordResetService";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -37,6 +38,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [showSignupOtp, setShowSignupOtp] = useState(false);
+  const [pendingSignup, setPendingSignup] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -112,9 +115,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                     data: { type: 'welcome_login' }
                   });
                 }
-              } catch {}
+              } catch (e) { void e; }
             }
-          } catch {}
+          } catch (e) { void e; }
           // Show permissions popup on first login if not completed
           try {
             const completed = localStorage.getItem('permissionsCompleted') === 'true';
@@ -187,118 +190,36 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           profileImage: profileImage || '',
           photos: profileImage ? [profileImage] : []
         });
-        const result = await register({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          age: parseInt(formData.age),
-          gender: (formData.gender || '').toLowerCase(),
-          college: formData.college,
-          department: formData.department,
-          year: formData.year,
-          profileImage: profileImage || '',
-          photos: profileImage ? [profileImage] : []
-        });
-        console.log('[AUTH PAGE] Registration result:', result);
-        if (result?.success) {
-          console.log('[AUTH PAGE] Setting permission popup to show');
-          setIsSubmitting(false);
-          // Use setTimeout to ensure state updates properly
-          setTimeout(() => {
-            setShowPermissionPopup(true);
-          }, 100);
-
-          // Acquire FCM token and send welcome notification
-          try {
-            if (isSupported) {
-              const granted = await requestPermission();
-              if (granted) {
-                // Ensure token is saved to backend
-                await updateToken();
-
-                // Get the token to log and optionally re-send to backend
-                const token = fcmToken || (await getFCMToken());
-                if (token) {
-                  console.log('[FCM] Registration token (for local testing):', token);
-                  // Optionally ensure backend has the token
-                  try {
-                    await api.post('/notifications/token', { token });
-                    console.log('[FCM] Token confirmed with backend');
-                  } catch (tokErr) {
-                    console.warn('[FCM] Could not confirm token with backend:', tokErr);
-                  }
-
-                  // Attempt sending a welcome notification immediately
-                  try {
-                    const rawUser = (result as unknown as { user?: { _id?: string; id?: string } }).user;
-                    const userId = rawUser?._id ?? rawUser?.id;
-                    if (userId) {
-                      await api.post('/notifications/send', {
-                        userId,
-                        title: 'Welcome to Campus Connection 🎉',
-                        body: 'Thanks for signing up! You’ll now receive important updates.',
-                        data: { type: 'welcome' }
-                      });
-                      console.log('[FCM] Welcome notification request sent');
-                      // Local fallback: show a native notification if push doesn’t appear
-                      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                        try {
-                          new Notification('Welcome to Campus Connection 🎉', {
-                            body: 'Thanks for signing up! You’ll now receive important updates.'
-                          });
-                          console.log('[FCM] Local welcome notification displayed');
-                        } catch (notifErr) {
-                          console.warn('[FCM] Local notification failed:', notifErr);
-                        }
-                      }
-                    } else {
-                      console.warn('[FCM] Missing userId for welcome notification');
-                    }
-                  } catch (sendErr) {
-                    console.warn('[FCM] Welcome notification send failed (Admin not initialized or token not active):', sendErr);
-                    // Local fallback even when server-side send fails
-                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                      try {
-                        new Notification('Welcome to Campus Connection 🎉', {
-                          body: 'Thanks for signing up! You’ll now receive important updates.'
-                        });
-                        console.log('[FCM] Local welcome notification displayed (fallback)');
-                      } catch (notifErr) {
-                        console.warn('[FCM] Local notification failed (fallback):', notifErr);
-                      }
-                    }
-                  }
-                } else {
-                  console.warn('[FCM] No token retrieved after permission grant');
-                }
-              } else {
-                console.log('[FCM] Notification permission not granted by user');
-              }
-            } else {
-              console.log('[FCM] Notifications not supported in this environment');
-            }
-          } catch (fcmErr) {
-            console.warn('[FCM] Error during FCM setup after registration:', fcmErr);
+        try {
+          const payload = {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            age: parseInt(formData.age),
+            gender: (formData.gender || '').toLowerCase(),
+            college: formData.college,
+            department: formData.department,
+            year: formData.year,
+            profileImage: profileImage || '',
+            photos: profileImage ? [profileImage] : []
+          };
+          const initRes = await registerInit(payload);
+          if (initRes?.status === 'success') {
+            setPendingSignup(payload);
+            setShowSignupOtp(true);
+            setIsSubmitting(false);
+            showToast({ type: 'success', message: 'We sent a verification code to your email.', duration: 3000 });
+          } else {
+            const message = initRes?.message || 'Could not start signup verification.';
+            setError(message);
+            setIsSubmitting(false);
+            showToast({ type: 'error', message, duration: 4000 });
           }
-          // Don't navigate yet - wait for permission popup
-          // Prepare verify modal if unverified
-          const u = result.user as any;
-          const skipped = localStorage.getItem('verificationSkipped') === 'true';
-          const hasBio = !!(u?.bio && String(u.bio).trim().length > 0);
-          const photosArr = Array.isArray(u?.photos) ? u.photos : [];
-          const hasPhoto = (photosArr.length > 0) || !!u?.profileImage;
-          const interestsArr = Array.isArray(u?.interests) ? u.interests : [];
-          const hasInterests = interestsArr.length > 0;
-          const complete = hasBio && hasPhoto && hasInterests;
-          if (!(skipped || complete)) {
-            const pUrl = (u?.profileImage && u.profileImage.length > 0) ? u.profileImage : (u?.photos?.[0] || undefined);
-            setVerifyProfileImageUrl(pUrl);
-          }
-        } else {
-          setError(result?.message || "Registration failed. Please try again.");
-          showToast({ type: 'error', title: 'Registration failed', message: result?.message || 'Please try again.' });
-          if (result.errors) setServerErrors(result.errors);
+        } catch (err: any) {
+          const message = err.response?.data?.message || err.message || 'Could not start signup verification.';
+          setError(message);
           setIsSubmitting(false);
+          showToast({ type: 'error', message, duration: 4000 });
         }
       }
 
@@ -402,7 +323,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         <VerifyProfileModal
           isOpen={showVerifyModal}
           onClose={() => setShowVerifyModal(false)}
-          profileImageUrl={verifyProfileImageUrl}
           onVerifiedSuccess={() => {
             updateUser({ isVerified: true });
             showToast({ type: 'success', message: 'You are now verified!' });
@@ -957,6 +877,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
           isOpen={showForgot}
           onClose={() => setShowForgot(false)}
           mode="forgot"
+        />
+      )}
+
+      {/* Signup OTP Popup */}
+      {showSignupOtp && (
+        <PasswordResetPopup
+          isOpen={showSignupOtp}
+          onClose={() => setShowSignupOtp(false)}
+          mode="signup"
+          prefilledEmail={pendingSignup?.email}
+          signupData={pendingSignup}
         />
       )}
     </div>

@@ -8,6 +8,9 @@ import {
   verifyPasswordOtp,
   updatePasswordWithOtp,
   resendPasswordOtp,
+  registerInit,
+  verifySignupOtp,
+  resendSignupOtp,
 } from '../services/passwordResetService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -16,16 +19,20 @@ interface PasswordResetPopupProps {
   isOpen: boolean;
   onClose: () => void;
   resetToken?: string;
-  mode?: 'forgot' | 'reset'; // 'forgot' = request OTP, 'reset' (legacy) not used in OTP flow
+  mode?: 'forgot' | 'reset' | 'signup';
+  prefilledEmail?: string;
+  signupData?: any;
 }
 
 export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
   isOpen,
   onClose,
   resetToken,
-  mode = 'forgot'
+  mode = 'forgot',
+  prefilledEmail,
+  signupData
 }) => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(prefilledEmail || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -65,6 +72,31 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
+    if (mode === 'signup') {
+      try {
+        if (!signupData || !signupData.email) {
+          throw new Error('Missing signup data');
+        }
+        setEmail(signupData.email);
+        const response = await registerInit(signupData);
+        if (response?.status === 'success') {
+          showToast({ type: 'success', message: 'OTP sent to your email. Please check your inbox.', duration: 4000 });
+          setStep('otp');
+          setOtpInputs(['', '', '', '', '', '']);
+          setOtpTimer(60);
+          setCanResend(false);
+        } else {
+          throw new Error(response?.message || 'Failed to send OTP');
+        }
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.';
+        setError(errorMessage);
+        showToast({ type: 'error', message: errorMessage, duration: 4000 });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
 
     if (!email) {
       setError('Email is required');
@@ -180,6 +212,20 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
     }
     setIsSubmitting(true);
     try {
+      if (mode === 'signup') {
+        const response = await verifySignupOtp(email, otp);
+        if (response?.status === 'success') {
+          setSuccess(true);
+          showToast({ type: 'success', message: 'Email verified and account created!', duration: 3000 });
+          setTimeout(() => {
+            navigate('/auth');
+            onClose();
+          }, 1500);
+          return;
+        } else {
+          throw new Error(response?.message || 'Invalid OTP');
+        }
+      }
       const response = await verifyPasswordOtp(email, otp);
       if (response?.status === 'success' && response?.data?.otpSessionId) {
         setOtpSessionId(response.data.otpSessionId);
@@ -203,7 +249,7 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
     setIsSubmitting(true);
     setError(null);
     try {
-      const response = await resendPasswordOtp(email);
+      const response = mode === 'signup' ? await resendSignupOtp(email) : await resendPasswordOtp(email);
       if (response?.status === 'success') {
         showToast({ type: 'success', message: 'OTP resent to your email.', duration: 3000 });
         setOtpInputs(['', '', '', '', '', '']);
@@ -269,14 +315,14 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
                 </div>
               </div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                {step === 'request' && 'Reset Password'}
-                {step === 'otp' && 'Enter OTP'}
-                {step === 'change' && 'Set New Password'}
+                {mode === 'signup' ? (step === 'request' ? 'Verify Your Email' : step === 'otp' ? 'Enter OTP' : 'Verified') : (
+                  step === 'request' ? 'Reset Password' : step === 'otp' ? 'Enter OTP' : 'Set New Password'
+                )}
               </h2>
               <p className="text-white/80 text-sm">
-                {step === 'request' && 'Enter your email and we\'ll send an OTP'}
-                {step === 'otp' && 'Enter the 6-digit OTP sent to your email'}
-                {step === 'change' && 'Enter your new password below'}
+                {mode === 'signup' ? (step === 'request' ? 'We\'ll send a verification code to your email' : step === 'otp' ? 'Enter the 6-digit OTP sent to your email' : 'Email verified') : (
+                  step === 'request' ? 'Enter your email and we\'ll send an OTP' : step === 'otp' ? 'Enter the 6-digit OTP sent to your email' : 'Enter your new password below'
+                )}
               </p>
             </div>
 
@@ -322,7 +368,7 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
                         placeholder="Enter your email"
                         className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
                         required
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || mode === 'signup'}
                       />
                     </div>
                   </div>

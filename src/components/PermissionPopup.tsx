@@ -119,11 +119,11 @@ export const PermissionPopup: React.FC<PermissionPopupProps> = ({ onComplete }) 
       await api.put('/auth/profile', {
         permissionsSet: false
       });
-      try { localStorage.setItem('permissionsCompleted', 'true'); } catch {}
+      try { localStorage.setItem('permissionsCompleted', 'true'); } catch (e) { void e; }
       onComplete();
     } catch (error) {
       console.error('Error saving skip:', error);
-      try { localStorage.setItem('permissionsCompleted', 'true'); } catch {}
+      try { localStorage.setItem('permissionsCompleted', 'true'); } catch (e) { void e; }
       onComplete(); // Continue anyway
     }
   };
