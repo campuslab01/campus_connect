@@ -155,6 +155,36 @@ const handleEmojiSelect = (emoji: any) => {
   const [activeTab, setActiveTab] = useState<"primary" | "requests">("primary");
   const [showDeleteMenu, setShowDeleteMenu] = useState(false);
   const socket = useSocket();
+  const inputRef = useRef<HTMLFormElement | null>(null);
+  const [inputHeight, setInputHeight] = useState<number>(72);
+
+  useEffect(() => {
+    const updateInputHeight = () => {
+      setInputHeight(inputRef.current?.offsetHeight || 72);
+    };
+    updateInputHeight();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateInputHeight) : null;
+    if (ro && inputRef.current) ro.observe(inputRef.current);
+    window.addEventListener('resize', updateInputHeight);
+    return () => {
+      if (ro && inputRef.current) ro.disconnect();
+      window.removeEventListener('resize', updateInputHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    const setVh = () => {
+      const vh = (window.visualViewport?.height || window.innerHeight) * 0.01;
+      document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+    };
+    setVh();
+    window.visualViewport?.addEventListener('resize', setVh);
+    window.addEventListener('resize', setVh);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', setVh);
+      window.removeEventListener('resize', setVh);
+    };
+  }, []);
   
   // Fetch chats using React Query
   const { data: chatsData, isLoading: loading, error: chatsError } = useChats(1, 50);
@@ -786,15 +816,15 @@ const filteredChats = transformedChats.filter(
 // message box UI
     return (
       <motion.div
-        className="min-h-screen bg-cover bg-center relative flex flex-col"
-        style={{ backgroundImage: `url(${bgImage})` }}
+        className="bg-cover bg-center relative flex flex-col"
+        style={{ backgroundImage: `url(${bgImage})`, minHeight: 'calc(var(--app-vh, 1vh) * 100)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <div className="absolute inset-0 bg-black/50 backdrop-blur-[1.3px]"></div>
 
-        <div className="fixed inset-x-0 top-0 bottom-16 z-10 max-w-3xl mx-auto flex flex-col">
+        <div className="absolute inset-0 z-10 max-w-3xl mx-auto flex flex-col">
         {/* Chat Header */}
           <motion.div className="bg-black/40 backdrop-blur-md border-b border-white/10 p-4 z-20 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -873,7 +903,9 @@ const filteredChats = transformedChats.filter(
           </motion.div>
 
           {/* Messages */}
-          <motion.div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <motion.div className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain"
+            style={{ paddingBottom: inputHeight + 24 }}
+          >
             {/* Load more button */}
             {hasMoreMessages && (
               <button
@@ -1045,8 +1077,10 @@ const filteredChats = transformedChats.filter(
 
           {/* Message Input */}
           <motion.form
+            ref={inputRef}
             onSubmit={(e) => handleSendMessage(e)}
-            className={`flex-shrink-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 sticky bottom-0 z-20 ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`fixed inset-x-0 bottom-0 z-20 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 max-w-3xl mx-auto ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div className="flex items-center gap-2 w-full">
               <motion.input

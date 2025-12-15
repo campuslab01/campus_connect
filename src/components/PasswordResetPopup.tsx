@@ -217,10 +217,32 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
         if (response?.status === 'success') {
           setSuccess(true);
           showToast({ type: 'success', message: 'Email verified and account created!', duration: 3000 });
-          setTimeout(() => {
-            navigate('/auth');
-            onClose();
-          }, 1500);
+          try {
+            if (signupData?.password) {
+              const loginResult = await login(email, signupData.password);
+              if (loginResult.success) {
+                setTimeout(() => {
+                  navigate('/discover');
+                  onClose();
+                }, 1500);
+              } else {
+                setTimeout(() => {
+                  navigate('/auth');
+                  onClose();
+                }, 1500);
+              }
+            } else {
+              setTimeout(() => {
+                navigate('/auth');
+                onClose();
+              }, 1500);
+            }
+          } catch (e) {
+            setTimeout(() => {
+              navigate('/auth');
+              onClose();
+            }, 1500);
+          }
           return;
         } else {
           throw new Error(response?.message || 'Invalid OTP');
