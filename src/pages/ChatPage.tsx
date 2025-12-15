@@ -1079,7 +1079,7 @@ const filteredChats = transformedChats.filter(
           <motion.form
             ref={inputRef}
             onSubmit={(e) => handleSendMessage(e)}
-            className={`fixed inset-x-0 bottom-0 z-20 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 max-w-3xl mx-auto ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`fixed inset-x-0 bottom-0 z-[60] p-4 bg-black/40 backdrop-blur-md border-t border-white/10 max-w-3xl mx-auto ${(selectedChatData?.chatRequest?.isPending && !selectedChatData?.chatRequest?.isRequester) || selectedChatData?.chatRequest?.isRejected ? 'opacity-50 pointer-events-none' : ''}`}
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div className="flex items-center gap-2 w-full">
