@@ -560,8 +560,8 @@ const handleEmojiSelect = (emoji: any) => {
   }, [showQuiz, quizTimeLeft]);
 
   const scrollToBottom = () => {
-    const behavior = isKeyboardOpen ? "auto" : "smooth";
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    if (isKeyboardOpen) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -584,7 +584,26 @@ const handleEmojiSelect = (emoji: any) => {
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      if (isKeyboardOpen) {
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    } catch {}
+    return () => {
+      try {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      } catch {}
+    };
+  }, [isKeyboardOpen]);
+
   const handleInputFocus = () => {
+    if (isKeyboardOpen) return;
     setTimeout(() => {
       if (messagesContainerRef.current) {
         messagesContainerRef.current.scrollTo({
@@ -904,7 +923,7 @@ const filteredChats = transformedChats.filter(
           </motion.div>
 
           {/* Messages */}
-          <motion.div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+          <motion.div ref={messagesContainerRef} className={`flex-1 ${isKeyboardOpen ? 'overflow-hidden' : 'overflow-y-auto'} p-4 space-y-4`}>
             {/* Load more button */}
             {hasMoreMessages && (
               <button
