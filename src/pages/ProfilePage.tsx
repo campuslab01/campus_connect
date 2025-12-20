@@ -352,9 +352,19 @@ const ProfilePage: React.FC = () => {
     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
-  const handleDeleteAccount = () => {
-    // delete logic
-    console.log('Account deleted');
+  const handleDeleteAccount = async () => {
+    try {
+      await api.delete('/auth/account');
+      logout();
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      navigate('/auth');
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        message: err.response?.data?.message || 'Failed to delete account',
+        duration: 4000
+      });
+    }
     setShowModal(null);
   };
 
