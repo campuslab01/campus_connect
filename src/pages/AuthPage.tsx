@@ -630,11 +630,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                       <option value="" disabled className="text-gray-400">
                         Academic Year
                       </option>
-                      <option value="Freshman">Freshman</option>
-                      <option value="Sophomore">Sophomore</option>
-                      <option value="Junior">Junior</option>
-                      <option value="Senior">Senior</option>
-                      <option value="Graduate">Graduate</option>
+                      
                       <option value="1st">1st</option>
                       <option value="2nd">2nd</option>
                       <option value="3rd">3rd</option>

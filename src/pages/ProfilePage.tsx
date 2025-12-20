@@ -1132,11 +1132,11 @@ const SelectField = ({ label, value, editable, onChange }: any) => {
           onChange={(e) => onChange(e.target.value)}
           className={`${commonStyles} focus:outline-none focus:ring-2 focus:ring-pink-400`}
         >
-          <option>Freshman</option>
-          <option>Sophomore</option>
-          <option>Junior</option>
-          <option>Senior</option>
-          <option>Graduate</option>
+          <option>1st</option>
+          <option>2nd</option>
+          <option>3rd</option>
+          <option>4th</option>
+          
         </select>
       ) : (
         <div className={`${commonStyles} text-white/90`}>{value || 'Not specified'}</div>
