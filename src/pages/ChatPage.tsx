@@ -228,7 +228,7 @@ const handleEmojiSelect = (emoji: any) => {
   // Transform messages to match UI and sort by timestamp
   const userIdStr = ((user as any)?.id?.toString() || (user as any)?._id?.toString()) || '';
 
-  const transformedMessages = allMessages
+  const transformedMessages = React.useMemo(() => allMessages
     .map((msg: any) => {
       // Use isOwn if explicitly set (for optimistic updates), otherwise calculate
       let isOwn: boolean;
@@ -257,7 +257,7 @@ const handleEmojiSelect = (emoji: any) => {
     .sort((a: any, b: any) => {
       // Sort by timestamp - oldest to newest for display (messages appear bottom to top)
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+    }), [allMessages, userIdStr]);
 
   // Quiz states - track per chat (declared before useEffect to avoid hoisting issues)
   const [showQuiz, setShowQuiz] = useState(false);
@@ -563,10 +563,18 @@ const handleEmojiSelect = (emoji: any) => {
   // Timer effect
   useEffect(() => {
     if (showQuiz && quizTimeLeft > 0) {
-      const timer = setInterval(() => setQuizTimeLeft(prev => prev - 1), 1000);
+      const timer = setInterval(() => {
+        setQuizTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       return () => clearInterval(timer);
     }
-  }, [showQuiz, quizTimeLeft]);
+  }, [showQuiz]); // Remove quizTimeLeft dependency to avoid interval re-creation
 
   const scrollToBottom = () => {
     if (isKeyboardOpen) return;
@@ -1173,9 +1181,19 @@ const filteredChats = transformedChats.filter(
             <Smile size={20} />
           </motion.button>
 
-              <motion.button type="submit" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white rounded-full p-3 transition-all shadow-lg shadow-pink-500/30" whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }}>
-                <Send size={20} className="transform rotate-45" />
-              </motion.button>
+          <motion.button 
+            type="submit" 
+            disabled={sendMessageMutation.isPending || !message.trim()}
+            className={`bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white rounded-full p-3 transition-all shadow-lg shadow-pink-500/30 ${sendMessageMutation.isPending || !message.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+            whileHover={!sendMessageMutation.isPending ? { scale: 1.1, rotate: 5 } : {}}
+            whileTap={!sendMessageMutation.isPending ? { scale: 0.9 } : {}}
+          >
+            {sendMessageMutation.isPending ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Send size={20} className="transform rotate-45" />
+            )}
+          </motion.button>
               {/* Emoji Picker */}
           {showEmojiPicker && (
             <div className="absolute bottom-14 right-0 z-50">

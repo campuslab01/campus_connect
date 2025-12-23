@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'; // Import useCallback
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'; // Removed Outlet as it's not directly used here
+import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom'; // Removed Outlet as it's not directly used here
 import Navigation from './components/Navigation';
 import SplashScreen from './components/SplashScreen';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -22,6 +22,18 @@ import { useLenis } from './hooks/useLenis';
 import { ToastProvider } from './contexts/ToastContext';
 import Toaster from './components/Toaster';
 import { useGlobalSocketUpdates } from './hooks/useGlobalSocketUpdates';
+
+// Layout component for authenticated pages
+const AuthenticatedLayout = () => {
+  return (
+    <>
+      <main>
+        <Outlet />
+      </main>
+      <Navigation />
+    </>
+  );
+};
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
@@ -62,18 +74,17 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {isAuthenticated && <Navigation />}
-      <main>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/landing" element={!isAuthenticated ? <LandingPage onGetStarted={handleGetStarted} /> : <Navigate to="/discover" replace />} />
-          <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" replace />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/payment/callback" element={<PaymentCallback />} />
-    
-          {/* Authenticated Routes */}
-          <Route element={<ProtectedRoute />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/landing" element={!isAuthenticated ? <LandingPage onGetStarted={handleGetStarted} /> : <Navigate to="/discover" replace />} />
+        <Route path="/auth" element={!isAuthenticated ? <AuthPage onAuth={() => {}} /> : <Navigate to="/discover" replace />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/payment/callback" element={<PaymentCallback />} />
+  
+        {/* Authenticated Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AuthenticatedLayout />}>
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/search" element={<SearchPage />} />
@@ -84,21 +95,21 @@ function AppContent() {
             <Route path="/" element={<Navigate to="/discover" replace />} />
             <Route path="*" element={<Navigate to="/discover" replace />} />
           </Route>
-          
-          {/* Catch-all route for unauthenticated users - check hasLaunchedBefore */}
-          <Route path="*" element={
-            !isAuthenticated ? (
-              localStorage.getItem('hasLaunchedBefore') === 'true' ? (
-                <Navigate to="/auth" replace />
-              ) : (
-                <Navigate to="/landing" replace />
-              )
+        </Route>
+        
+        {/* Catch-all route for unauthenticated users - check hasLaunchedBefore */}
+        <Route path="*" element={
+          !isAuthenticated ? (
+            localStorage.getItem('hasLaunchedBefore') === 'true' ? (
+              <Navigate to="/auth" replace />
             ) : (
-              <Navigate to="/discover" replace />
+              <Navigate to="/landing" replace />
             )
-          } />
-        </Routes>
-      </main>
+          ) : (
+            <Navigate to="/discover" replace />
+          )
+        } />
+      </Routes>
       <Toaster />
     </div>
   );

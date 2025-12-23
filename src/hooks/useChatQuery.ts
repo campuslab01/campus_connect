@@ -111,9 +111,9 @@ export const useInfiniteMessages = (chatId: string | number | null, theirPublicK
     getNextPageParam: (lastPage) => lastPage?.nextPage,
     enabled: !!chatId,
     initialPageParam: 1,
-    refetchInterval: 30000,
-    refetchIntervalInBackground: false,
-    staleTime: 15000,
+    refetchInterval: false, // Disable polling, rely on socket events
+    refetchOnWindowFocus: false,
+    staleTime: Infinity, // Messages are immutable, don't refetch unless invalidated
   });
 };
 

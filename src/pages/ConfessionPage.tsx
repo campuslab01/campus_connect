@@ -75,7 +75,7 @@ const ConfessionPage: React.FC = () => {
   const locked = Boolean(data?.pages?.some((p: any) => p?.meta?.locked));
 
   // Transform API response to match Confession structure
-  const confessions = confessionsData.map((confession: any) => {
+  const confessions = React.useMemo(() => confessionsData.map((confession: any) => {
     // Ensure comments is always an array
     const commentsArray = Array.isArray(confession.comments) ? confession.comments : [];
 
@@ -152,7 +152,7 @@ const ConfessionPage: React.FC = () => {
         } as Comment;
       })
     };
-  });
+  }), [confessionsData, user]);
 
   const error = queryError ? ((queryError as any)?.response?.data?.message || 'Failed to load confessions') : null;
   const confLimit = Number(membership?.meta?.confessionLimit) || 30;
@@ -170,9 +170,9 @@ const ConfessionPage: React.FC = () => {
     socket.onConfessionNew(handleNewConfession);
 
     return () => {
-      // Cleanup handled by SocketContext
+      socket.offConfessionNew(handleNewConfession);
     };
-  }, [socket]);
+  }, [socket, queryClient]);
 
   const handleSubmitConfession = async (e: React.FormEvent) => {
     e.preventDefault();

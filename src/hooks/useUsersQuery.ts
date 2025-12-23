@@ -17,9 +17,9 @@ export const useUserSuggestions = (limit = 50) => {
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,
-    refetchInterval: 35000,
-    refetchIntervalInBackground: false,
-    staleTime: 20000,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 };
 
@@ -43,17 +43,22 @@ export const useSearchUsers = (filters: any, enabled = true) => {
     getNextPageParam: (lastPage) => lastPage.nextPage,
     enabled,
     initialPageParam: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 60000, // Cache search results for 1 minute
   });
 };
 
-export const useUserLikes = () => {
+export const useUserLikes = (countOnly = false) => {
   return useQuery({
-    queryKey: ['userLikes'],
+    queryKey: ['userLikes', { countOnly }],
     queryFn: async () => {
-      const response = await api.get('/users/likes');
+      const response = await api.get('/users/likes', {
+        params: { countOnly }
+      });
       return response.data.data;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: false, // Rely on socket updates
+    staleTime: Infinity,
   });
 };
 

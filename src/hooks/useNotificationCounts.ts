@@ -14,9 +14,10 @@ export const useNotificationCounts = () => {
     queryFn: async () => {
       try {
         // Fetch all notification counts in parallel
+        // Use countOnly=true for likes to reduce payload size
         const [unreadMessages, likesData] = await Promise.allSettled([
           api.get('/chat/unread-count').catch(() => ({ data: { data: { unreadCount: 0 } } })),
-          api.get('/users/likes').catch(() => ({ data: { data: { likedBy: [], matches: [] } } }))
+          api.get('/users/likes?countOnly=true').catch(() => ({ data: { data: { likes: [], likedBy: [], matches: [] } } }))
         ]);
 
         // Extract message count - API returns { data: { unreadCount } }
@@ -24,24 +25,34 @@ export const useNotificationCounts = () => {
           ? unreadMessages.value.data?.data?.unreadCount || 0
           : 0;
 
-        // Extract likes count - count likedBy (people who liked you) that aren't matches
+        // Extract likes count
         const likesDataResult = likesData.status === 'fulfilled'
           ? likesData.value.data?.data || {}
           : {};
         
-        // Count likes: likedBy count minus matches (since matches are also in likedBy)
-        const likedByCount = Array.isArray(likesDataResult.likedBy) ? likesDataResult.likedBy.length : 0;
-        const matchesCount = Array.isArray(likesDataResult.matches) ? likesDataResult.matches.length : 0;
+        // When using countOnly=true, the backend might return counts directly or empty arrays
+        // Check if we got counts or arrays
+        let likedByCount = 0;
+        let matchesCount = 0;
+
+        if (Array.isArray(likesDataResult.likedBy)) {
+             likedByCount = likesDataResult.likedBy.length;
+        } else if (typeof likesDataResult.likedBy === 'number') {
+             likedByCount = likesDataResult.likedBy;
+        }
+
+        if (Array.isArray(likesDataResult.matches)) {
+             matchesCount = likesDataResult.matches.length;
+        } else if (typeof likesDataResult.matches === 'number') {
+             matchesCount = likesDataResult.matches;
+        }
+
         // People who liked you but you haven't matched with yet = new likes
+        // Note: If the backend logic for countOnly returns total likes including matches, adjust logic.
+        // Assuming likedBy includes everyone who liked.
         const likesCount = Math.max(0, likedByCount - matchesCount);
 
-        // For confessions, count total confessions (you can add read tracking later)
-        // For now, return 0 as confessions don't have unread tracking yet
-        // You can implement read tracking similar to messages if needed
         const confessionsCount = 0;
-
-        // Profile notifications - could be new profile views, etc.
-        // For now, set to 0 unless you have a specific endpoint
         const profileCount = 0;
 
         return {
@@ -51,7 +62,6 @@ export const useNotificationCounts = () => {
           profile: Math.max(0, profileCount),
         };
       } catch (error) {
-        // Return zero counts on error
         return {
           messages: 0,
           likes: 0,
@@ -60,8 +70,9 @@ export const useNotificationCounts = () => {
         };
       }
     },
-    refetchInterval: 10000, // Refetch every 10 seconds to keep counts updated
-    staleTime: 5000, // Consider data stale after 5 seconds for more frequent updates
+    refetchInterval: 60000, // Refetch every 60 seconds (much less aggressive)
+    staleTime: 30000, // Data is fresh for 30 seconds
+    refetchOnWindowFocus: 'always', // Update when user comes back to tab
   });
 };
 

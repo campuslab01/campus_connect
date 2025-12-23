@@ -90,11 +90,12 @@ export const useGlobalSocketUpdates = () => {
 
     // Cleanup
     return () => {
+      socket.offMessage(handleNewMessage);
+      socket.offLikeNew(handleNewLike);
+      socket.offMatchNew(handleNewMatch);
+      socket.offConfessionNew(handleNewConfession);
+
       if (socket.socket) {
-        socket.socket.off('message:new', handleNewMessage);
-        socket.socket.off('like:new', handleNewLike);
-        socket.socket.off('match:new', handleNewMatch);
-        socket.socket.off('confession:new', handleNewConfession);
         socket.socket.off('chat:request', handleChatRequest);
         socket.socket.off('chat:accepted', handleChatAccepted);
         socket.socket.off('chat:rejected', handleChatRejected);

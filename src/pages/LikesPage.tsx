@@ -122,7 +122,8 @@ const LikesPage: React.FC = () => {
     socket.onMatchNew(handleNewMatch);
 
     return () => {
-      // Cleanup handled by SocketContext
+      socket.offLikeNew(handleNewLike);
+      socket.offMatchNew(handleNewMatch);
     };
   }, [socket, queryClient]);
 

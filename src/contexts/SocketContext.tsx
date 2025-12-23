@@ -12,12 +12,17 @@ interface SocketContextType {
   onMessage: (callback: (data: any) => void) => void;
   offMessage: (callback: (data: any) => void) => void;
   onTypingStart: (callback: (data: any) => void) => void;
+  offTypingStart: (callback: (data: any) => void) => void;
   onTypingStop: (callback: (data: any) => void) => void;
+  offTypingStop: (callback: (data: any) => void) => void;
   startTyping: (chatId: string) => void;
   stopTyping: (chatId: string) => void;
   onMatchNew: (callback: (data: any) => void) => void;
+  offMatchNew: (callback: (data: any) => void) => void;
   onLikeNew: (callback: (data: any) => void) => void;
+  offLikeNew: (callback: (data: any) => void) => void;
   onConfessionNew: (callback: (data: any) => void) => void;
+  offConfessionNew: (callback: (data: any) => void) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -148,9 +153,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
+  const offTypingStart = (callback: (data: any) => void) => {
+    if (socket) {
+      socket.off('typing:start', callback);
+    }
+  };
+
   const onTypingStop = (callback: (data: any) => void) => {
     if (socket) {
       socket.on('typing:stop', callback);
+    }
+  };
+
+  const offTypingStop = (callback: (data: any) => void) => {
+    if (socket) {
+      socket.off('typing:stop', callback);
     }
   };
 
@@ -186,9 +203,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
+  const offMatchNew = (callback: (data: any) => void) => {
+    if (socket) {
+      socket.off('match:new', callback);
+    }
+  };
+
   const onLikeNew = (callback: (data: any) => void) => {
     if (socket) {
       socket.on('like:new', callback);
+    }
+  };
+
+  const offLikeNew = (callback: (data: any) => void) => {
+    if (socket) {
+      socket.off('like:new', callback);
     }
   };
 
@@ -198,25 +227,36 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
-  const value: SocketContextType = {
-    socket,
-    isConnected,
-    joinChat,
-    leaveChat,
-    sendMessage,
-    onMessage,
-    offMessage,
-    onTypingStart,
-    onTypingStop,
-    startTyping,
-    stopTyping,
-    onMatchNew,
-    onLikeNew,
-    onConfessionNew,
+  const offConfessionNew = (callback: (data: any) => void) => {
+    if (socket) {
+      socket.off('confession:new', callback);
+    }
   };
 
   return (
-    <SocketContext.Provider value={value}>
+    <SocketContext.Provider
+      value={{
+        socket,
+        isConnected,
+        joinChat,
+        leaveChat,
+        sendMessage,
+        onMessage,
+        offMessage,
+        onTypingStart,
+        offTypingStart,
+        onTypingStop,
+        offTypingStop,
+        startTyping,
+        stopTyping,
+        onMatchNew,
+        offMatchNew,
+        onLikeNew,
+        offLikeNew,
+        onConfessionNew,
+        offConfessionNew,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );
