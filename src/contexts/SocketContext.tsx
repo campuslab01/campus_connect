@@ -171,9 +171,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
+  const lastTypingSentRef = useRef<number>(0);
+
   const startTyping = (chatId: string) => {
     if (socket && isConnected) {
-      socket.emit('typing:start', { chatId });
+      const now = Date.now();
+      // Throttle: Only send typing:start if we haven't sent it in the last 2 seconds
+      if (now - lastTypingSentRef.current > 2000) {
+        socket.emit('typing:start', { chatId });
+        lastTypingSentRef.current = now;
+      }
       
       // Clear existing timeout
       if (typingTimeoutRef.current) {
@@ -190,6 +197,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const stopTyping = (chatId: string) => {
     if (socket && isConnected) {
       socket.emit('typing:stop', { chatId });
+      lastTypingSentRef.current = 0; // Reset throttle
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
