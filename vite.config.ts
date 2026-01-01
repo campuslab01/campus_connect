@@ -6,6 +6,12 @@ export default defineConfig(({ mode }) => {
   // Load environment variables based on the current mode
   const env = loadEnv(mode, process.cwd(), '');
 
+  if (mode !== 'development') {
+    if (!env.VITE_API_URL) {
+      throw new Error('VITE_API_URL must be set for non-development builds');
+    }
+  }
+
   return {
     plugins: [
       react(),
