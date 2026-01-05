@@ -123,7 +123,7 @@ export const useSendMessage = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ chatId, content, theirPublicKey, type = 'text', confessionId = null }: { chatId: string | number; content: string; theirPublicKey?: string | null; type?: string; confessionId?: string | null }) => {
+    mutationFn: async ({ chatId, content, type = 'text', confessionId = null }: { chatId: string | number; content: string; theirPublicKey?: string | null; type?: string; confessionId?: string | null }) => {
       const payload: any = { content, type };
       if (confessionId) payload.confessionId = confessionId;
       const response = await api.post(`/chat/${chatId}/messages`, payload);

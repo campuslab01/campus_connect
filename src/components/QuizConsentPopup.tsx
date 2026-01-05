@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, Users } from 'lucide-react';
+import { XCircle, Users } from 'lucide-react';
 
 interface QuizConsentPopupProps {
   isOpen: boolean;

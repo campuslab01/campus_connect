@@ -18,6 +18,7 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useChat = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {

@@ -38,7 +38,7 @@ const LikesPage: React.FC = () => {
         const res = await api.get('/payment/premium-status');
         const active = !!res?.data?.active;
         if (mounted) setIsPremiumActive(active);
-      } catch (_) {
+      } catch {
         // Default to non-premium if endpoint unavailable
         if (mounted) setIsPremiumActive(false);
       }

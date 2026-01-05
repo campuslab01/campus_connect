@@ -95,7 +95,7 @@ export const testAuthStatus = () => {
       } else {
         console.warn('⚠️ Token has expired');
       }
-    } catch (e) {
+    } catch {
       console.warn('⚠️ Could not decode token');
     }
   } else {
@@ -107,7 +107,7 @@ export const testAuthStatus = () => {
     try {
       const userData = JSON.parse(user);
       console.log('   User:', userData.name || userData.email);
-    } catch (e) {
+    } catch {
       console.warn('⚠️ Could not parse user data');
     }
   } else {

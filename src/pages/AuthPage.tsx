@@ -13,7 +13,6 @@ import { PermissionPopup } from "../components/PermissionPopup";
 import { PasswordResetPopup } from "../components/PasswordResetPopup";
 import VerifyProfileModal from "../components/VerifyProfileModal";
 import { useNotification } from "../contexts/NotificationContext";
-import { getFCMToken } from "../config/firebase";
 import api from "../config/axios";
 import { registerInit } from "../services/passwordResetService";
 
@@ -36,6 +35,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
 
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [showSignupOtp, setShowSignupOtp] = useState(false);
@@ -57,11 +57,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [showPermissionPopup, setShowPermissionPopup] = useState(false);
   
   const navigate = useNavigate();
-  const { login, register, isLoading, updateUser, user } = useAuth();
+  const { login, isLoading, updateUser, user } = useAuth();
   const { showToast } = useToast();
-  const { requestPermission, updateToken, fcmToken, isSupported, addNotification } = useNotification();
+  const { updateToken, isSupported, addNotification } = useNotification();
   const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [verifyProfileImageUrl, setVerifyProfileImageUrl] = useState<string | undefined>(undefined);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,6 +154,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
         // Validate registration form
         if (!termsAccepted) {
           setError("Please accept the Terms & Conditions to continue.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!ageConfirmed) {
+          setError("You must confirm you are at least 18 years old.");
           setIsSubmitting(false);
           return;
         }
@@ -254,6 +258,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
   const [termsHtml, setTermsHtml] = useState<string | null>(null);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   useEffect(() => {
     if (!showTerms) return; // only load when modal opens
@@ -687,44 +693,91 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
               )}
             </motion.div>
 
-            {/* Terms checkbox (only Signup) */}
+            {/* Terms & Age Confirmation (only Signup) */}
             {!isLogin && (
-              <div className="flex items-center space-x-3 text-white text-sm mt-2">
-                {/* Checkbox only controls acceptance */}
-                <div
-                  className={`w-5 h-5 flex items-center justify-center rounded-lg border-2 cursor-pointer
+              <div className="space-y-3 mt-4">
+                {/* Age Confirmation */}
+                <div className="flex items-start space-x-3 text-white text-sm">
+                  <div
+                    className={`w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg border-2 cursor-pointer mt-0.5
+                  ${
+                    ageConfirmed
+                      ? "bg-gradient-to-tr from-purple-500 to-blue-500 border-transparent"
+                      : "border-white/40 bg-white/10"
+                  } 
+                  transition-all duration-300`}
+                    onClick={() => setAgeConfirmed(!ageConfirmed)}
+                  >
+                    {ageConfirmed && (
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-white/90 text-xs sm:text-sm leading-tight">
+                    I certify that I am at least <strong>18 years old</strong>.
+                  </span>
+                </div>
+
+                {/* Terms Acceptance */}
+                <div className="flex items-start space-x-3 text-white text-sm">
+                  <div
+                    className={`w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg border-2 cursor-pointer mt-0.5
                   ${
                     termsAccepted
                       ? "bg-gradient-to-tr from-purple-500 to-blue-500 border-transparent"
                       : "border-white/40 bg-white/10"
                   } 
                   transition-all duration-300`}
-                  onClick={() => setTermsAccepted(!termsAccepted)}
-                >
-                  {termsAccepted && (
-                    <svg
-                      className="w-3 h-3 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-
-                {/* Text + modal trigger */}
-                <span className="ml-2 text-white text-sm">
-                  I accept the{" "}
-                  <button
-                    type="button"
-                    onClick={() => setShowTerms(true)}
-                    className="text-blue-400 underline font-semibold hover:text-purple-400 transition-colors duration-300"
+                    onClick={() => setTermsAccepted(!termsAccepted)}
                   >
-                    Terms & Conditions
-                  </button>
-                </span>
+                    {termsAccepted && (
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+
+                  <span className="text-white/90 text-xs sm:text-sm leading-tight">
+                    I accept the{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTerms(true)}
+                      className="text-blue-300 underline hover:text-white transition-colors"
+                    >
+                      Terms
+                    </button>
+                    ,{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowPrivacy(true)}
+                      className="text-blue-300 underline hover:text-white transition-colors"
+                    >
+                      Privacy Policy
+                    </button>{" "}
+                    &{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowRules(true)}
+                      className="text-blue-300 underline hover:text-white transition-colors"
+                    >
+                      Rules
+                    </button>
+                    .
+                  </span>
+                </div>
               </div>
             )}
 
@@ -852,9 +905,117 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuth }) => {
                 )}
               </div>
 
-              <div className="mt-6 text-right">
+              <div className="mt-6 flex items-center justify-between">
+                <a
+                  href={`${import.meta.env.BASE_URL}terms`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-300 underline hover:text-white transition-colors text-sm"
+                >
+                  Open in new tab
+                </a>
                 <button
                   onClick={() => setShowTerms(false)}
+                  className="px-5 py-2 bg-gradient-to-r from-purple-500 to-blue-500 
+                       text-white rounded-lg shadow-md hover:shadow-lg 
+                       transition-all duration-300"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Privacy Modal */}
+      <AnimatePresence>
+        {showPrivacy && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative bg-white/10 backdrop-blur-lg border border-white/20 
+                   rounded-2xl p-6 max-w-lg w-full sm:max-w-md md:max-w-lg shadow-2xl text-gray-200"
+            >
+              <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
+                Privacy Policy
+              </h3>
+              <div className="rounded-lg overflow-hidden border border-white/15">
+                <iframe
+                  src={`${import.meta.env.BASE_URL}privacy`}
+                  title="Privacy Policy"
+                  className="w-full h-[60vh] bg-black/20"
+                />
+              </div>
+              <div className="mt-6 flex items-center justify-between">
+                <a
+                  href={`${import.meta.env.BASE_URL}privacy`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-300 underline hover:text-white transition-colors text-sm"
+                >
+                  Open in new tab
+                </a>
+                <button
+                  onClick={() => setShowPrivacy(false)}
+                  className="px-5 py-2 bg-gradient-to-r from-purple-500 to-blue-500 
+                       text-white rounded-lg shadow-md hover:shadow-lg 
+                       transition-all duration-300"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Rules Modal */}
+      <AnimatePresence>
+        {showRules && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative bg-white/10 backdrop-blur-lg border border-white/20 
+                   rounded-2xl p-6 max-w-lg w-full sm:max-w-md md:max-w-lg shadow-2xl text-gray-200"
+            >
+              <h3 className="text-xl font-bold text-white mb-4 text-center sm:text-left">
+                Community Guidelines & Rules
+              </h3>
+              <div className="rounded-lg overflow-hidden border border-white/15">
+                <iframe
+                  src={`${import.meta.env.BASE_URL}rules`}
+                  title="Rules"
+                  className="w-full h-[60vh] bg-black/20"
+                />
+              </div>
+              <div className="mt-6 flex items-center justify-between">
+                <a
+                  href={`${import.meta.env.BASE_URL}rules`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-300 underline hover:text-white transition-colors text-sm"
+                >
+                  Open in new tab
+                </a>
+                <button
+                  onClick={() => setShowRules(false)}
                   className="px-5 py-2 bg-gradient-to-r from-purple-500 to-blue-500 
                        text-white rounded-lg shadow-md hover:shadow-lg 
                        transition-all duration-300"

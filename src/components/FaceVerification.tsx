@@ -11,7 +11,7 @@ interface Props {
 const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [streaming, setStreaming] = useState(false);
+
   const [captured, setCaptured] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ verified: boolean; score: number; liveness: boolean } | null>(null);
@@ -19,20 +19,20 @@ const FaceVerification: React.FC<Props> = ({ onSuccess }) => {
   const { user } = useAuth();
 
   useEffect(() => {
+    const videoEl = videoRef.current;
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          setStreaming(true);
         }
-      } catch (_err) {
+      } catch {
         showToast({ type: 'error', message: 'Camera access denied. Please allow camera to verify.', duration: 4000 });
       }
     })();
     return () => {
-      const v = videoRef.current as HTMLVideoElement | null;
+      const v = videoEl as HTMLVideoElement | null;
       const stream = (v?.srcObject as MediaStream) || null;
       stream?.getTracks().forEach(t => t.stop());
     };

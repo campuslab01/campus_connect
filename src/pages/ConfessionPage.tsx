@@ -17,7 +17,6 @@ const ConfessionPage: React.FC = () => {
   const [showNewConfession, setShowNewConfession] = useState(false);
   const [confessionText, setConfessionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
-  const [likedConfessions, setLikedConfessions] = useState<Set<string>>(new Set());
   const [selectedConfession, setSelectedConfession] = useState<number | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [confessionToShare, setConfessionToShare] = useState<{ id: string | number; content: string } | null>(null);
@@ -60,7 +59,7 @@ const ConfessionPage: React.FC = () => {
       try {
         const res = await api.get('/payment/premium-status');
         if (mounted) setMembership(res.data);
-      } catch (_) {
+      } catch {
         if (mounted) setMembership(null);
       }
     })();
@@ -71,7 +70,7 @@ const ConfessionPage: React.FC = () => {
   const createConfessionMutation = useCreateConfession();
 
   // Flatten paginated confessions
-  const confessionsData = data?.pages.flatMap(page => page.confessions) || [];
+  const confessionsData = React.useMemo(() => data?.pages.flatMap(page => page.confessions) || [], [data]);
   const locked = Boolean(data?.pages?.some((p: any) => p?.meta?.locked));
 
   // Transform API response to match Confession structure
@@ -224,18 +223,6 @@ const ConfessionPage: React.FC = () => {
       if (!confession) return;
 
       const isCurrentlyLiked = confession.isLiked;
-
-      // Optimistic update
-      setLikedConfessions(prev => {
-        const newSet = new Set(prev);
-        const confessionIdStr = confessionId.toString();
-        if (isCurrentlyLiked) {
-          newSet.delete(confessionIdStr);
-        } else {
-          newSet.add(confessionIdStr);
-        }
-        return newSet;
-      });
 
       // Call API
       if (isCurrentlyLiked) {

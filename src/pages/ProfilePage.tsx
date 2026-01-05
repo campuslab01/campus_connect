@@ -112,7 +112,6 @@ const ProfilePage: React.FC = () => {
   });
 
   const [isUploading, setIsUploading] = useState(false);
-  const [isPremiumActive, setIsPremiumActive] = useState<boolean>(false);
   const fileInputId = 'add-photo-input';
   const replaceInputId = (idx: number) => `replace-photo-input-${idx}`;
   
@@ -234,41 +233,7 @@ const ProfilePage: React.FC = () => {
         year: profile.year || ''
       };
     }
-  }, [user]);
-
-  const isProfileDirty = () => {
-    const init = initialProfile.current;
-    if (!init) return false;
-    const curr = {
-      name: profile.name,
-      age: profile.age,
-      bio: profile.bio || '',
-      interests: profile.interests || [],
-      relationshipStatus: profile.relationshipStatus || '',
-      lookingFor: profile.lookingFor || [],
-      college: profile.college || '',
-      department: profile.department || '',
-      year: profile.year || ''
-    };
-    const sameArrays = (a: any[], b: any[]) => {
-      if (a.length !== b.length) return false;
-      for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-      }
-      return true;
-    };
-    if (init.name !== curr.name) return true;
-    if (init.age !== curr.age) return true;
-    if (init.bio !== curr.bio) return true;
-    if (!sameArrays(init.interests, curr.interests)) return true;
-    if (init.relationshipStatus !== curr.relationshipStatus) return true;
-    if (!sameArrays(init.lookingFor, curr.lookingFor)) return true;
-    if (init.college !== curr.college) return true;
-    if (init.department !== curr.department) return true;
-    if (init.year !== curr.year) return true;
-    return false;
-  };
-  
+  }, [user, profile]);
 
   // Handlers
   const handleSaveProfile = async () => {
@@ -367,18 +332,6 @@ const ProfilePage: React.FC = () => {
     }
     setShowModal(null);
   };
-
-  useEffect(() => {
-    const fetchPremiumStatus = async () => {
-      try {
-        const { data } = await api.get('/payment/premium-status');
-        setIsPremiumActive(Boolean(data?.active));
-      } catch (e) {
-        // ignore
-      }
-    };
-    fetchPremiumStatus();
-  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -637,7 +590,7 @@ const ProfilePage: React.FC = () => {
 
                   {/* Relationship Status */}
                   <motion.div variants={itemVariants}>
-                    <label className="block text-sm font-medium text-white/80 mb-2">Relationship Status</label>
+                    <label className="block text-sm font-medium text-white/80 mb-2">Social Status</label>
                     {isEditing ? (
                       <select
                         value={profile.relationshipStatus}
@@ -656,7 +609,7 @@ const ProfilePage: React.FC = () => {
 
                   {/* Looking For */}
                   <motion.div variants={itemVariants}>
-                    <label className="block text-sm font-medium text-white/80 mb-2">Looking For</label>
+                    <label className="block text-sm font-medium text-white/80 mb-2">Interested In</label>
                     {isEditing ? (
                       <div className="space-y-2">
                         {['Long term', 'Short term', 'Friendship'].map((option) => (
@@ -674,12 +627,18 @@ const ProfilePage: React.FC = () => {
                               }}
                               className="mr-2 rounded"
                             />
-                            {option}
+                            {option === 'Long term' ? 'Long-term Connections' : 
+                             option === 'Short term' ? 'Casual Chat' : option}
                           </label>
                         ))}
                       </div>
                     ) : (
-                      <div className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white/90">{profile.lookingFor?.join(', ') || 'Not specified'}</div>
+                      <div className="w-full px-3 py-2 bg-white/10 border border-white/12 rounded-lg text-white/90">
+                        {profile.lookingFor?.map(o => 
+                          o === 'Long term' ? 'Long-term Connections' : 
+                          o === 'Short term' ? 'Casual Chat' : o
+                        ).join(', ') || 'Not specified'}
+                      </div>
                     )}
                   </motion.div>
 

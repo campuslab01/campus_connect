@@ -174,7 +174,7 @@ const DiscoverPage: React.FC = () => {
       try {
         const res = await api.get('/payment/premium-status');
         if (mounted) setMembership(res.data);
-      } catch (_) {
+      } catch {
         if (mounted) setMembership(null);
       }
     })();
@@ -382,7 +382,21 @@ const DiscoverPage: React.FC = () => {
       });
       return newCount;
     });
-  }, [currentUser, setSwipeCount, setShowLimitModal, setExitDirection, setIsSwiping, setPhotoLoading, setCurrentPhotoIndex, setShowNextCard, queryClient]);
+  }, [
+    currentUser, 
+    setSwipeCount, 
+    setShowLimitModal, 
+    setExitDirection, 
+    setIsSwiping, 
+    setPhotoLoading, 
+    setCurrentPhotoIndex, 
+    setShowNextCard, 
+    queryClient,
+    isProfileComplete,
+    limitReached,
+    membership,
+    viewerId
+  ]);
   const handleDragEnd = useCallback(
     (_event: any, info: PanInfo) => {
       const offset = info.offset.x;

@@ -223,7 +223,7 @@ const handleEmojiSelect = (emoji: any) => {
   );
 
   // Flatten paginated messages
-  const allMessages = messagesData?.pages.flatMap((page: any) => page?.messages || []) || [];
+  const allMessages = React.useMemo(() => messagesData?.pages.flatMap((page: any) => page?.messages || []) || [], [messagesData]);
   
   // Transform messages to match UI and sort by timestamp
   const userIdStr = ((user as any)?.id?.toString() || (user as any)?._id?.toString()) || '';
@@ -275,7 +275,7 @@ const handleEmojiSelect = (emoji: any) => {
   const [quizDeniedBy, setQuizDeniedBy] = useState<{ [chatId: string]: 'you' | 'other' | null }>({});
   const [showSelectionsPopup, setShowSelectionsPopup] = useState(false);
   const [receivedSelections, setReceivedSelections] = useState<{ [chatId: string]: any }>({});
-  const [submittedAnswersByChat, setSubmittedAnswersByChat] = useState<{ [chatId: string]: any }>({});
+  const [, setSubmittedAnswersByChat] = useState<{ [key: string]: { [key: number]: string } }>({});
 
   // Send message mutation with optimistic updates
   const sendMessageMutation = useSendMessage();
@@ -449,7 +449,7 @@ const handleEmojiSelect = (emoji: any) => {
         socket.leaveChat(chatIdStr);
       }
     };
-  }, [socket, selectedChatData?.chatId, queryClient, userQuizConsent, showToast]);
+  }, [socket, selectedChatData?.chatId, queryClient, userQuizConsent, showToast, quizCompletedForChats, selectedChatData?.name]);
 
   // Fetch quiz consent status from backend
   const fetchQuizConsentStatus = async (chatId: string | number) => {
@@ -574,16 +574,17 @@ const handleEmojiSelect = (emoji: any) => {
       }, 1000);
       return () => clearInterval(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showQuiz]); // Remove quizTimeLeft dependency to avoid interval re-creation
 
-  const scrollToBottom = () => {
+  const scrollToBottom = React.useCallback(() => {
     if (isKeyboardOpen) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, [isKeyboardOpen]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [transformedMessages, selectedChat]);
+  }, [transformedMessages, selectedChat, scrollToBottom]);
 
   useEffect(() => {
     const vv: any = (window as any).visualViewport;
@@ -610,12 +611,16 @@ const handleEmojiSelect = (emoji: any) => {
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
     return () => {
       try {
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
-      } catch {}
+      } catch {
+        // ignore
+      }
     };
   }, [isKeyboardOpen]);
 

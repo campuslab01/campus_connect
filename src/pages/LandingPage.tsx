@@ -155,7 +155,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           setScreen3Triggered(false);
         }
       }
-    }, [activeIndex, scrollable, index]);
+    }, [scrollable, index]);
 
     return (
       <div className="relative w-full min-h-screen flex flex-col" style={{ willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
@@ -507,7 +507,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
               <motion.button
   onClick={onGetStarted}
-  className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-bold py-3 px-8 sm:py-4 sm:px-12 rounded-full text-base sm:text-lg shadow-xl"
+  className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 font-bold py-3 px-8 sm:py-4 sm:px-12 rounded-full text-base sm:text-lg shadow-xl mb-8"
   initial={{ scale: 1 }}
   animate={{
     scale: [1, 1.05, 1],
@@ -525,6 +525,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 >
   Start Connecting Today
 </motion.button>
+
+            {/* Footer Links */}
+            <div className="flex flex-col items-center gap-4 relative z-30">
+                <p className="text-white/60 text-sm font-semibold tracking-wider">
+                  STRICTLY 18+ • VERIFIED STUDENTS ONLY
+                </p>
+                <div className="flex gap-6 text-white/70 text-xs sm:text-sm">
+                  <a href="/terms" className="hover:text-white transition-colors">Terms</a>
+                  <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
+                  <a href="/rules" className="hover:text-white transition-colors">Rules</a>
+                  <a href="/contact" className="hover:text-white transition-colors">Contact</a>
+                </div>
+                <p className="text-white/40 text-[10px] mt-2">
+                  &copy; {new Date().getFullYear()} Campus Connection. All rights reserved.
+                </p>
+            </div>
 
             </div>
           </ScreenWrapper>

@@ -15,11 +15,6 @@ interface EncryptedMessage {
   tag: string; // Base64 encoded authentication tag
 }
 
-interface KeyPair {
-  publicKey: string; // Base64 encoded public key
-  privateKey: string; // Base64 encoded private key (encrypted)
-}
-
 /**
  * Generate a symmetric encryption key
  */

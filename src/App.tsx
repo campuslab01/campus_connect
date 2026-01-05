@@ -22,7 +22,22 @@ import { useLenis } from './hooks/useLenis';
 import { ToastProvider } from './contexts/ToastContext';
 import Toaster from './components/Toaster';
 import { useGlobalSocketUpdates } from './hooks/useGlobalSocketUpdates';
+import TermsPage from './pages/TermsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import RulesPage from './pages/RulesPage';
+import ContactPage from './pages/ContactPage';
 
+if (import.meta.env.DEV) {
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    const msg = args[0];
+    if (typeof msg === 'string') {
+      if (msg.includes('React Router Future Flag Warning')) return;
+      if (msg.includes('Download the React DevTools')) return;
+    }
+    originalWarn(...args);
+  };
+}
 // Layout component for authenticated pages
 const AuthenticatedLayout = () => {
   return (
@@ -81,6 +96,10 @@ function AppContent() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/rules" element={<RulesPage />} />
+        <Route path="/contact" element={<ContactPage />} />
   
         {/* Authenticated Routes */}
         <Route element={<ProtectedRoute />}>

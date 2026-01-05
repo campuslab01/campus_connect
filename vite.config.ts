@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    server: {
+    host: true,       // 👈 REQUIRED for mobile
+    port: 5173,
+    strictPort: true
+  },
     plugins: [
       react(),
       // Plugin to inject Firebase config into service worker

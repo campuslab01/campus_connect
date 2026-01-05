@@ -6,7 +6,7 @@ interface E2EEIndicatorProps {
   isActive?: boolean;
 }
 
-export const E2EEIndicator: React.FC<E2EEIndicatorProps> = ({ isActive = true }) => {
+export const E2EEIndicator: React.FC<E2EEIndicatorProps> = () => {
   return (
     <motion.div
       className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 border border-green-400/30 backdrop-blur-sm"

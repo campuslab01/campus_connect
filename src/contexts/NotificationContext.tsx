@@ -33,6 +33,7 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (!context) {
@@ -168,7 +169,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       .catch((error) => {
         console.error('Error receiving message:', error);
       });
-  }, [isSupported, onMessageListener, showToast]);
+  }, [isSupported, showToast]);
 
   // Get and update FCM token
   const updateToken = useCallback(async () => {
@@ -200,7 +201,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     } catch (error) {
       console.error('Error getting FCM token:', error);
     }
-  }, [isSupported, isAuthenticated, user]);
+  }, [isSupported, isAuthenticated, user, showToast]);
 
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<boolean> => {

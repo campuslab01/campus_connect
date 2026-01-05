@@ -17,7 +17,6 @@ import {
   formatEncryptedMessage,
   parseEncryptedMessage,
   isEncryptedMessage,
-  type EncryptedMessage,
 } from '../utils/e2ee';
 
 const STORAGE_KEYS = {
@@ -137,7 +136,6 @@ class E2EEService {
     // Try to load from storage
     const stored = localStorage.getItem(STORAGE_KEYS.SHARED_KEYS);
     if (stored) {
-      const keys = JSON.parse(stored);
       // Note: We can't store CryptoKey directly, so we'll need to re-derive
       // This is a limitation - in production, you might want a different approach
     }
@@ -222,7 +220,6 @@ class E2EEService {
   clearKeys(): void {
     this.keyPair = null;
     this.sharedKeys.clear();
-    this.userPassword = null;
     localStorage.removeItem(STORAGE_KEYS.KEY_PAIR);
     localStorage.removeItem(STORAGE_KEYS.SHARED_KEYS);
     localStorage.removeItem(STORAGE_KEYS.PEER_PUBLIC_KEYS);

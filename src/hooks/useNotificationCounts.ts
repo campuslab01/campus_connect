@@ -61,7 +61,7 @@ export const useNotificationCounts = () => {
           confessions: Math.max(0, confessionsCount),
           profile: Math.max(0, profileCount),
         };
-      } catch (error) {
+      } catch {
         return {
           messages: 0,
           likes: 0,

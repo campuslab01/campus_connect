@@ -27,6 +27,7 @@ interface SocketContextType {
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (context === undefined) {
@@ -61,16 +62,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       return;
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '');
-    if (!import.meta.env.DEV && !apiUrl) {
-      throw new Error('VITE_API_URL is required for non-development builds');
-    }
-    if (import.meta.env.DEV) {
-      const isLocalhost = apiUrl.startsWith('http://localhost:') || apiUrl.startsWith('https://localhost:');
-      if (!isLocalhost) {
-        throw new Error('Development must use localhost API. Set VITE_API_URL=http://localhost:5000/api');
-      }
-    }
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api';
     const socketUrl = apiUrl.replace('/api', '');
 
     const newSocket = io(socketUrl, {

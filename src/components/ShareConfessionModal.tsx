@@ -5,7 +5,6 @@ import { useChats } from '../hooks/useChatQuery';
 import { useSendMessage } from '../hooks/useChatQuery';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import api from '../config/axios';
 import { useNavigate } from 'react-router-dom';
 import { useE2EE } from '../hooks/useE2EE';
 

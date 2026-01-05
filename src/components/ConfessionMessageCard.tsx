@@ -16,7 +16,6 @@ const ConfessionMessageCard: React.FC<ConfessionMessageCardProps> = ({
   confessionId,
   isOwn,
   time,
-  text,
   confession: initialConfession
 }) => {
   const [confession, setConfession] = useState<any>(initialConfession || null);

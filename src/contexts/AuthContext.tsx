@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { generateKeyPair } from '../lib/e2ee';
 
@@ -44,6 +44,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -62,46 +63,88 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   // Use the centralized axios configuration
-  const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api',
-    withCredentials: true,
-    timeout: 60000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  const api = useMemo(() => {
+    const instance = axios.create({
+      baseURL: import.meta.env.VITE_API_URL || 'https://campus-connect-server-yqbh.onrender.com/api',
+      withCredentials: true,
+      timeout: 60000,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  // AuthContext API configuration
+    // Add request interceptor for JWT token
+    instance.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
 
-  // Add request interceptor for JWT token
-  api.interceptors.request.use(
-    (config) => {
+    // Add response interceptor for auth errors
+    instance.interceptors.response.use(
+      (response) => {
+        return response;
+      },
+      (error) => {
+        if (error.response?.status === 401) {
+          // Token is invalid, clear it and redirect to auth
+          localStorage.removeItem('token');
+          localStorage.removeItem('tokenTimestamp');
+          setUser(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+    return instance;
+  }, []);
+
+  const handleAuthSuccess = useCallback((userData: User, token: string) => {
+    let keyPair = JSON.parse(localStorage.getItem('keyPair') || 'null');
+    if (!keyPair) {
+      keyPair = generateKeyPair();
+      localStorage.setItem('keyPair', JSON.stringify(keyPair));
+    }
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('tokenTimestamp', Date.now().toString());
+
+    setUser({ ...userData, publicKey: keyPair.publicKey });
+
+    // Persist user's public key to backend for E2EE peer discovery
+    // Best-effort; failures should not block authentication flow
+    (async () => {
+      try {
+        await api.put('/e2ee/public-key', { publicKey: keyPair.publicKey });
+      } catch (err) {
+        // Silently ignore; public key can be retried later
+        console.warn('Failed to save E2EE public key:', err);
+      }
+    })();
+  }, [api]);
+
+  const verifyToken = useCallback(async () => {
+    try {
       const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
+      if (!token) return;
 
-  // Add response interceptor for auth errors
-  api.interceptors.response.use(
-    (response) => {
-      return response;
-    },
-    (error) => {
-      if (error.response?.status === 401) {
-        // Token is invalid, clear it and redirect to auth
-        localStorage.removeItem('token');
-        localStorage.removeItem('tokenTimestamp');
-        setUser(null);
+      const response = await api.get('/auth/me');
+
+      if (response.data.status === 'success') {
+        handleAuthSuccess(response.data.data.user, token);
       }
-      return Promise.reject(error);
+    } catch {
+      // Token is invalid, remove it
+      localStorage.removeItem('token');
+      setUser(null);
     }
-  );
+  }, [handleAuthSuccess, api]);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -126,7 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } else {
       setIsBootstrapping(false);
     }
-  }, []);
+  }, [verifyToken]);
 
   // Set up periodic session timeout checker
   useEffect(() => {
@@ -153,47 +196,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const verifyToken = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await api.get('/auth/me');
-
-      if (response.data.status === 'success') {
-        handleAuthSuccess(response.data.data.user, token);
-      }
-    } catch (error) {
-      // Token is invalid, remove it
-      localStorage.removeItem('token');
-      setUser(null);
-    }
-  };
-
-  const handleAuthSuccess = (userData: User, token: string) => {
-    let keyPair = JSON.parse(localStorage.getItem('keyPair') || 'null');
-    if (!keyPair) {
-      keyPair = generateKeyPair();
-      localStorage.setItem('keyPair', JSON.stringify(keyPair));
-    }
-
-    localStorage.setItem('token', token);
-    localStorage.setItem('tokenTimestamp', Date.now().toString());
-
-    setUser({ ...userData, publicKey: keyPair.publicKey });
-
-    // Persist user's public key to backend for E2EE peer discovery
-    // Best-effort; failures should not block authentication flow
-    (async () => {
-      try {
-        await api.put('/e2ee/public-key', { publicKey: keyPair.publicKey });
-      } catch (err) {
-        // Silently ignore; public key can be retried later
-        console.warn('Failed to save E2EE public key:', err);
-      }
-    })();
-  };
-
   const login = async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true);
     try {
@@ -202,7 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Warm up backend (Render free instances may cold start)
       try {
         await api.get('/health', { timeout: 10000 });
-      } catch (_) {
+      } catch {
         // ignore health check failure; proceed to attempt login
       }
 
@@ -215,7 +217,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             await api.get('/health', { timeout: 10000 }).catch(() => {});
             response = await api.post('/auth/login', { email, password });
-          } catch (e) {
+          } catch {
             throw err;
           }
         } else {

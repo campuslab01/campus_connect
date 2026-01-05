@@ -32,9 +32,10 @@ export const InfiniteScroll: React.FC<InfiniteScrollProps> = ({
       observerRef.current.observe(loadMoreRef.current);
     }
 
+    const currentLoadMore = loadMoreRef.current;
     return () => {
-      if (observerRef.current && loadMoreRef.current) {
-        observerRef.current.unobserve(loadMoreRef.current);
+      if (observerRef.current && currentLoadMore) {
+        observerRef.current.unobserve(currentLoadMore);
       }
     };
   }, [fetchNext, hasMore, isLoading]);

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
-import api from '../config/axios';
 import {
   requestPasswordOtp,
   verifyPasswordOtp,
@@ -237,7 +236,7 @@ export const PasswordResetPopup: React.FC<PasswordResetPopupProps> = ({
                 onClose();
               }, 1500);
             }
-          } catch (e) {
+          } catch {
             setTimeout(() => {
               navigate('/auth');
               onClose();

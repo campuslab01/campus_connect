@@ -20,18 +20,27 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Cloud Messaging and get a reference to the service
 let messaging: Messaging | null = null;
 
+// Ensure minimal required config is present for Messaging
+const hasRequiredMessagingConfig =
+  Boolean(firebaseConfig.projectId) &&
+  Boolean(firebaseConfig.messagingSenderId) &&
+  Boolean(firebaseConfig.apiKey) &&
+  Boolean(firebaseConfig.appId);
+
 // Check if browser supports service workers and notifications
 const isSupported = typeof window !== 'undefined' && 
                    'serviceWorker' in navigator && 
                    'Notification' in window &&
                    'PushManager' in window;
 
-if (isSupported) {
+if (isSupported && hasRequiredMessagingConfig) {
   try {
     messaging = getMessaging(app);
   } catch (error) {
     console.warn('Firebase messaging not available:', error);
   }
+} else if (isSupported && !hasRequiredMessagingConfig && import.meta.env.PROD) {
+  console.warn('Firebase messaging disabled: missing required configuration values');
 }
 
 // Get FCM registration token

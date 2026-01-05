@@ -12,6 +12,12 @@ import { InfiniteScroll } from '../components/InfiniteScroll';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useAuth } from '../contexts/AuthContext';
 
+// 🔠 Typewriter placeholder animation with blinking cursor
+const placeholders = [
+  "Find by name...",
+  "Find by department...",
+];
+
 const SearchPage: React.FC = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,11 +41,6 @@ const SearchPage: React.FC = () => {
   // Fetch full profile when modal is opened
   const { data: profileData, isLoading: profileLoading } = useUserProfile(selectedUserId);
   const modalUser = profileData?.user || null;
-    // 🔠 Typewriter placeholder animation with blinking cursor
-    const placeholders = [
-      "Find by name...",
-      "Find by department...",
-    ];
   
     const [displayText, setDisplayText] = useState("");
     const [index, setIndex] = useState(0);
